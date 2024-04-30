@@ -1,0 +1,73 @@
+version: "3"
+
+services:
+  localstack:
+    image: localstack/localstack:3.1
+    container_name: "localstack"
+    ports:
+      - "127.0.0.1:4566:4566"
+      - "127.0.0.1:4510-4559:4510-4559"
+    environment:
+      DEBUG: ${DEBUG:-0}
+      AWS_DEFAULT_REGION: eu-west-2
+      SERVICES: sqs, s3
+
+  postgres:
+        image: postgres:10-alpine
+        environment:
+            - POSTGRES_USER=airflow
+            - POSTGRES_PASSWORD=airflow
+            - POSTGRES_DB=airflow
+
+  local-runner:
+        image: amazon/mwaa-local:2_8
+        user: 1000:1000
+        restart: always
+        depends_on:
+            - postgres
+        environment:
+            - LOAD_EX=n
+            - EXECUTOR=Local
+            - AIRFLOW_CONN_AWS_DEFAULT=aws://a:a@?host=http://localstack:4566&region_name=eu-west-2
+            - AWS_ACCESS_KEY_ID=dummyaccess
+            - AWS_SECRET_ACCESS_KEY=dummysecret
+            - AWS_DEFAULT_REGION=eu-west-2
+            - AWS_PROFILE=default
+            - DEFAULT_PASSWORD=test
+            - S3_DAGS_PATH=""
+            - S3_PLUGINS_PATH=""
+            - S3_REQUIREMENTS_PATH=""
+        volumes:
+            - "${PWD}/dags:/usr/local/airflow/dags"
+            - "${PWD}/plugins:/usr/local/airflow/plugins"
+        ports:
+            - "8080:8080"
+        command: local-runner
+        healthcheck:
+            test: ["CMD-SHELL", "[ -f /usr/local/airflow/airflow-webserver.pid ]"]
+            interval: 30s
+            timeout: 30s
+            retries: 3
+
+  aws-cli:
+      image: mesosphere/aws-cli
+      container_name: "aws-cli"
+      volumes:
+        - ./landing:/tmp/landing:ro
+      environment:
+        - AWS_ACCESS_KEY_ID=dummyaccess
+        - AWS_SECRET_ACCESS_KEY=dummysecret
+        - AWS_DEFAULT_REGION=eu-west-2
+      entrypoint: /bin/sh -c
+      command: >
+        "
+          echo Waiting for localstack service start...;
+          echo add code in here to add setup to localstack;
+          while ! nc -z localstack 4566;
+          do
+            sleep 1;
+          done;     
+          echo Connected!;
+        "
+      depends_on:
+        - localstack

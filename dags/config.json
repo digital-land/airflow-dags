@@ -1,0 +1,163 @@
+{
+    "ancient-woodland": [
+        "ancient-woodland-status",
+        "ancient-woodland"
+    ],
+    "area-of-outstanding-natural-beauty": [
+        "area-of-outstanding-natural-beauty"
+    ],
+    "article-4-direction": [
+        "article-4-direction-area",
+        "article-4-direction"
+    ],
+    "historic-england": [
+        "battlefield",
+        "building-preservation-notice",
+        "certificate-of-immunity",
+        "heritage-at-risk",
+        "park-and-garden-grade",
+        "park-and-garden",
+        "protected-wreck-site",
+        "scheduled-monument",
+        "world-heritage-site-buffer-zone",
+        "world-heritage-site"
+    ],
+    "brownfield-land": [
+        "brownfield-land"
+    ],
+    "brownfield-site": [
+        "brownfield-site"
+    ],
+    "central-activities-zone": [
+        "central-activities-zone"
+    ],
+    "conservation-area": [
+        "conservation-area-document",
+        "conservation-area"
+    ],
+    "developer-contributions": [
+        "contribution-funding-status",
+        "contribution-purpose",
+        "developer-agreement-contribution",
+        "developer-agreement-transaction",
+        "developer-agreement-type",
+        "developer-agreement"
+    ],
+    "design-code": [
+        "design-code-area-type",
+        "design-code-area",
+        "design-code-characteristic",
+        "design-code-rule-category",
+        "design-code-rule",
+        "design-code-status",
+        "design-code"
+    ],
+    "organisation": [
+        "development-corporation",
+        "government-organisation",
+        "local-authority-type",
+        "local-authority",
+        "local-enterprise-partnership",
+        "local-resilience-forum",
+        "national-park-authority",
+        "nonprofit",
+        "passenger-transport-executive",
+        "public-authority",
+        "regional-park-authority",
+        "waste-authority"
+    ],
+    "document": [
+        "document-type"
+    ],
+    "flood-risk-zone": [
+        "flood-risk-level",
+        "flood-risk-type",
+        "flood-risk-zone"
+    ],
+    "green-belt": [
+        "green-belt-core",
+        "green-belt"
+    ],
+    "heritage-coast": [
+        "heritage-coast"
+    ],
+    "infrastructure-funding-statement": [
+        "infrastructure-funding-statement"
+    ],
+    "infrastructure-project": [
+        "infrastructure-project-decision",
+        "infrastructure-project-document-type",
+        "infrastructure-project-document",
+        "infrastructure-project-event",
+        "infrastructure-project-log",
+        "infrastructure-project-type",
+        "infrastructure-project"
+    ],
+    "listed-building": [
+        "listed-building-grade",
+        "listed-building-outline",
+        "listed-building",
+        "locally-listed-building"
+    ],
+    "local-authority-district": [
+        "local-authority-district"
+    ],
+    "local-nature-reserve": [
+        "local-nature-reserve"
+    ],
+    "local-planning-authority": [
+        "local-planning-authority"
+    ],
+    "local-resilience-forum-boundary": [
+        "local-resilience-forum-boundary"
+    ],
+    "national-nature-reserve": [
+        "national-nature-reserve"
+    ],
+    "national-park": [
+        "national-park"
+    ],
+    "ownership-status": [
+        "ownership-status"
+    ],
+    "parish": [
+        "parish"
+    ],
+    "legislation": [
+        "permitted-development-right-part",
+        "permitted-development-right"
+    ],
+    "planning-permission-status": [
+        "planning-permission-status"
+    ],
+    "planning-permission-type": [
+        "planning-permission-type"
+    ],
+    "ramsar": [
+        "ramsar"
+    ],
+    "region": [
+        "region"
+    ],
+    "site-category": [
+        "site-category"
+    ],
+    "site-of-special-scientific-interest": [
+        "site-of-special-scientific-interest"
+    ],
+    "special-area-of-conservation": [
+        "special-area-of-conservation"
+    ],
+    "special-protection-area": [
+        "special-protection-area"
+    ],
+    "title-boundary": [
+        "title-boundary"
+    ],
+    "tree-preservation-order": [
+        "tree-preservation-order",
+        "tree-preservation-zone-type",
+        "tree-preservation-zone",
+        "tree"
+    ]
+}
