@@ -32,9 +32,10 @@ jobs:
           aws-region: eu-west-2
 
       - run: |
-          aws s3 sync ./dags s3://$AWS_S3_BUCKET/ \
+          aws s3 sync ./dags s3://$AWS_S3_BUCKET/dags \
             --delete \
             --exclude '.git/*' \
+            --exclude '*/__pycache__/*'
             
 
       
