@@ -33,7 +33,7 @@ jobs:
 
       - run: |
           aws s3 sync ./dags s3://$AWS_S3_BUCKET/dags \
-            --delete \
+            --delete '__pycache__/*' \
             --exclude '.git/*' \
             --exclude '*/__pycache__/*'
             
