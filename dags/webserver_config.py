@@ -1,4 +1,3 @@
-from airflow.auth.managers.fab.security_manager.override import FabAirflowSecurityManagerOverride
 from flask_appbuilder.security.manager import AUTH_OAUTH
 import os
 import security_manager

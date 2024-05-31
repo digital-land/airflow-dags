@@ -1,7 +1,8 @@
-from airflow.auth.managers.fab.security_manager.override import FabAirflowSecurityManagerOverride
 from typing import Any, List, Union
 import logging
 import os
+
+from airflow.www.security import AirflowSecurityManager
 
 log = logging.getLogger(__name__)
 log.setLevel(os.getenv("AIRFLOW__LOGGING__FAB_LOGGING_LEVEL", "INFO"))
@@ -29,7 +30,7 @@ def map_roles(team_list: list[int]) -> list[str]:
     return list(set(team_role_map.get(team, FAB_PUBLIC_ROLE) for team in team_list))
 
 
-class GithubTeamAuthorizer(FabAirflowSecurityManagerOverride):
+class GithubTeamAuthorizer(AirflowSecurityManager):
     # In this example, the oauth provider == 'github'.
     # If you ever want to support other providers, see how it is done here:
     # https://github.com/dpgaspar/Flask-AppBuilder/blob/master/flask_appbuilder/security/manager.py#L550
