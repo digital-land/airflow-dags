@@ -38,6 +38,8 @@ configuration_file_path = os.path.join(my_dir, "config.json")
 with open(configuration_file_path) as file:
     configs = json.load(file)
 
+cluster_name = 'development-cluster'
+
 @task
 def hello():
     hello_task = EcsRunTaskOperator(
