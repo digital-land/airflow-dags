@@ -3,10 +3,35 @@ import json
 
 from datetime import datetime
 from airflow.decorators import dag, task
-from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
-from airflow.providers.docker.operators.docker import DockerOperator
+from airflow.providers.amazon.aws.operators.ecs import EcsRegisterTaskDefinitionOperator, EcsRunTaskOperator
 
-
+register_task = EcsRegisterTaskDefinitionOperator(
+    task_id="hello",
+    family="test",
+    container_definitions=[
+        {
+            "name": "hello",
+            "image": "ubuntu",
+            "workingDirectory": "/usr/bin",
+            "entryPoint": ["sh", "-c"],
+            "command": ["ls"],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "log_group",
+                    "awslogs-region": "eu-west-1",
+                    "awslogs-create-group": "true",
+                    "awslogs-stream-prefix": "ecs",
+                },
+            },
+        },
+    ],
+    register_task_kwargs={
+        "cpu": "256",
+        "memory": "512",
+        "networkMode": "awsvpc",
+    },
+)
 
 my_dir = os.path.dirname(os.path.abspath(__file__))
 configuration_file_path = os.path.join(my_dir, "config.json")
@@ -60,27 +85,24 @@ for collection,datasets in configs.items():
 
     collection_workflow()
 
-@dag(dag_id="hello-world")
-def hello():
-
-    @task()
-    def t1():
-        pass
-
-    hello_task = DockerOperator(
-        task_id='hello',
-        image='hello-world',
-        container_name='hello-world',
-        api_version='auto',
-        auto_remove=True,
-        docker_url='unix://var/run/docker.sock',
-        #docker_url='tcp://docker-proxy:2375',
-        network_mode='bridge',
-        tty=True,
-        xcom_all=False,
-        mount_tmp_dir=False,
-        environment={
-        # 'SOMETHING': '{{ task_instance.xcom_pull(task_ids="store_prices") }}'
-        })
-    
-    t1() >> hello_task
+hello_world = EcsRunTaskOperator(
+    task_id="hello_world",
+    #cluster=cluster_name,
+    task_definition="hello",
+    launch_type="FARGATE",
+    overrides={
+        "containerOverrides": [
+            {
+                "name": "hello",
+                "command": ["echo", "hello", "world"],
+            },
+        ],
+    },
+    network_configuration={
+        "awsvpcConfiguration": {
+            #"subnets": test_context[SUBNETS_KEY],
+            #"securityGroups": test_context[SECURITY_GROUPS_KEY],
+            "assignPublicIp": "ENABLED",
+        },
+    },
+)
