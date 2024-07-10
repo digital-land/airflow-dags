@@ -38,6 +38,40 @@ configuration_file_path = os.path.join(my_dir, "config.json")
 with open(configuration_file_path) as file:
     configs = json.load(file)
 
+@task
+def hello():
+    hello_task = EcsRunTaskOperator(
+        task_id="hello",
+        cluster=cluster_name,
+        task_definition="hello",
+        launch_type="FARGATE",
+        overrides={
+            "containerOverrides": [
+                {
+                    "name": "hello",
+                    "command": ["echo", "hello", "world"],
+                },
+            ],
+        },
+        network_configuration={
+            "awsvpcConfiguration": {
+                #"subnets": test_context[SUBNETS_KEY],
+                #"securityGroups": test_context[SECURITY_GROUPS_KEY],
+                "assignPublicIp": "ENABLED",
+            },
+        },
+    )
+    return hello_task
+
+@dag(dag_id="test")
+def test_hello():
+    @task
+    def hello_task():
+        return hello()
+    
+    return hello_task
+
+"""
 for collection,datasets in configs.items():
     dag_id = f"dynamic-generated-dag-{collection}"
 
@@ -62,8 +96,8 @@ for collection,datasets in configs.items():
         cluster_name = 'development-cluster'
         task_definition_name = 'development-collection-workflow'
 
-        collection_task = EcsRunTaskOperator(
-            task_id="hello_world",
+        hello_task = EcsRunTaskOperator(
+            task_id="hello",
             cluster=cluster_name,
             task_definition="hello",
             launch_type="FARGATE",
@@ -98,10 +132,11 @@ for collection,datasets in configs.items():
         # )
         
         
-        # collection_task = run_collection_task(collection)
+        collection_task = run_collection_task(collection)
 
         for dataset in datasets:
             dataset_task = load_dataset_into_postgres(dataset)
             collection_task >> dataset_task
 
     collection_workflow()
+"""
