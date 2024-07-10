@@ -87,7 +87,7 @@ for collection,datasets in configs.items():
 
 hello_world = EcsRunTaskOperator(
     task_id="hello_world",
-    #cluster=cluster_name,
+    cluster='development-cluster',
     task_definition="hello",
     launch_type="FARGATE",
     overrides={
