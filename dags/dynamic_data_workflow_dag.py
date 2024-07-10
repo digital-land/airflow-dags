@@ -65,13 +65,13 @@ def hello():
     )
     return hello_task
 
-@dag(dag_id="test")
+@dag(dag_id="test", start_date=datetime.today())
 def test_hello():
     @task
     def hello_task():
         return hello()
     
-    return hello_task
+    hello_task()
 
 """
 for collection,datasets in configs.items():
