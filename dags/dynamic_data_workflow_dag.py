@@ -62,6 +62,27 @@ for collection,datasets in configs.items():
         cluster_name = 'development-cluster'
         task_definition_name = 'development-collection-workflow'
 
+        collection_task = EcsRunTaskOperator(
+            task_id="hello_world",
+            cluster=cluster_name,
+            task_definition="hello",
+            launch_type="FARGATE",
+            overrides={
+                "containerOverrides": [
+                    {
+                        "name": "hello",
+                        "command": ["echo", "hello", "world"],
+                    },
+                ],
+            },
+            network_configuration={
+                "awsvpcConfiguration": {
+                    #"subnets": test_context[SUBNETS_KEY],
+                    #"securityGroups": test_context[SECURITY_GROUPS_KEY],
+                    "assignPublicIp": "ENABLED",
+                },
+            },
+        )
         # collection_task = EcsRunTaskOperator(
         #     task_id="hello_world",
         #     cluster=cluster_name,
@@ -77,32 +98,10 @@ for collection,datasets in configs.items():
         # )
         
         
-        collection_task = run_collection_task(collection)
+        # collection_task = run_collection_task(collection)
 
         for dataset in datasets:
             dataset_task = load_dataset_into_postgres(dataset)
             collection_task >> dataset_task
 
     collection_workflow()
-
-hello_world = EcsRunTaskOperator(
-    task_id="hello_world",
-    cluster='development-cluster',
-    task_definition="hello",
-    launch_type="FARGATE",
-    overrides={
-        "containerOverrides": [
-            {
-                "name": "hello",
-                "command": ["echo", "hello", "world"],
-            },
-        ],
-    },
-    network_configuration={
-        "awsvpcConfiguration": {
-            #"subnets": test_context[SUBNETS_KEY],
-            #"securityGroups": test_context[SECURITY_GROUPS_KEY],
-            "assignPublicIp": "ENABLED",
-        },
-    },
-)
