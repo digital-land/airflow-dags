@@ -4,6 +4,9 @@ import json
 from datetime import datetime
 from airflow.decorators import dag, task
 from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
+from airflow.providers.docker.operators.docker import DockerOperator
+
+
 
 my_dir = os.path.dirname(os.path.abspath(__file__))
 configuration_file_path = os.path.join(my_dir, "config.json")
@@ -23,6 +26,8 @@ for collection,datasets in configs.items():
         @task
         def load_dataset_into_postgres(message):
             print(message)
+
+
 
         # need an ECS task to run the collection, pipeline and dataset stages
         # need to get a list of updated datasets
@@ -54,3 +59,28 @@ for collection,datasets in configs.items():
             collection_task >> dataset_task
 
     collection_workflow()
+
+@dag(dag_id="hello-world")
+def hello():
+
+    @task()
+    def t1():
+        pass
+
+    hello_task = DockerOperator(
+        task_id='hello',
+        image='hello-world',
+        container_name='hello-world',
+        api_version='auto',
+        auto_remove=True,
+        docker_url='unix://var/run/docker.sock',
+        #docker_url='tcp://docker-proxy:2375',
+        network_mode='bridge',
+        tty=True,
+        xcom_all=False,
+        mount_tmp_dir=False,
+        environment={
+        # 'SOMETHING': '{{ task_instance.xcom_pull(task_ids="store_prices") }}'
+        })
+    
+    t1() >> hello_task
