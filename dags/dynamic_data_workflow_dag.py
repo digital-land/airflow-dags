@@ -106,6 +106,6 @@ for collection,datasets in configs.items():
 
         for dataset in datasets:
             dataset_task = load_dataset_into_postgres(dataset)
-            collection_task >> dataset_task
+            hello_task >> collection_task >> dataset_task
 
     collection_workflow()
