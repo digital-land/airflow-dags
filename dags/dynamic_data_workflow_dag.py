@@ -20,12 +20,12 @@ register_task = EcsRegisterTaskDefinitionOperator(
             "command": ["ls"],
             "logConfiguration": {
                 "logDriver": "awslogs",
-                "options": {
-                    "awslogs-group": "airflow-development-mwaa",
-                    "awslogs-region": "eu-west-1",
-                    "awslogs-create-group": "true",
-                    "awslogs-stream-prefix": "ecs",
-                },
+#                "options": {
+#                    "awslogs-group": "airflow-development-mwaa-Task",
+#                    "awslogs-region": "eu-west-1",
+#                    "awslogs-create-group": "true",
+#                    "awslogs-stream-prefix": "ecs",
+#                },
             },
         },
     ],
