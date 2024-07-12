@@ -21,7 +21,7 @@ register_task = EcsRegisterTaskDefinitionOperator(
             "logConfiguration": {
                 "logDriver": "awslogs",
                 "options": {
-                    "awslogs-group": "log_group",
+                    "awslogs-group": "airflow-development-mwaa",
                     "awslogs-region": "eu-west-1",
                     "awslogs-create-group": "true",
                     "awslogs-stream-prefix": "ecs",
@@ -106,6 +106,6 @@ for collection,datasets in configs.items():
 
         for dataset in datasets:
             dataset_task = load_dataset_into_postgres(dataset)
-            collection_task >> hello_task >> dataset_task
+            collection_task >> dataset_task
 
     collection_workflow()
