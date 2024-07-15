@@ -134,7 +134,7 @@ with DAG(
         execution_timeout=timedelta(minutes=2),
         retries=3,
         aws_conn_id="aws_default",
-        cluster="ecs-airflow-cluster",
+        cluster="development-cluster",
         task_definition="ecs-airflow-task:1",
         launch_type="FARGATE",
         overrides={"containerOverrides": [
@@ -149,7 +149,7 @@ with DAG(
                  "securityGroups": ["sg-xxxx"]
         }
         },
-        awslogs_group="ecs-airflow",
+                awslogs_group="airflow-development-mwaa-Task",
         awslogs_region="eu-central-1",
         awslogs_stream_prefix=f"ecs/test",
         awslogs_fetch_interval=timedelta(seconds=5)
