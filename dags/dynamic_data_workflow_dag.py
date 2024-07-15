@@ -1,7 +1,8 @@
 import os
 import json
 
-from datetime import datetime
+from datetime import datetime, timedelta
+from airflow import DAG
 from airflow.decorators import dag, task
 from airflow.providers.amazon.aws.operators.ecs import EcsRegisterTaskDefinitionOperator, EcsRunTaskOperator
 
@@ -112,3 +113,44 @@ for collection,datasets in configs.items():
             hello_task >> collection_task >> dataset_task
 
     collection_workflow()
+
+
+
+DEFAULT_ARGS = {
+    "owner": "airflow",
+    "depends_on_past": False,
+    "start_date": datetime(2024, 1, 1),
+}
+
+with DAG(
+    "sample",
+    default_args=DEFAULT_ARGS,
+    description="A test DAG to try out functionality",
+    schedule=None,
+) as dag:
+    EcsRunTaskOperator(
+        task_id="ecs_operator",
+        dag=dag,
+        execution_timeout=timedelta(minutes=2),
+        retries=3,
+        aws_conn_id="aws_default",
+        cluster="ecs-airflow-cluster",
+        task_definition="ecs-airflow-task:1",
+        launch_type="FARGATE",
+        overrides={"containerOverrides": [
+                {
+                "name": CONTAINER_NAME,
+                "command": ["python", "-c", "import time; for i in range(30): print(i); time.sleep(10)"],
+            },
+        ]},
+        network_configuration={
+            "awsvpcConfiguration": {
+                "subnets": ["subnet-xxxxx", "subnet-xxx"],
+                 "securityGroups": ["sg-xxxx"]
+        }
+        },
+        awslogs_group="ecs-airflow",
+        awslogs_region="eu-central-1",
+        awslogs_stream_prefix=f"ecs/{CONTAINER_NAME}",
+        awslogs_fetch_interval=timedelta(seconds=5)
+    )
