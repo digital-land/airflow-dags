@@ -20,12 +20,12 @@ register_task = EcsRegisterTaskDefinitionOperator(
             "command": ["ls"],
             "logConfiguration": {
                 "logDriver": "awslogs",
-#                "options": {
-#                    "awslogs-group": "airflow-development-mwaa-Task",
+                "options": {
+                    "awslogs-group": "airflow-development-mwaa-Task",
 #                    "awslogs-region": "eu-west-1",
 #                    "awslogs-create-group": "true",
 #                    "awslogs-stream-prefix": "ecs",
-#                },
+                },
             },
         },
     ],
@@ -77,7 +77,7 @@ for collection,datasets in configs.items():
                         "name": "hello",
                         "command": ["echo", "hello", "world"],
                     },
-                ],
+                ],                
             },
             network_configuration={
                 "awsvpcConfiguration": {
@@ -86,6 +86,9 @@ for collection,datasets in configs.items():
                     "assignPublicIp": "ENABLED",
                 },
             },
+            awslogs_group="airflow-development-mwaa-Task"
+            #awslogs_region=aws_region,
+            #awslogs_stream_prefix=f"ecs/{container_name}",            
         )
         # collection_task = EcsRunTaskOperator(
         #     task_id="hello_world",
