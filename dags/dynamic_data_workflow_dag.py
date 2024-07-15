@@ -139,7 +139,7 @@ with DAG(
         launch_type="FARGATE",
         overrides={"containerOverrides": [
                 {
-                "name": CONTAINER_NAME,
+                "name": "test",
                 "command": ["python", "-c", "import time; for i in range(30): print(i); time.sleep(10)"],
             },
         ]},
@@ -151,6 +151,6 @@ with DAG(
         },
         awslogs_group="ecs-airflow",
         awslogs_region="eu-central-1",
-        awslogs_stream_prefix=f"ecs/{CONTAINER_NAME}",
+        awslogs_stream_prefix=f"ecs/test",
         awslogs_fetch_interval=timedelta(seconds=5)
     )
