@@ -8,7 +8,7 @@ from airflow.providers.amazon.aws.operators.ecs import EcsRegisterTaskDefinition
 
 
 cluster_name = 'development-cluster'
-
+"""
 register_task = EcsRegisterTaskDefinitionOperator(
     task_id="hello",
     family="test",
@@ -38,6 +38,7 @@ register_task = EcsRegisterTaskDefinitionOperator(
         ],
     },
 )
+"""
 
 my_dir = os.path.dirname(os.path.abspath(__file__))
 configuration_file_path = os.path.join(my_dir, "config.json")
