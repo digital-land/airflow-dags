@@ -32,6 +32,9 @@ register_task = EcsRegisterTaskDefinitionOperator(
         "cpu": "256",
         "memory": "512",
         "networkMode": "awsvpc",
+        "requiresCompatibilities": [
+            "FARGATE"
+        ],
     },
 )
 
@@ -43,6 +46,7 @@ with open(configuration_file_path) as file:
 
 for collection,datasets in configs.items():
     dag_id = f"dynamic-generated-dag-{collection}"
+    break
 
     @dag(dag_id=dag_id, start_date=datetime.today())
     def collection_workflow():
