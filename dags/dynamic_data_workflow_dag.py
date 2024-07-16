@@ -19,14 +19,14 @@ register_task = EcsRegisterTaskDefinitionOperator(
             "workingDirectory": "/usr/bin",
             "entryPoint": ["sh", "-c"],
             "command": ["ls"],
-            "logConfiguration": {
-                "logDriver": "awslogs",
-                "options": {
-                    "awslogs-group": "airflow-development-mwaa-Task",
-                    "awslogs-region": "eu-west-1",
-                    "awslogs-stream-prefix": "ecs/test",
-                },
-            },
+            # "logConfiguration": {
+            #     "logDriver": "awslogs",
+            #     "options": {
+            #         "awslogs-group": "airflow-development-mwaa-Task",
+            #         "awslogs-region": "eu-west-1",
+            #         "awslogs-stream-prefix": "ecs/test",
+            #     },
+            # },
         },
     ],
     register_task_kwargs={
@@ -140,13 +140,13 @@ with DAG(
         retries=3,
         aws_conn_id="aws_default",
         cluster="development-cluster",
-        task_definition="development-status",#register_task.output,
-        launch_type="EC2",#"FARGATE",
+        task_definition=register_task.output,#"development-status",
+        launch_type="FARGATE",
         overrides={"containerOverrides": [
-        #        {
-        #        "name": "test",
-        #        "command": ["python", "-c", "import time; for i in range(30): print(i); time.sleep(10)"],
-        #    },
+                {
+                "name": "test",
+                "command": ["python", "-c", "import time; for i in range(30): print(i); time.sleep(10)"],
+            },
         ]},
         network_configuration={
             "awsvpcConfiguration": {
