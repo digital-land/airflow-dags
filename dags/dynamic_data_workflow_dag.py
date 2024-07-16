@@ -23,9 +23,9 @@ register_task = EcsRegisterTaskDefinitionOperator(
                 "logDriver": "awslogs",
                 "options": {
                     "awslogs-group": "airflow-development-mwaa-Task",
-#                    "awslogs-region": "eu-west-1",
+                    "awslogs-region": "eu-west-1",
 #                    "awslogs-create-group": "true",
-#                    "awslogs-stream-prefix": "ecs",
+                     "awslogs_stream_prefix" :f"ecs/test",
                 },
             },
         },
@@ -152,7 +152,7 @@ with DAG(
             }
         },
         awslogs_group="airflow-development-mwaa-Task",
-        awslogs_region="eu-central-1",
+        awslogs_region="eu-west-1",
         awslogs_stream_prefix=f"ecs/test",
         awslogs_fetch_interval=timedelta(seconds=5)
     )
