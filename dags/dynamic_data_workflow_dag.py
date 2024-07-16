@@ -67,6 +67,7 @@ for collection,datasets in configs.items():
         cluster_name = 'development-cluster'
         task_definition_name = 'development-collection-workflow'
 
+"""
         hello_task = EcsRunTaskOperator(
             task_id=f"{collection}-collector",
             cluster="development-cluster",
@@ -104,13 +105,14 @@ for collection,datasets in configs.items():
         #         },
         #     },
         # )
-        
+"""        
         
         collection_task = run_collection_task(collection)
 
         for dataset in datasets:
             dataset_task = load_dataset_into_postgres(dataset)
-            hello_task >> collection_task >> dataset_task
+            # hello_task >> 
+            collection_task >> dataset_task
 
     collection_workflow()
 
