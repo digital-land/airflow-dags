@@ -140,7 +140,7 @@ with DAG(
         retries=3,
         aws_conn_id="aws_default",
         cluster="development-cluster",
-        task_definition="development-status"# register_task.output,
+        task_definition="development-status",#register_task.output,
         launch_type="FARGATE",
         overrides={"containerOverrides": [
                 {
