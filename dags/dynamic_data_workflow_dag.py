@@ -68,8 +68,8 @@ for collection,datasets in configs.items():
         task_definition_name = 'development-collection-workflow'
 
         hello_task = EcsRunTaskOperator(
-            task_id="hello",
-            cluster=cluster_name,
+            #task_id="hello",
+            #cluster=cluster_name,
             task_definition=register_task.output,
             launch_type="FARGATE",
             overrides={
@@ -129,7 +129,7 @@ with DAG(
     schedule=None,
 ) as dag:
     EcsRunTaskOperator(
-        task_id="ecs_operator",
+        # task_id="ecs_operator",
         dag=dag,
         execution_timeout=timedelta(minutes=2),
         retries=3,
