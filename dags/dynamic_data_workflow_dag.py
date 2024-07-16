@@ -141,7 +141,7 @@ with DAG(
         aws_conn_id="aws_default",
         cluster="development-cluster",
         task_definition="development-status",#register_task.output,
-        launch_type="FARGATE",
+        launch_type="EC2",#"FARGATE",
         overrides={"containerOverrides": [
                 {
                 "name": "test",
