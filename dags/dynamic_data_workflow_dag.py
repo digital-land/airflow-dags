@@ -68,7 +68,7 @@ for collection,datasets in configs.items():
         task_definition_name = 'development-collection-workflow'
 
         hello_task = EcsRunTaskOperator(
-            task_id="hello",
+            task_id=f"{collection}-collector",
             cluster="development-cluster",
             task_definition=register_task.output,
             launch_type="FARGATE",
