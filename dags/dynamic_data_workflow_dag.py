@@ -70,7 +70,7 @@ for collection,datasets in configs.items():
         hello_task = EcsRunTaskOperator(
             task_id="hello",
             cluster=cluster_name,
-            task_definition="hello",
+            task_definition=register_task.output,
             launch_type="FARGATE",
             overrides={
                 "containerOverrides": [
@@ -135,7 +135,7 @@ with DAG(
         retries=3,
         aws_conn_id="aws_default",
         cluster="development-cluster",
-        task_definition="ecs-airflow-task:1",
+        task_definition=register_task.output,
         launch_type="FARGATE",
         overrides={"containerOverrides": [
                 {
