@@ -150,6 +150,7 @@ with DAG(
         #         "command": ["python", "-c", "import time; for i in range(30): print(i); time.sleep(10)"],
         #     },
         # ]},
+        network_mode="awsvpc",
         network_configuration={
             "awsvpcConfiguration": {
                 "subnets": ["subnet-05a0d548ea8d901ab", "subnet-07252405b5369afd3"],
