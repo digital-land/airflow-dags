@@ -138,8 +138,8 @@ with DAG(
         task_id="ecs_operator",
         dag=dag,
         execution_timeout=timedelta(minutes=2),
-        retries=3,
-        aws_conn_id="aws_default",
+        #retries=3,
+        #aws_conn_id="aws_default",
         cluster="development-cluster",
         task_definition="development-status",#register_task.output,#",
         launch_type="EC2",#"FARGATE",
@@ -154,6 +154,7 @@ with DAG(
             "awsvpcConfiguration": {
                 "subnets": ["subnet-05a0d548ea8d901ab", "subnet-07252405b5369afd3"],
                 "securityGroups": ["sg-0fe390dd951829c75"],
+                "assignPublicIp": "ENABLED",
             }
         },
         awslogs_group="airflow-development-mwaa-Task",
