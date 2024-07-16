@@ -24,8 +24,6 @@ register_task = EcsRegisterTaskDefinitionOperator(
                 "options": {
                     "awslogs-group": "airflow-development-mwaa-Task",
                     "awslogs-region": "eu-west-1",
-#                    "awslogs-create-group": "true",
-                     "awslogs_stream_prefix" :f"ecs/test",
                 },
             },
         },
