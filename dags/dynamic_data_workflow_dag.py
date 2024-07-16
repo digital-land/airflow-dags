@@ -82,8 +82,8 @@ for collection,datasets in configs.items():
             },
             network_configuration={
                 "awsvpcConfiguration": {
-                    #"subnets": test_context[SUBNETS_KEY],
-                    #"securityGroups": test_context[SECURITY_GROUPS_KEY],
+                    "subnets": ["subnet-05a0d548ea8d901ab", "subnet-07252405b5369afd3"],
+                    "securityGroups": ["sg-0fe390dd951829c75"],
                     "assignPublicIp": "ENABLED",
                 },
             },
@@ -145,11 +145,11 @@ with DAG(
         ]},
         network_configuration={
             "awsvpcConfiguration": {
-                "subnets": ["subnet-xxxxx", "subnet-xxx"],
-                 "securityGroups": ["sg-xxxx"]
-        }
+                "subnets": ["subnet-05a0d548ea8d901ab", "subnet-07252405b5369afd3"],
+                "securityGroups": ["sg-0fe390dd951829c75"],
+            }
         },
-                awslogs_group="airflow-development-mwaa-Task",
+        awslogs_group="airflow-development-mwaa-Task",
         awslogs_region="eu-central-1",
         awslogs_stream_prefix=f"ecs/test",
         awslogs_fetch_interval=timedelta(seconds=5)
