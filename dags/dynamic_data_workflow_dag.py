@@ -143,12 +143,13 @@ with DAG(
         cluster="development-cluster",
         task_definition="development-status",#register_task.output,#",
         launch_type="EC2",#"FARGATE",
-        overrides={"containerOverrides": [
-                {
-                "name": "test",
-                "command": ["python", "-c", "import time; for i in range(30): print(i); time.sleep(10)"],
-            },
-        ]},
+        overrides={},
+        # overrides={"containerOverrides": [
+        #         {
+        #         "name": "test",
+        #         "command": ["python", "-c", "import time; for i in range(30): print(i); time.sleep(10)"],
+        #     },
+        # ]},
         network_configuration={
             "awsvpcConfiguration": {
                 "subnets": ["subnet-05a0d548ea8d901ab", "subnet-07252405b5369afd3"],
