@@ -129,7 +129,7 @@ with DAG(
     schedule=None,
 ) as dag:
     EcsRunTaskOperator(
-        # task_id="ecs_operator",
+        task_id="ecs_operator",
         dag=dag,
         execution_timeout=timedelta(minutes=2),
         retries=3,
