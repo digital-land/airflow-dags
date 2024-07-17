@@ -151,7 +151,7 @@ with DAG(
         #     },
         # ]},
         network_configuration={
-            "networkMode"="awsvpc",
+            "networkMode": "awsvpc",
             "awsvpcConfiguration": {
                 "subnets": ["subnet-05a0d548ea8d901ab", "subnet-07252405b5369afd3"],
                 "securityGroups": ["sg-0fe390dd951829c75"],
