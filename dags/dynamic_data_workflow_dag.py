@@ -128,7 +128,7 @@ DEFAULT_ARGS = {
 }
 
 with DAG(
-    "sample",
+    "Status",
     default_args=DEFAULT_ARGS,
     description="A test DAG to try out functionality",
     schedule=None,
@@ -156,8 +156,8 @@ with DAG(
         #        "assignPublicIp": "ENABLED",
         #    }
         #},
-        awslogs_group="airflow-development-mwaa-Task",
-        awslogs_region="eu-west-1",
-        awslogs_stream_prefix=f"ecs/test",
-        awslogs_fetch_interval=timedelta(seconds=5)
+        #awslogs_group="airflow-development-mwaa-Task",
+        #awslogs_region="eu-west-1",
+        #awslogs_stream_prefix=f"ecs/test",
+        #awslogs_fetch_interval=timedelta(seconds=5)
     )
