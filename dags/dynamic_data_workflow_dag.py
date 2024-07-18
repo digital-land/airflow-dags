@@ -6,11 +6,10 @@ from airflow import DAG
 from airflow.decorators import dag, task
 from airflow.providers.amazon.aws.operators.ecs import EcsRegisterTaskDefinitionOperator, EcsRunTaskOperator
 
-
 cluster_name = 'development-cluster'
 
 register_task = EcsRegisterTaskDefinitionOperator(
-    task_id="ecs-task",
+    task_id="register-task",
     family="test",
     container_definitions=[
         {
@@ -136,7 +135,8 @@ with DAG(
     EcsRunTaskOperator(
         task_id="development-status",
         dag=dag,
-        execution_timeout=timedelta(seconds=30),
+        execution_timeout=timedelta(minutes=5),
+        dagrun_timeout=timedelta(minutes=5),
         #retries=3,
         #aws_conn_id="aws_default",
         cluster=cluster_name,
@@ -171,7 +171,8 @@ with DAG(
     EcsRunTaskOperator(
         task_id="fargate-test",
         dag=dag,
-        execution_timeout=timedelta(seconds=30),
+        execution_timeout=timedelta(minutes=5),
+        dagrun_timeout=timedelta(minutes=5),
         #retries=3,
         #aws_conn_id="aws_default",
         cluster=cluster_name,
