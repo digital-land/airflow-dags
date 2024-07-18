@@ -124,6 +124,7 @@ DEFAULT_ARGS = {
     "owner": "airflow",
     "depends_on_past": False,
     "start_date": datetime(2024, 1, 1),
+    "dagrun_timeout":timedelta(minutes=5),
 }
 
 with DAG(
@@ -136,7 +137,6 @@ with DAG(
         task_id="development-status",
         dag=dag,
         execution_timeout=timedelta(minutes=5),
-        dagrun_timeout=timedelta(minutes=5),
         #retries=3,
         #aws_conn_id="aws_default",
         cluster=cluster_name,
@@ -172,7 +172,6 @@ with DAG(
         task_id="fargate-test",
         dag=dag,
         execution_timeout=timedelta(minutes=5),
-        dagrun_timeout=timedelta(minutes=5),
         #retries=3,
         #aws_conn_id="aws_default",
         cluster=cluster_name,
