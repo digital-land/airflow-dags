@@ -10,7 +10,7 @@ from airflow.providers.amazon.aws.operators.ecs import EcsRegisterTaskDefinition
 cluster_name = 'development-cluster'
 
 register_task = EcsRegisterTaskDefinitionOperator(
-    task_id="fargate-test",
+    task_id="ecs-task",
     family="test",
     container_definitions=[
         {
