@@ -128,7 +128,7 @@ DEFAULT_ARGS = {
 }
 
 with DAG(
-    "ECS Test",
+    "ECS-Test",
     default_args=DEFAULT_ARGS,
     description="A test DAG to try out functionality",
     schedule=None,
