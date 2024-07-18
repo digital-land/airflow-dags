@@ -177,7 +177,6 @@ with DAG(
         cluster=cluster_name,
         task_definition=register_task.output,
         launch_type="FARGATE",
-        overrides={},
         overrides={"containerOverrides": [
              {
                  "name": "hello",
