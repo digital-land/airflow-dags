@@ -161,3 +161,38 @@ with DAG(
         #awslogs_stream_prefix=f"ecs/test",
         #awslogs_fetch_interval=timedelta(seconds=5)
     )
+
+with DAG(
+    "Fargate",
+    default_args=DEFAULT_ARGS,
+    description="A test DAG to try out functionality",
+    schedule=None,
+) as dag:
+    EcsRunTaskOperator(
+        task_id="fargate-test",
+        dag=dag,
+        execution_timeout=timedelta(seconds=30),
+        #retries=3,
+        #aws_conn_id="aws_default",
+        cluster=cluster_name,
+        task_definition=register_task.output,
+        launch_type="FARGATE",
+        overrides={},
+        overrides={"containerOverrides": [
+             {
+                 "name": "hello",
+                 "command": ["python", "-c", "import time; for i in range(30): print(i); time.sleep(1)"],
+             },        
+         ]},
+        network_configuration={
+           "awsvpcConfiguration": {
+               "subnets": ["subnet-05a0d548ea8d901ab", "subnet-07252405b5369afd3"],
+               "securityGroups": ["sg-0fe390dd951829c75"],
+               "assignPublicIp": "ENABLED",
+           }
+        },
+        awslogs_group="airflow-development-mwaa-Task",
+        awslogs_region="eu-west-1",
+        #awslogs_stream_prefix=f"ecs/test",
+        awslogs_fetch_interval=timedelta(seconds=5)
+    )    
