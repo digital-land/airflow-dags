@@ -17,7 +17,7 @@ register_task = EcsRegisterTaskDefinitionOperator(
             "image": "ubuntu",
             "workingDirectory": "/usr/bin",
             "entryPoint": ["sh", "-c"],
-            #"command": ["ls"],
+            "command": ["ls"],
             # "logConfiguration": {
             #     "logDriver": "awslogs",
             #     "options": {
@@ -180,7 +180,7 @@ with DAG(
         overrides={"containerOverrides": [
              {
                  "name": "hello",
-                 "command": ["python", "-c", "import time; for i in range(30): print(i); time.sleep(1)"],
+                 "command": ["echo", "hello"],#python", "-c", "import time; for i in range(30): print(i); time.sleep(1)"],
              },        
          ]},
         network_configuration={
