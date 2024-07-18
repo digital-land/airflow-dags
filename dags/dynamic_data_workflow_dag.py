@@ -136,7 +136,7 @@ with DAG(
     EcsRunTaskOperator(
         task_id="development-status",
         dag=dag,
-        execution_timeout=timedelta(minutes=2),
+        execution_timeout=timedelta(seconds=30),
         #retries=3,
         #aws_conn_id="aws_default",
         cluster=cluster_name,
@@ -156,8 +156,8 @@ with DAG(
         #        "assignPublicIp": "ENABLED",
         #    }
         #},
-        #awslogs_group="airflow-development-mwaa-Task",
-        #awslogs_region="eu-west-1",
+        awslogs_group="airflow-development-mwaa-Task",
+        awslogs_region="eu-west-1",
         #awslogs_stream_prefix=f"ecs/test",
         #awslogs_fetch_interval=timedelta(seconds=5)
     )
