@@ -142,7 +142,7 @@ with DAG(
         cluster=cluster_name,
         task_definition="development-status",#register_task.output,#",
         launch_type="EC2",#"FARGATE",
-        overrides={[]},
+        overrides={},
         # overrides={"containerOverrides": [
         #     {
         #         "name": "test",
