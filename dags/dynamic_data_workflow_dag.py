@@ -153,7 +153,7 @@ with DAG(
            "awsvpcConfiguration": {
                "subnets": ["subnet-05a0d548ea8d901ab", "subnet-07252405b5369afd3"],
                "securityGroups": ["sg-0fe390dd951829c75"],
-               "assignPublicIp": "ENABLED",
+               #"assignPublicIp": "ENABLED",
            }
         },
         awslogs_group="airflow-development-mwaa-Task",
