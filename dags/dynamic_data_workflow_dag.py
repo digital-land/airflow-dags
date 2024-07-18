@@ -8,9 +8,9 @@ from airflow.providers.amazon.aws.operators.ecs import EcsRegisterTaskDefinition
 
 
 cluster_name = 'development-cluster'
-"""
+
 register_task = EcsRegisterTaskDefinitionOperator(
-    task_id="hello",
+    task_id="fargate-test",
     family="test",
     container_definitions=[
         {
@@ -18,7 +18,7 @@ register_task = EcsRegisterTaskDefinitionOperator(
             "image": "ubuntu",
             "workingDirectory": "/usr/bin",
             "entryPoint": ["sh", "-c"],
-            "command": ["ls"],
+            #"command": ["ls"],
             # "logConfiguration": {
             #     "logDriver": "awslogs",
             #     "options": {
@@ -38,7 +38,6 @@ register_task = EcsRegisterTaskDefinitionOperator(
         ],
     },
 )
-"""
 
 my_dir = os.path.dirname(os.path.abspath(__file__))
 configuration_file_path = os.path.join(my_dir, "config.json")
@@ -135,21 +134,21 @@ with DAG(
     schedule=None,
 ) as dag:
     EcsRunTaskOperator(
-        task_id="ecs_operator",
+        task_id="development-status",
         dag=dag,
         execution_timeout=timedelta(minutes=2),
         #retries=3,
         #aws_conn_id="aws_default",
-        cluster="development-cluster",
+        cluster=cluster_name,
         task_definition="development-status",#register_task.output,#",
         launch_type="EC2",#"FARGATE",
         overrides={},
-        # overrides={"containerOverrides": [
-        #         {
-        #         "name": "test",
-        #         "command": ["python", "-c", "import time; for i in range(30): print(i); time.sleep(10)"],
-        #     },
-        # ]},
+        overrides={"containerOverrides": [
+            {
+                "name": "test",
+                "command": ["python", "-c", "import time; for i in range(30): print(i); time.sleep(1)"],
+            },
+        ]},
         #network_configuration={
         #    "awsvpcConfiguration": {
         #        "subnets": ["subnet-05a0d548ea8d901ab", "subnet-07252405b5369afd3"],
