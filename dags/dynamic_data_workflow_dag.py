@@ -128,19 +128,19 @@ DEFAULT_ARGS = {
 }
 
 with DAG(
-    "Status",
+    "ECS Test",
     default_args=DEFAULT_ARGS,
     description="A test DAG to try out functionality",
     schedule=None,
 ) as dag:
     EcsRunTaskOperator(
-        task_id="development-status",
+        task_id="ecs-test",
         dag=dag,
         execution_timeout=timedelta(minutes=5),
         #retries=3,
         #aws_conn_id="aws_default",
         cluster=cluster_name,
-        task_definition="development-status",#register_task.output,#",
+        task_definition="airflow-ecs-operator-test",#register_task.output,#",
         launch_type="EC2",#"FARGATE",
         overrides={},
         # overrides={"containerOverrides": [
