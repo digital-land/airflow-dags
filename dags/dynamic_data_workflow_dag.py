@@ -17,7 +17,7 @@ collection_task = EcsRegisterTaskDefinitionOperator(
     container_definitions=[
         {
             "name": "collection-task",
-            "image": "collection-task",
+            "image": "development-mwaa-dataset-collection-task:publish-image",
             # "workingDirectory": "/usr/bin",
             # "entryPoint": ["sh", "-c"],
             # "command": ["ls"],
