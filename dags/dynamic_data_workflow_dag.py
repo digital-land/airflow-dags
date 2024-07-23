@@ -10,17 +10,17 @@ from airflow.providers.amazon.aws.operators.ecs import (
 )
 
 cluster_name = "development-cluster"
-"""
-register_task = EcsRegisterTaskDefinitionOperator(
-    task_id="register-task",
-    family="test",
+
+collection_task = EcsRegisterTaskDefinitionOperator(
+    task_id="collection-task",
+    family="collection",
     container_definitions=[
         {
-            "name": "hello",
-            "image": "ubuntu",
-            "workingDirectory": "/usr/bin",
-            "entryPoint": ["sh", "-c"],
-            "command": ["ls"],
+            "name": "collection-task",
+            "image": "collection-task",
+            #"workingDirectory": "/usr/bin",
+            #"entryPoint": ["sh", "-c"],
+            #"command": ["ls"],
             # "logConfiguration": {
             #     "logDriver": "awslogs",
             #     "options": {
@@ -38,7 +38,6 @@ register_task = EcsRegisterTaskDefinitionOperator(
         "requiresCompatibilities": ["FARGATE"],
     },
 )
-"""
 
 my_dir = os.path.dirname(os.path.abspath(__file__))
 configuration_file_path = os.path.join(my_dir, "config.json")
