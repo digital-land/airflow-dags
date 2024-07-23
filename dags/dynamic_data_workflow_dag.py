@@ -21,14 +21,14 @@ collection_task = EcsRegisterTaskDefinitionOperator(
             # "workingDirectory": "/usr/bin",
             # "entryPoint": ["sh", "-c"],
             # "command": ["ls"],
-            # "logConfiguration": {
-            #     "logDriver": "awslogs",
-            #     "options": {
-            #         "awslogs-group": "airflow-development-mwaa-Task",
-            #         "awslogs-region": "eu-west-1",
-            #         "awslogs-stream-prefix": "ecs/test",
-            #     },
-            # },
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "airflow-development-mwaa-Task",
+                    "awslogs-region": "eu-west-1",
+                    # "awslogs-stream-prefix": f"{}ecs/test",
+                },
+            },
         },
     ],
     register_task_kwargs={
