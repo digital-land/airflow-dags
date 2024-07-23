@@ -72,7 +72,7 @@ for collection, datasets in configs.items():
             overrides={
                 "containerOverrides": [
                     {
-                        "name": "collection-tasK",
+                        "name": "collection-task",
                         "environment": [
                             {"name": "COLLECTION_NAME", "value": collection}
                         ],
