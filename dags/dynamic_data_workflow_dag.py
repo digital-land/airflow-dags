@@ -67,8 +67,8 @@ for collection, datasets in configs.items():
             # retries=3,
             # aws_conn_id="aws_default",
             cluster=cluster_name,
-            task_definition="airflow-ecs-operator-test",  # register_task.output,#",
-            launch_type="EC2",  # "FARGATE",
+            task_definition=collection_task.output,
+            launch_type="FARGATE",
             overrides={},
             # overrides={"containerOverrides": [
             #     {
@@ -80,7 +80,7 @@ for collection, datasets in configs.items():
                 "awsvpcConfiguration": {
                     "subnets": ["subnet-05a0d548ea8d901ab", "subnet-07252405b5369afd3"],
                     "securityGroups": ["sg-0fe390dd951829c75"],
-                    # "assignPublicIp": "ENABLED",
+                    "assignPublicIp": "ENABLED",
                 }
             },
             awslogs_group="airflow-development-mwaa-Task",
@@ -88,6 +88,8 @@ for collection, datasets in configs.items():
             # awslogs_stream_prefix=f"ecs/test",
             # awslogs_fetch_interval=timedelta(seconds=5)
         )
+
+    break # Just do the first one for now
 
     """
     with DAG(
