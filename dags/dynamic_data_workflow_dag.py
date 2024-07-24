@@ -21,8 +21,8 @@ collection_task = EcsRegisterTaskDefinitionOperator(
             # "workingDirectory": "/usr/bin",
             # "entryPoint": ["sh", "-c"],
             # "command": ["ls"],
-            "executionRoleArn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
             "logConfiguration": {
+                "executionRoleArn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
                 "logDriver": "awslogs",
                 "options": {
                     "awslogs-group": "airflow-development-mwaa-Task",
