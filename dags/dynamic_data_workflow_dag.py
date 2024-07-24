@@ -14,7 +14,6 @@ cluster_name = "development-cluster"
 collection_task = EcsRegisterTaskDefinitionOperator(
     task_id="collection-task",
     family="collection",
-    executionRoleArn="arn:aws:iam::955696714113:role/development-mwaa-execution-role",
     container_definitions=[
         {
             "name": "collection-task",
@@ -22,15 +21,15 @@ collection_task = EcsRegisterTaskDefinitionOperator(
             # "workingDirectory": "/usr/bin",
             # "entryPoint": ["sh", "-c"],
             # "command": ["ls"],
-
-            # "logConfiguration": {
-            #     "logDriver": "awslogs",
-            #     "options": {
-            #         "awslogs-group": "airflow-development-mwaa-Task",
-            #         "awslogs-region": "eu-west-1",
-            #         "awslogs-stream-prefix": "ecs",
-            #     },
-            # },
+            "executionRoleArn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "airflow-development-mwaa-Task",
+                    "awslogs-region": "eu-west-1",
+                    "awslogs-stream-prefix": "ecs",
+                },
+            },
         },
     ],
     register_task_kwargs={
