@@ -35,7 +35,7 @@ collection_task = EcsRegisterTaskDefinitionOperator(
     ],
     register_task_kwargs={
         "cpu": "1024",
-        "taskRoleRrn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
+        "taskRoleArn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
         "executionRoleArn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
         "memory": "8192",
         "networkMode": "awsvpc",
