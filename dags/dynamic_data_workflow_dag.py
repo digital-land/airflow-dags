@@ -21,14 +21,15 @@ collection_task = EcsRegisterTaskDefinitionOperator(
             # "workingDirectory": "/usr/bin",
             # "entryPoint": ["sh", "-c"],
             # "command": ["ls"],
-            "logConfiguration": {
-                "logDriver": "awslogs",
-                "options": {
-                    "awslogs-group": "airflow-development-mwaa-Task",
-                    "awslogs-region": "eu-west-1",
-                    "awslogs-stream-prefix": "ecs",
-                },
-            },
+
+            # "logConfiguration": {
+            #     "logDriver": "awslogs",
+            #     "options": {
+            #         "awslogs-group": "airflow-development-mwaa-Task",
+            #         "awslogs-region": "eu-west-1",
+            #         "awslogs-stream-prefix": "ecs",
+            #     },
+            # },
         },
     ],
     register_task_kwargs={
@@ -52,6 +53,10 @@ DEFAULT_ARGS = {
 }
 
 for collection, datasets in configs.items():
+
+    if collection != "central-activities-zone":
+        continue
+
     dag_id = f"{collection}-collection"
 
     with DAG(
@@ -92,7 +97,6 @@ for collection, datasets in configs.items():
             # awslogs_fetch_interval=timedelta(seconds=5)
         )
 
-    break  # Just do the first one for now
 
     """
     with DAG(
