@@ -187,7 +187,7 @@ with DAG(
         #retries=3,
         #aws_conn_id="aws_default",
         cluster=cluster_name,
-        task_definition=register_task.output,
+        task_definition=test_task.output,
         launch_type="FARGATE",
         overrides={"containerOverrides": [
              {
