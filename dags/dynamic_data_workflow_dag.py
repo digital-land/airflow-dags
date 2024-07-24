@@ -88,7 +88,7 @@ for collection, datasets in configs.items():
             },
             awslogs_group="airflow-development-mwaa-Task",
             awslogs_region="eu-west-1",
-            # awslogs_stream_prefix=f"ecs/test",
+            awslogs_stream_prefix="ecs",
             # awslogs_fetch_interval=timedelta(seconds=5)
         )
 
