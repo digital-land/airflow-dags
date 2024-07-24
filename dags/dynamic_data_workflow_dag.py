@@ -10,6 +10,8 @@ from airflow.providers.amazon.aws.operators.ecs import (
 )
 
 cluster_name = "development-cluster"
+log_group = "airflow-development-mwaa-Task"
+log_region = "eu-west-1"
 
 collection_task = EcsRegisterTaskDefinitionOperator(
     task_id="collection-task",
@@ -24,9 +26,9 @@ collection_task = EcsRegisterTaskDefinitionOperator(
             "logConfiguration": {
                 "logDriver": "awslogs",
                 "options": {
-                    "awslogs-group": "airflow-development-mwaa-Task",
-                    "awslogs-region": "eu-west-1",
-                    "awslogs-stream-prefix": "ecs",
+                    "awslogs-group": log_group,
+                    "awslogs-region": log_region,
+                    "awslogs-stream-prefix": "collector",
                 },
             },
         },
@@ -91,8 +93,8 @@ for collection, datasets in configs.items():
                     "assignPublicIp": "ENABLED",
                 }
             },
-            awslogs_group="airflow-development-mwaa-Task",
-            awslogs_region="eu-west-1",
-            awslogs_stream_prefix="ecs",
+            awslogs_group=log_group,
+            awslogs_region=log_region,
+            awslogs_stream_prefix="collector",
             # awslogs_fetch_interval=timedelta(seconds=5)
         )
