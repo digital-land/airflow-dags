@@ -13,6 +13,37 @@ cluster_name = "development-cluster"
 log_group = "airflow-development-mwaa-Task"
 log_region = "eu-west-1"
 
+test_task = EcsRegisterTaskDefinitionOperator(
+    task_id="register-task",
+    family="test",
+    container_definitions=[
+        {
+            "name": "hello",
+            "image": "ubuntu",
+            "workingDirectory": "/usr/bin",
+            "entryPoint": ["sh", "-c"],
+            "command": ["ls"],
+            # "logConfiguration": {
+            #     "logDriver": "awslogs",
+            #     "options": {
+            #         "awslogs-group": "airflow-development-mwaa-Task",
+            #         "awslogs-region": "eu-west-1",
+            #         "awslogs-stream-prefix": "ecs/test",
+            #     },
+            # },
+        },
+    ],
+    register_task_kwargs={
+        "cpu": "256",
+        "memory": "512",
+        "networkMode": "awsvpc",
+        "requiresCompatibilities": [
+            "FARGATE"
+        ],
+    },
+)
+
+
 collection_task = EcsRegisterTaskDefinitionOperator(
     task_id="collection-task",
     family="collection",
@@ -99,3 +130,80 @@ for collection, datasets in configs.items():
             awslogs_stream_prefix="collector",
             # awslogs_fetch_interval=timedelta(seconds=5)
         )
+
+DEFAULT_ARGS = {
+    "owner": "airflow",
+    "depends_on_past": False,
+    "start_date": datetime(2024, 1, 1),
+    "dagrun_timeout":timedelta(minutes=5),
+}
+
+with DAG(
+    "ECS-Test",
+    default_args=DEFAULT_ARGS,
+    description="A test DAG to try out functionality",
+    schedule=None,
+) as dag:
+    EcsRunTaskOperator(
+        task_id="ecs-test",
+        dag=dag,
+        execution_timeout=timedelta(minutes=5),
+        #retries=3,
+        #aws_conn_id="aws_default",
+        cluster=cluster_name,
+        task_definition="airflow-ecs-operator-test",#register_task.output,#",
+        launch_type="EC2",#"FARGATE",
+        overrides={},
+        # overrides={"containerOverrides": [
+        #     {
+        #         "name": "test",
+        #         "command": ["python", "-c", "import time; for i in range(30): print(i); time.sleep(1)"],
+        #     },
+        # ]},
+        network_configuration={
+           "awsvpcConfiguration": {
+               "subnets": ["subnet-05a0d548ea8d901ab", "subnet-07252405b5369afd3"],
+               "securityGroups": ["sg-0fe390dd951829c75"],
+               #"assignPublicIp": "ENABLED",
+           }
+        },
+        awslogs_group="airflow-development-mwaa-Task",
+        awslogs_region="eu-west-1",
+        #awslogs_stream_prefix=f"ecs/test",
+        #awslogs_fetch_interval=timedelta(seconds=5)
+    )
+
+
+with DAG(
+    "Fargate",
+    default_args=DEFAULT_ARGS,
+    description="A test DAG to try out functionality",
+    schedule=None,
+) as dag:
+    EcsRunTaskOperator(
+        task_id="fargate-test",
+        dag=dag,
+        execution_timeout=timedelta(minutes=5),
+        #retries=3,
+        #aws_conn_id="aws_default",
+        cluster=cluster_name,
+        task_definition=register_task.output,
+        launch_type="FARGATE",
+        overrides={"containerOverrides": [
+             {
+                 "name": "hello",
+                 "command": ["echo", "hello"],#python", "-c", "import time; for i in range(30): print(i); time.sleep(1)"],
+             },        
+         ]},
+        network_configuration={
+           "awsvpcConfiguration": {
+               "subnets": ["subnet-05a0d548ea8d901ab", "subnet-07252405b5369afd3"],
+               "securityGroups": ["sg-0fe390dd951829c75"],
+               "assignPublicIp": "ENABLED",
+           }
+        },
+        awslogs_group="airflow-development-mwaa-Task",
+        awslogs_region="eu-west-1",
+        #awslogs_stream_prefix=f"ecs/test",
+        awslogs_fetch_interval=timedelta(seconds=5)
+    )        
