@@ -22,7 +22,6 @@ collection_task = EcsRegisterTaskDefinitionOperator(
             # "entryPoint": ["sh", "-c"],
             # "command": ["ls"],
             "logConfiguration": {
-                "executionRoleArn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
                 "logDriver": "awslogs",
                 "options": {
                     "awslogs-group": "airflow-development-mwaa-Task",
@@ -34,6 +33,7 @@ collection_task = EcsRegisterTaskDefinitionOperator(
     ],
     register_task_kwargs={
         "cpu": "256",
+        "executionRoleArn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
         "memory": "512",
         "networkMode": "awsvpc",
         "requiresCompatibilities": ["FARGATE"],
