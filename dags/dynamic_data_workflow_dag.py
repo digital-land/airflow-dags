@@ -16,6 +16,7 @@ log_region = "eu-west-1"
 collection_task = EcsRegisterTaskDefinitionOperator(
     task_id="collection-task",
     family="collection",
+    task_role_arn="arn:aws:iam::955696714113:role/development-mwaa-execution-role",
     container_definitions=[
         {
             "name": "collection-task",
