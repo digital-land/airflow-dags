@@ -202,8 +202,8 @@ with DAG(
                "assignPublicIp": "ENABLED",
            }
         },
-        awslogs_group=log_group
-        awslogs_region=log_region
+        awslogs_group=log_group,
+        awslogs_region=log_region,
         awslogs_stream_prefix="ecs/test",
         awslogs_fetch_interval=timedelta(seconds=5)
     )        
