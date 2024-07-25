@@ -130,7 +130,7 @@ for collection, datasets in configs.items():
             },
             awslogs_group=log_group,
             awslogs_region=log_region,
-            awslogs_stream_prefix="collector",
+            awslogs_stream_prefix="collector/collection-task",
             # awslogs_fetch_interval=timedelta(seconds=5)
         )
 
