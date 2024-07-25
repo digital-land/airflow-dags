@@ -85,10 +85,9 @@ DEFAULT_ARGS = {
     "dagrun_timeout": timedelta(minutes=5),
 }
 
-for collection, datasets in configs.items():
 
-    if collection not in ["central-activities-zone", "ancient-woodland"]:
-        continue
+for collection, datasets in configs.items():
+    continue
 
     dag_id = f"{collection}-collection"
 
@@ -208,3 +207,44 @@ with DAG(
         awslogs_stream_prefix="ecs/hello",
         awslogs_fetch_interval=timedelta(seconds=5),
     )
+
+
+    with DAG(
+        "Digital Land Collector",
+        default_args=DEFAULT_ARGS,
+        description=f"Collection task for digital land",
+        schedule=None,
+    ) as dag:
+        for collection, datasets in configs.items():
+
+            EcsRunTaskOperator(
+                task_id=f"{collection}-collector",
+                dag=dag,
+                execution_timeout=timedelta(minutes=10),
+                # retries=3,
+                # aws_conn_id="aws_default",
+                cluster=cluster_name,
+                task_definition=collection_task.output,
+                launch_type="FARGATE",
+                overrides={
+                    "containerOverrides": [
+                        {
+                            "name": "collection-task",
+                            "environment": [
+                                {"name": "COLLECTION_NAME", "value": collection}
+                            ],
+                        },
+                    ]
+                },
+                network_configuration={
+                    "awsvpcConfiguration": {
+                        "subnets": ["subnet-05a0d548ea8d901ab", "subnet-07252405b5369afd3"],
+                        "securityGroups": ["sg-0fe390dd951829c75"],
+                        "assignPublicIp": "ENABLED",
+                    }
+                },
+                awslogs_group=log_group,
+                awslogs_region=log_region,
+                awslogs_stream_prefix=f"collection/{collection}-collector"
+                # awslogs_fetch_interval=timedelta(seconds=5)
+            )
