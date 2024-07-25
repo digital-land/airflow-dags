@@ -195,7 +195,7 @@ with DAG(
         overrides={"containerOverrides": [
              {
                  "name": "hello",
-                 "command": ["python", "-c", "import time; for i in range(30): print(i); time.sleep(1)"],
+                 "command": ["uname"],
              },        
          ]},
         network_configuration={
