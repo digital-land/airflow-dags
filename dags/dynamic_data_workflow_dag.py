@@ -45,33 +45,6 @@ test_task = EcsRegisterTaskDefinitionOperator(
 )
 
 
-collection_task = EcsRegisterTaskDefinitionOperator(
-    task_id="collection-task",
-    family="collection",
-    container_definitions=[
-        {
-            "name": "collection-task",
-            "image": "public.ecr.aws/l6z6v3j6/development-mwaa-dataset-collection-task:publish-image",
-            "logConfiguration": {
-                "logDriver": "awslogs",
-                "options": {
-                    "awslogs-create-group": "true",
-                    "awslogs-group": log_group,
-                    "awslogs-region": log_region,
-                    "awslogs-stream-prefix": "collector",
-                },
-            },
-        },
-    ],
-    register_task_kwargs={
-        "cpu": "1024",
-        "taskRoleArn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
-        "executionRoleArn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
-        "memory": "8192",
-        "networkMode": "awsvpc",
-        "requiresCompatibilities": ["FARGATE"],
-    },
-)
 
 my_dir = os.path.dirname(os.path.abspath(__file__))
 configuration_file_path = os.path.join(my_dir, "config.json")
@@ -87,7 +60,34 @@ DEFAULT_ARGS = {
 
 
 for collection, datasets in configs.items():
-    continue
+
+    collection_task = EcsRegisterTaskDefinitionOperator(
+        task_id="collection-task",
+        family="collection",
+        container_definitions=[
+            {
+                "name": "collection-task",
+                "image": "public.ecr.aws/l6z6v3j6/development-mwaa-dataset-collection-task:publish-image",
+                "logConfiguration": {
+                    "logDriver": "awslogs",
+                    "options": {
+                        "awslogs-create-group": "true",
+                        "awslogs-group": log_group,
+                        "awslogs-region": log_region,
+                        "awslogs-stream-prefix": "collector",
+                    },
+                },
+            },
+        ],
+        register_task_kwargs={
+            "cpu": "1024",
+            "taskRoleArn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
+            "executionRoleArn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
+            "memory": "8192",
+            "networkMode": "awsvpc",
+            "requiresCompatibilities": ["FARGATE"],
+        },
+    )
 
     dag_id = f"{collection}-collection"
 
