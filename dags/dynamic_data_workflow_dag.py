@@ -23,14 +23,14 @@ test_task = EcsRegisterTaskDefinitionOperator(
             "workingDirectory": "/usr/bin",
             "entryPoint": ["sh", "-c"],
             "command": ["ls"],
-            # "logConfiguration": {
-            #     "logDriver": "awslogs",
-            #     "options": {
-            #         "awslogs-group": "airflow-development-mwaa-Task",
-            #         "awslogs-region": "eu-west-1",
-            #         "awslogs-stream-prefix": "ecs/test",
-            #     },
-            # },
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": log_group,
+                    "awslogs-region": log_region,
+                    "awslogs-stream-prefix": "ecs/test",
+                },
+            },
         },
     ],
     register_task_kwargs={
@@ -202,8 +202,8 @@ with DAG(
                "assignPublicIp": "ENABLED",
            }
         },
-        awslogs_group="airflow-development-mwaa-Task",
-        awslogs_region="eu-west-1",
-        #awslogs_stream_prefix=f"ecs/test",
+        awslogs_group=log_group
+        awslogs_region=log_region
+        awslogs_stream_prefix="ecs/test",
         awslogs_fetch_interval=timedelta(seconds=5)
     )        
