@@ -210,7 +210,7 @@ with DAG(
 
 
     with DAG(
-        "Digital Land Collector",
+        "digital-land-collector",
         default_args=DEFAULT_ARGS,
         description=f"Collection task for digital land",
         schedule=None,
