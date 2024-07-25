@@ -8,8 +8,6 @@ from airflow.providers.amazon.aws.operators.ecs import (
     EcsRegisterTaskDefinitionOperator,
     EcsRunTaskOperator,
 )
-from airflow.providers.amazon.aws.operators.iam import iam
-
 
 cluster_name = "development-cluster"
 log_group = "airflow-development-mwaa-Task"
