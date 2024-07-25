@@ -29,7 +29,7 @@ test_task = EcsRegisterTaskDefinitionOperator(
                     "awslogs-create-group": "true",
                     "awslogs-group": log_group,
                     "awslogs-region": log_region,
-                    "awslogs-stream-prefix": "ecs/test",
+                    "awslogs-stream-prefix": "ecs",
                 },
             },
         },
@@ -207,6 +207,6 @@ with DAG(
         },
         awslogs_group=log_group,
         awslogs_region=log_region,
-        awslogs_stream_prefix="ecs/test",
+        awslogs_stream_prefix="ecs/hello",
         awslogs_fetch_interval=timedelta(seconds=5)
     )        
