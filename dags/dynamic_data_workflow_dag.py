@@ -8,13 +8,15 @@ from airflow.providers.amazon.aws.operators.ecs import (
     EcsRegisterTaskDefinitionOperator,
     EcsRunTaskOperator,
 )
+from airflow.providers.amazon.aws.operators.iam import iam
+
 
 cluster_name = "development-cluster"
 log_group = "airflow-development-mwaa-Task"
 log_region = "eu-west-1"
 
 test_task = EcsRegisterTaskDefinitionOperator(
-    task_id="register-task",
+    task_id="test-task",
     family="test",
     container_definitions=[
         {
@@ -23,8 +25,6 @@ test_task = EcsRegisterTaskDefinitionOperator(
             "workingDirectory": "/usr/bin",
             "entryPoint": ["sh", "-c"],
             "command": ["ls"],
-            "taskRoleArn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
-            "executionRoleArn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
             "logConfiguration": {                
                 "logDriver": "awslogs",
                 "options": {
