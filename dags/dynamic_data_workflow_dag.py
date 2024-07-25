@@ -3,7 +3,7 @@ import json
 
 from datetime import datetime, timedelta
 from airflow import DAG
-from airflow.decorators import dag, task
+from airflow.decorators import dag
 from airflow.providers.amazon.aws.operators.ecs import (
     EcsRegisterTaskDefinitionOperator,
     EcsRunTaskOperator,
@@ -23,7 +23,7 @@ test_task = EcsRegisterTaskDefinitionOperator(
             "workingDirectory": "/usr/bin",
             "entryPoint": ["sh", "-c"],
             "command": ["ls"],
-            "logConfiguration": {                
+            "logConfiguration": {
                 "logDriver": "awslogs",
                 "options": {
                     "awslogs-create-group": "true",
@@ -40,9 +40,7 @@ test_task = EcsRegisterTaskDefinitionOperator(
         "executionRoleArn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
         "memory": "512",
         "networkMode": "awsvpc",
-        "requiresCompatibilities": [
-            "FARGATE"
-        ],
+        "requiresCompatibilities": ["FARGATE"],
     },
 )
 
@@ -54,12 +52,10 @@ collection_task = EcsRegisterTaskDefinitionOperator(
         {
             "name": "collection-task",
             "image": "public.ecr.aws/l6z6v3j6/development-mwaa-dataset-collection-task:publish-image",
-            #"workingDirectory": "/usr/bin",
-            #"entryPoint": ["sh", "-c"],
-            #"command": ["ls"],
             "logConfiguration": {
                 "logDriver": "awslogs",
                 "options": {
+                    "awslogs-create-group": "true",
                     "awslogs-group": log_group,
                     "awslogs-region": log_region,
                     "awslogs-stream-prefix": "collector",
@@ -91,7 +87,7 @@ DEFAULT_ARGS = {
 
 for collection, datasets in configs.items():
 
-    if collection not in  ["central-activities-zone","ancient-woodland"]:
+    if collection not in ["central-activities-zone", "ancient-woodland"]:
         continue
 
     dag_id = f"{collection}-collection"
@@ -138,7 +134,7 @@ DEFAULT_ARGS = {
     "owner": "airflow",
     "depends_on_past": False,
     "start_date": datetime(2024, 1, 1),
-    "dagrun_timeout":timedelta(minutes=5),
+    "dagrun_timeout": timedelta(minutes=5),
 }
 
 with DAG(
@@ -151,11 +147,11 @@ with DAG(
         task_id="ecs-test",
         dag=dag,
         execution_timeout=timedelta(minutes=5),
-        #retries=3,
-        #aws_conn_id="aws_default",
+        # retries=3,
+        # aws_conn_id="aws_default",
         cluster=cluster_name,
-        task_definition="airflow-ecs-operator-test",#register_task.output,#",
-        launch_type="EC2",#"FARGATE",
+        task_definition="airflow-ecs-operator-test",  # register_task.output,#",
+        launch_type="EC2",  # "FARGATE",
         overrides={},
         # overrides={"containerOverrides": [
         #     {
@@ -164,16 +160,16 @@ with DAG(
         #     },
         # ]},
         network_configuration={
-           "awsvpcConfiguration": {
-               "subnets": ["subnet-05a0d548ea8d901ab", "subnet-07252405b5369afd3"],
-               "securityGroups": ["sg-0fe390dd951829c75"],
-               #"assignPublicIp": "ENABLED",
-           }
+            "awsvpcConfiguration": {
+                "subnets": ["subnet-05a0d548ea8d901ab", "subnet-07252405b5369afd3"],
+                "securityGroups": ["sg-0fe390dd951829c75"],
+                # "assignPublicIp": "ENABLED",
+            }
         },
         awslogs_group="airflow-development-mwaa-Task",
         awslogs_region="eu-west-1",
-        #awslogs_stream_prefix=f"ecs/test",
-        #awslogs_fetch_interval=timedelta(seconds=5)
+        # awslogs_stream_prefix=f"ecs/test",
+        # awslogs_fetch_interval=timedelta(seconds=5)
     )
 
 
@@ -187,26 +183,28 @@ with DAG(
         task_id="fargate-test",
         dag=dag,
         execution_timeout=timedelta(minutes=5),
-        #retries=3,
-        #aws_conn_id="aws_default",
+        # retries=3,
+        # aws_conn_id="aws_default",
         cluster=cluster_name,
         task_definition=test_task.output,
         launch_type="FARGATE",
-        overrides={"containerOverrides": [
-             {
-                 "name": "hello",
-                 "command": ["uname"],
-             },        
-         ]},
+        overrides={
+            "containerOverrides": [
+                {
+                    "name": "hello",
+                    "command": ["uname"],
+                },
+            ]
+        },
         network_configuration={
-           "awsvpcConfiguration": {
-               "subnets": ["subnet-05a0d548ea8d901ab", "subnet-07252405b5369afd3"],
-               "securityGroups": ["sg-0fe390dd951829c75"],
-               "assignPublicIp": "ENABLED",
-           }
+            "awsvpcConfiguration": {
+                "subnets": ["subnet-05a0d548ea8d901ab", "subnet-07252405b5369afd3"],
+                "securityGroups": ["sg-0fe390dd951829c75"],
+                "assignPublicIp": "ENABLED",
+            }
         },
         awslogs_group=log_group,
         awslogs_region=log_region,
         awslogs_stream_prefix="ecs/hello",
-        awslogs_fetch_interval=timedelta(seconds=5)
-    )        
+        awslogs_fetch_interval=timedelta(seconds=5),
+    )
