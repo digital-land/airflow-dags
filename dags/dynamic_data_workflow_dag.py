@@ -35,6 +35,8 @@ test_task = EcsRegisterTaskDefinitionOperator(
     ],
     register_task_kwargs={
         "cpu": "256",
+        "taskRoleArn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
+        "executionRoleArn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
         "memory": "512",
         "networkMode": "awsvpc",
         "requiresCompatibilities": [
