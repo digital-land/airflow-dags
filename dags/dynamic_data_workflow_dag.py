@@ -91,7 +91,7 @@ DEFAULT_ARGS = {
 
 for collection, datasets in configs.items():
 
-    if collection != "central-activities-zone":
+    if collection not in  ["central-activities-zone","ancient-woodland"]:
         continue
 
     dag_id = f"{collection}-collection"
