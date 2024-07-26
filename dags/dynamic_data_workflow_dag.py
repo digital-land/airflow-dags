@@ -139,7 +139,7 @@ with DAG(
     schedule=None,
 ) as dag:    
     test_task = EcsRegisterTaskDefinitionOperator(
-        task_id="test-task",
+        task_id="register-test-task",
         family="test",
         container_definitions=[
             {
@@ -170,7 +170,7 @@ with DAG(
     )
 
     EcsRunTaskOperator(
-        task_id="fargate-test",
+        task_id="run-test-task",
         dag=dag,
         execution_timeout=timedelta(minutes=5),
         # retries=3,
