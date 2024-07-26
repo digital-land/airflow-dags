@@ -20,38 +20,6 @@ default_args = {
     "dagrun_timeout": timedelta(minutes=5),
 }
 
-test_task = EcsRegisterTaskDefinitionOperator(
-    task_id="test-task",
-    family="test",
-    container_definitions=[
-        {
-            "name": "hello",
-            "image": "ubuntu",
-            "workingDirectory": "/usr/bin",
-            "entryPoint": ["sh", "-c"],
-            "command": ["ls"],
-            "logConfiguration": {
-                "logDriver": "awslogs",
-                "options": {
-                    "awslogs-create-group": "true",
-                    "awslogs-group": log_group,
-                    "awslogs-region": log_region,
-                    "awslogs-stream-prefix": "ecs",
-                },
-            },
-        },
-    ],
-    register_task_kwargs={
-        "cpu": "256",
-        "taskRoleArn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
-        "executionRoleArn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
-        "memory": "512",
-        "networkMode": "awsvpc",
-        "requiresCompatibilities": ["FARGATE"],
-    },
-)
-
-
 my_dir = os.path.dirname(os.path.abspath(__file__))
 configuration_file_path = os.path.join(my_dir, "config.json")
 with open(configuration_file_path) as file:
@@ -142,7 +110,7 @@ with DAG(
         # aws_conn_id="aws_default",
         cluster=cluster_name,
         task_definition="airflow-ecs-operator-test",  # register_task.output,#",
-        launch_type="EC2",  # "FARGATE",
+        launch_type="EC2",
         overrides={},
         # overrides={"containerOverrides": [
         #     {
@@ -159,7 +127,7 @@ with DAG(
         },
         awslogs_group="airflow-development-mwaa-Task",
         awslogs_region="eu-west-1",
-        # awslogs_stream_prefix=f"ecs/test",
+        # awslogs_stream_prefix=f"ec2/test",
         # awslogs_fetch_interval=timedelta(seconds=5)
     )
 
@@ -169,7 +137,38 @@ with DAG(
     default_args=default_args,
     description="A test DAG to try out functionality",
     schedule=None,
-) as dag:
+) as dag:    
+    test_task = EcsRegisterTaskDefinitionOperator(
+        task_id="test-task",
+        family="test",
+        container_definitions=[
+            {
+                "name": "hello",
+                "image": "ubuntu",
+                "workingDirectory": "/usr/bin",
+                "entryPoint": ["sh", "-c"],
+                "command": ["ls"],
+                "logConfiguration": {
+                    "logDriver": "awslogs",
+                    "options": {
+                        "awslogs-create-group": "true",
+                        "awslogs-group": log_group,
+                        "awslogs-region": log_region,
+                        "awslogs-stream-prefix": "ecs",
+                    },
+                },
+            },
+        ],
+        register_task_kwargs={
+            "cpu": "256",
+            "taskRoleArn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
+            "executionRoleArn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
+            "memory": "512",
+            "networkMode": "awsvpc",
+            "requiresCompatibilities": ["FARGATE"],
+        },
+    )
+
     EcsRunTaskOperator(
         task_id="fargate-test",
         dag=dag,
