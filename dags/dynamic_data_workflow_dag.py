@@ -61,33 +61,36 @@ DEFAULT_ARGS = {
 
 for collection, datasets in configs.items():
 
-    collection_task = EcsRegisterTaskDefinitionOperator(
-        task_id="collection-task",
-        family="collection",
-        container_definitions=[
-            {
-                "name": "collection-task",
-                "image": "public.ecr.aws/l6z6v3j6/development-mwaa-dataset-collection-task:publish-image",
-                "logConfiguration": {
-                    "logDriver": "awslogs",
-                    "options": {
-                        "awslogs-create-group": "true",
-                        "awslogs-group": log_group,
-                        "awslogs-region": log_region,
-                        "awslogs-stream-prefix": "collector",
+    collection_task = 'development-mwaa-collection-task'
+
+    if not collection_task:      
+        collection_task = EcsRegisterTaskDefinitionOperator(
+            task_id="collection-task",
+            family="collection",
+            container_definitions=[
+                {
+                    "name": "collection-task",
+                    "image": "public.ecr.aws/l6z6v3j6/development-mwaa-dataset-collection-task:publish-image",
+                    "logConfiguration": {
+                        "logDriver": "awslogs",
+                        "options": {
+                            "awslogs-create-group": "true",
+                            "awslogs-group": log_group,
+                            "awslogs-region": log_region,
+                            "awslogs-stream-prefix": "collector",
+                        },
                     },
                 },
+            ],
+            register_task_kwargs={
+                "cpu": "1024",
+                "taskRoleArn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
+                "executionRoleArn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
+                "memory": "8192",
+                "networkMode": "awsvpc",
+                "requiresCompatibilities": ["FARGATE"],
             },
-        ],
-        register_task_kwargs={
-            "cpu": "1024",
-            "taskRoleArn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
-            "executionRoleArn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
-            "memory": "8192",
-            "networkMode": "awsvpc",
-            "requiresCompatibilities": ["FARGATE"],
-        },
-    )
+        )
 
     dag_id = f"{collection}-collection"
 
@@ -207,73 +210,3 @@ with DAG(
         awslogs_stream_prefix="ecs/hello",
         awslogs_fetch_interval=timedelta(seconds=5),
     )
-
-
-    with DAG(
-        "digital-land-collector",
-        default_args=DEFAULT_ARGS,
-        description=f"Collection task for digital land",
-        schedule=None,
-    ) as dag:
-        for collection, datasets in configs.items():
-
-            if False:
-                collection_task = EcsRegisterTaskDefinitionOperator(
-                    task_id=f"{collection}-collection-task",
-                    family="collection",
-                    container_definitions=[
-                        {
-                            "name": f"{collection}-collection-task",
-                            "image": "public.ecr.aws/l6z6v3j6/development-mwaa-dataset-collection-task:publish-image",
-                            "logConfiguration": {
-                                "logDriver": "awslogs",
-                                "options": {
-                                    "awslogs-create-group": "true",
-                                    "awslogs-group": log_group,
-                                    "awslogs-region": log_region,
-                                    "awslogs-stream-prefix": "collector",
-                                },
-                            },
-                        },
-                    ],
-                    register_task_kwargs={
-                        "cpu": "1024",
-                        "taskRoleArn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
-                        "executionRoleArn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
-                        "memory": "8192",
-                        "networkMode": "awsvpc",
-                        "requiresCompatibilities": ["FARGATE"],
-                    },
-                )
-
-            EcsRunTaskOperator(
-                task_id=f"{collection}-collector",
-                dag=dag,
-                execution_timeout=timedelta(minutes=10),
-                # retries=3,
-                # aws_conn_id="aws_default",
-                cluster=cluster_name,
-                task_definition="development-mwaa-collection-task", # collection_task.output,
-                launch_type="FARGATE",
-                overrides={
-                    "containerOverrides": [
-                        {
-                            "name": f"{collection}-collection-task",
-                            "environment": [
-                                {"name": "COLLECTION_NAME", "value": collection}
-                            ],
-                        },
-                    ]
-                },
-                network_configuration={
-                    "awsvpcConfiguration": {
-                        "subnets": ["subnet-05a0d548ea8d901ab", "subnet-07252405b5369afd3"],
-                        "securityGroups": ["sg-0fe390dd951829c75"],
-                        "assignPublicIp": "ENABLED",
-                    }
-                },
-                awslogs_group=log_group,
-                awslogs_region=log_region,
-                awslogs_stream_prefix=f"collection/{collection}-collector"
-                # awslogs_fetch_interval=timedelta(seconds=5)
-            )
