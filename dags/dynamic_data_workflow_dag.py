@@ -102,10 +102,8 @@ for collection, datasets in configs.items():
             task_id="collection",
             dag=dag,
             execution_timeout=timedelta(minutes=10),
-            # retries=3,
-            # aws_conn_id="aws_default",
             cluster=cluster_name,
-            task_definition='development-mwaa-collection-task', # collection_task.output,
+            task_definition="https://tpximpact.slack.com/archives/D073YKHR163/p1721992680434849", # collection_task.output,
             launch_type="FARGATE",
             overrides={
                 "containerOverrides": [
