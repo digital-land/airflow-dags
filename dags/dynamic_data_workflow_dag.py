@@ -45,56 +45,53 @@ test_task = EcsRegisterTaskDefinitionOperator(
 )
 
 
-
 my_dir = os.path.dirname(os.path.abspath(__file__))
 configuration_file_path = os.path.join(my_dir, "config.json")
 with open(configuration_file_path) as file:
     configs = json.load(file)
 
-DEFAULT_ARGS = {
-    "owner": "airflow",
-    "depends_on_past": False,
-    "start_date": datetime(2024, 1, 1),
-    "dagrun_timeout": timedelta(minutes=5),
-}
+
+def create_collection_task():
+    return EcsRegisterTaskDefinitionOperator(
+        task_id="collection-task",
+        family="collection",
+        container_definitions=[
+            {
+                "name": "collection-task",
+                "image": "public.ecr.aws/l6z6v3j6/development-mwaa-dataset-collection-task:publish-image",
+                "logConfiguration": {
+                    "logDriver": "awslogs",
+                    "options": {
+                        "awslogs-create-group": "true",
+                        "awslogs-group": log_group,
+                        "awslogs-region": log_region,
+                        "awslogs-stream-prefix": "collector",
+                    },
+                },
+            },
+        ],
+        register_task_kwargs={
+            "cpu": "1024",
+            "taskRoleArn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
+            "executionRoleArn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
+            "memory": "8192",
+            "networkMode": "awsvpc",
+            "requiresCompatibilities": ["FARGATE"],
+        },
+    )
 
 
 for collection, datasets in configs.items():
-
-    if False:      
-        collection_task = EcsRegisterTaskDefinitionOperator(
-            task_id="collection-task",
-            family="collection",
-            container_definitions=[
-                {
-                    "name": "collection-task",
-                    "image": "public.ecr.aws/l6z6v3j6/development-mwaa-dataset-collection-task:publish-image",
-                    "logConfiguration": {
-                        "logDriver": "awslogs",
-                        "options": {
-                            "awslogs-create-group": "true",
-                            "awslogs-group": log_group,
-                            "awslogs-region": log_region,
-                            "awslogs-stream-prefix": "collector",
-                        },
-                    },
-                },
-            ],
-            register_task_kwargs={
-                "cpu": "1024",
-                "taskRoleArn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
-                "executionRoleArn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
-                "memory": "8192",
-                "networkMode": "awsvpc",
-                "requiresCompatibilities": ["FARGATE"],
-            },
-        )
-
     dag_id = f"{collection}-collection"
 
     with DAG(
         f"{collection}-collector",
-        default_args=DEFAULT_ARGS,
+        default_args={
+            "owner": "airflow",
+            "depends_on_past": False,
+            "start_date": datetime(2024, 1, 1),
+            "dagrun_timeout": timedelta(minutes=5),
+        },
         description=f"Collection task for the {collection} collection",
         schedule=None,
     ) as dag:
@@ -103,7 +100,7 @@ for collection, datasets in configs.items():
             dag=dag,
             execution_timeout=timedelta(minutes=10),
             cluster=cluster_name,
-            task_definition="https://tpximpact.slack.com/archives/D073YKHR163/p1721992680434849", # collection_task.output,
+            task_definition="public.ecr.aws/l6z6v3j6/development-mwaa-dataset-collection-task:publish-image",  # collection_task.output,
             launch_type="FARGATE",
             overrides={
                 "containerOverrides": [
