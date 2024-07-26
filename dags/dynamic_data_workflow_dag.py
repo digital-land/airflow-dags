@@ -100,7 +100,7 @@ for collection, datasets in configs.items():
             dag=dag,
             execution_timeout=timedelta(minutes=10),
             cluster=cluster_name,
-            task_definition="public.ecr.aws/l6z6v3j6/development-mwaa-dataset-collection-task:publish-image",  # collection_task.output,
+            task_definition="development-mwaa-collection-task",  # collection_task.output,
             launch_type="FARGATE",
             overrides={
                 "containerOverrides": [
