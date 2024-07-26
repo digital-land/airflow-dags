@@ -217,33 +217,34 @@ with DAG(
     ) as dag:
         for collection, datasets in configs.items():
 
-            collection_task = EcsRegisterTaskDefinitionOperator(
-                task_id=f"{collection}-collection-task",
-                family="collection",
-                container_definitions=[
-                    {
-                        "name": f"{collection}-collection-task",
-                        "image": "public.ecr.aws/l6z6v3j6/development-mwaa-dataset-collection-task:publish-image",
-                        "logConfiguration": {
-                            "logDriver": "awslogs",
-                            "options": {
-                                "awslogs-create-group": "true",
-                                "awslogs-group": log_group,
-                                "awslogs-region": log_region,
-                                "awslogs-stream-prefix": "collector",
+            if False:
+                collection_task = EcsRegisterTaskDefinitionOperator(
+                    task_id=f"{collection}-collection-task",
+                    family="collection",
+                    container_definitions=[
+                        {
+                            "name": f"{collection}-collection-task",
+                            "image": "public.ecr.aws/l6z6v3j6/development-mwaa-dataset-collection-task:publish-image",
+                            "logConfiguration": {
+                                "logDriver": "awslogs",
+                                "options": {
+                                    "awslogs-create-group": "true",
+                                    "awslogs-group": log_group,
+                                    "awslogs-region": log_region,
+                                    "awslogs-stream-prefix": "collector",
+                                },
                             },
                         },
+                    ],
+                    register_task_kwargs={
+                        "cpu": "1024",
+                        "taskRoleArn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
+                        "executionRoleArn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
+                        "memory": "8192",
+                        "networkMode": "awsvpc",
+                        "requiresCompatibilities": ["FARGATE"],
                     },
-                ],
-                register_task_kwargs={
-                    "cpu": "1024",
-                    "taskRoleArn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
-                    "executionRoleArn": "arn:aws:iam::955696714113:role/development-mwaa-execution-role",
-                    "memory": "8192",
-                    "networkMode": "awsvpc",
-                    "requiresCompatibilities": ["FARGATE"],
-                },
-            )
+                )
 
             EcsRunTaskOperator(
                 task_id=f"{collection}-collector",
@@ -252,7 +253,7 @@ with DAG(
                 # retries=3,
                 # aws_conn_id="aws_default",
                 cluster=cluster_name,
-                task_definition=collection_task.output,
+                task_definition="development-mwaa-collection-task", # collection_task.output,
                 launch_type="FARGATE",
                 overrides={
                     "containerOverrides": [
