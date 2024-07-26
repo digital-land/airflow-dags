@@ -61,9 +61,7 @@ DEFAULT_ARGS = {
 
 for collection, datasets in configs.items():
 
-    collection_task = 'development-mwaa-collection-task'
-
-    if not collection_task:      
+    if False:      
         collection_task = EcsRegisterTaskDefinitionOperator(
             task_id="collection-task",
             family="collection",
@@ -107,7 +105,7 @@ for collection, datasets in configs.items():
             # retries=3,
             # aws_conn_id="aws_default",
             cluster=cluster_name,
-            task_definition=collection_task.output,
+            task_definition='development-mwaa-collection-task', # collection_task.output,
             launch_type="FARGATE",
             overrides={
                 "containerOverrides": [
