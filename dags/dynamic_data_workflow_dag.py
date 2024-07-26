@@ -12,6 +12,13 @@ from airflow.providers.amazon.aws.operators.ecs import (
 cluster_name = "development-cluster"
 log_group = "airflow-development-mwaa-Task"
 log_region = "eu-west-1"
+collect_task_defn = "development-mwaa-collection-task"
+default_args = {
+    "owner": "airflow",
+    "depends_on_past": False,
+    "start_date": datetime(2024, 1, 1),
+    "dagrun_timeout": timedelta(minutes=5),
+}
 
 test_task = EcsRegisterTaskDefinitionOperator(
     task_id="test-task",
@@ -86,12 +93,7 @@ for collection, datasets in configs.items():
 
     with DAG(
         f"{collection}-collector",
-        default_args={
-            "owner": "airflow",
-            "depends_on_past": False,
-            "start_date": datetime(2024, 1, 1),
-            "dagrun_timeout": timedelta(minutes=5),
-        },
+        default_args=default_args,
         description=f"Collection task for the {collection} collection",
         schedule=None,
     ) as dag:
@@ -100,7 +102,7 @@ for collection, datasets in configs.items():
             dag=dag,
             execution_timeout=timedelta(minutes=10),
             cluster=cluster_name,
-            task_definition="development-mwaa-collection-task",  # collection_task.output,
+            task_definition=collect_task_defn or create_collection_task().output,
             launch_type="FARGATE",
             overrides={
                 "containerOverrides": [
@@ -125,21 +127,15 @@ for collection, datasets in configs.items():
             # awslogs_fetch_interval=timedelta(seconds=5)
         )
 
-DEFAULT_ARGS = {
-    "owner": "airflow",
-    "depends_on_past": False,
-    "start_date": datetime(2024, 1, 1),
-    "dagrun_timeout": timedelta(minutes=5),
-}
 
 with DAG(
-    "ECS-Test",
-    default_args=DEFAULT_ARGS,
+    "EC2-Test",
+    default_args=default_args,
     description="A test DAG to try out functionality",
     schedule=None,
 ) as dag:
     EcsRunTaskOperator(
-        task_id="ecs-test",
+        task_id="ec2-test",
         dag=dag,
         execution_timeout=timedelta(minutes=5),
         # retries=3,
@@ -169,8 +165,8 @@ with DAG(
 
 
 with DAG(
-    "Fargate",
-    default_args=DEFAULT_ARGS,
+    "Fargate-Test",
+    default_args=default_args,
     description="A test DAG to try out functionality",
     schedule=None,
 ) as dag:
