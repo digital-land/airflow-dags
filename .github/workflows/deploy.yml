@@ -1,8 +1,8 @@
 name: Deploy dags to aws
 
 on:
-  push:
-    branches: [main,setup-gha-workflow,run-docker-container]
+  # push:
+  #   branches: [main]
   workflow_dispatch:
     inputs:
       environment:
@@ -15,8 +15,19 @@ jobs:
     environment: development
     env:
       AWS_S3_BUCKET: ${{ secrets.DAGS_S3_BUCKET }}
+      ENVIRONMENT: development
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.8
+
+      - run: |
+          pip install -r requirements.txt
+        
+      - run: |
+          make dags/config.json
       
       - run: |
           curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"

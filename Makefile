@@ -1,5 +1,9 @@
 .PHONY: local-mwaa-image
 
+ifeq ($(ENVIRONMENT),)
+ENVIRONMENT='development'
+endif
+
 local-mwaa-image::
 	rm -rf var
 	mkdir -p var
@@ -8,8 +12,8 @@ local-mwaa-image::
 	cd aws-mwaa-local-runner; \
 	./mwaa-local-env build-image;
 
-dag-config::
-	python -m 
+dags/config.json::
+	python bin/generate_dag_config.py --env=$(ENVIRONMENT)
 
 compose-up::
 	docker compose up -d --build
