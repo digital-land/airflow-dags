@@ -37,9 +37,21 @@ services:
             - S3_DAGS_PATH=""
             - S3_PLUGINS_PATH=""
             - S3_REQUIREMENTS_PATH=""
+            - GITHUB_ORG_ID=""
+            - OAUTH_APP_ID=""
+            - OAUTH_APP_SECRET=""
         volumes:
             - "${PWD}/dags:/usr/local/airflow/dags"
             - "${PWD}/plugins:/usr/local/airflow/plugins"
+            - type: bind
+              source: "${PWD}/dags/webserver_config.py"
+              target: "/usr/local/airflow/webserver_config.py"
+            - type: bind
+              source: "${PWD}/dags/security_manager.py"
+              target: "/usr/local/airflow/security_manager.py"
+            - type: bind
+              source: "${PWD}/requirements.txt"
+              target: "/usr/local/airflow/requirements/requirements.txt"
         ports:
             - "8080:8080"
         command: local-runner
@@ -66,8 +78,9 @@ services:
           while ! nc -z localstack 4566;
           do
             sleep 1;
-          done;     
+          done;
           echo Connected!;
         "
       depends_on:
         - localstack
+
