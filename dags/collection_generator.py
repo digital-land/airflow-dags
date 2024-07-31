@@ -9,6 +9,7 @@ from airflow.providers.amazon.aws.operators.ecs import (
     EcsRunTaskOperator,
 )
 
+#TO-DO generate name from env
 cluster_name = "development-cluster"
 log_group = "airflow-development-mwaa-Task"
 log_region = "eu-west-2"
@@ -82,13 +83,13 @@ for collection, datasets in configs.items():
                     },
                 ]
             },
-            # network_configuration={
-            #     "awsvpcConfiguration": {
-            #         "subnets": ["subnet-05a0d548ea8d901ab", "subnet-07252405b5369afd3"],
-            #         "securityGroups": ["sg-0fe390dd951829c75"],
-            #         "assignPublicIp": "ENABLED",
-            #     }
-            # },
+            network_configuration={
+                "awsvpcConfiguration": {
+                    "subnets": ["subnet-05a0d548ea8d901ab", "subnet-07252405b5369afd3"],
+                    "securityGroups": ["sg-0fe390dd951829c75"],
+                    "assignPublicIp": "ENABLED",
+                }
+            },
             awslogs_group=log_group,
             awslogs_region=log_region,
             awslogs_stream_prefix="collector/collection-task",
