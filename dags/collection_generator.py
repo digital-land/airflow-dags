@@ -97,40 +97,40 @@ for collection, datasets in configs.items():
         )
 
 
-# with DAG(
-#     "EC2-Test",
-#     default_args=default_args,
-#     description="A test DAG to try out functionality",
-#     schedule=None,
-# ) as dag:
-#     EcsRunTaskOperator(
-#         task_id="ec2-test",
-#         dag=dag,
-#         execution_timeout=timedelta(minutes=5),
-#         # retries=3,
-#         # aws_conn_id="aws_default",
-#         cluster=cluster_name,
-#         task_definition="airflow-ecs-operator-test",  # register_task.output,#",
-#         launch_type="EC2",
-#         overrides={},
-#         # overrides={"containerOverrides": [
-#         #     {
-#         #         "name": "test",
-#         #         "command": ["python", "-c", "import time; for i in range(30): print(i); time.sleep(1)"],
-#         #     },
-#         # ]},
-#         network_configuration={
-#             "awsvpcConfiguration": {
-#                 "subnets": ["subnet-05a0d548ea8d901ab", "subnet-07252405b5369afd3"],
-#                 "securityGroups": ["sg-0fe390dd951829c75"],
-#                 # "assignPublicIp": "ENABLED",
-#             }
-#         },
-#         awslogs_group="airflow-development-mwaa-Task",
-#         awslogs_region="eu-west-1",
-#         # awslogs_stream_prefix=f"ec2/test",
-#         # awslogs_fetch_interval=timedelta(seconds=5)
-#     )
+with DAG(
+    "EC2-Test",
+    default_args=default_args,
+    description="A test DAG to try out functionality",
+    schedule=None,
+) as dag:
+    EcsRunTaskOperator(
+        task_id="ec2-test",
+        dag=dag,
+        execution_timeout=timedelta(minutes=5),
+        # retries=3,
+        # aws_conn_id="aws_default",
+        cluster=cluster_name,
+        task_definition="airflow-ecs-operator-test",  # register_task.output,#",
+        launch_type="EC2",
+        overrides={},
+        # overrides={"containerOverrides": [
+        #     {
+        #         "name": "test",
+        #         "command": ["python", "-c", "import time; for i in range(30): print(i); time.sleep(1)"],
+        #     },
+        # ]},
+        network_configuration={
+            "awsvpcConfiguration": {
+                "subnets": ["subnet-05a0d548ea8d901ab", "subnet-07252405b5369afd3"],
+                "securityGroups": ["sg-0fe390dd951829c75"],
+                # "assignPublicIp": "ENABLED",
+            }
+        },
+        awslogs_group="airflow-development-mwaa-Task",
+        awslogs_region="eu-west-1",
+        # awslogs_stream_prefix=f"ec2/test",
+        # awslogs_fetch_interval=timedelta(seconds=5)
+    )
 
 
 # with DAG(
