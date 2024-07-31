@@ -89,10 +89,10 @@ for collection, datasets in configs.items():
             #         "assignPublicIp": "ENABLED",
             #     }
             # },
-            # awslogs_group=log_group,
-            # awslogs_region=log_region,
-            # awslogs_stream_prefix="collector/collection-task",
-            # awslogs_fetch_interval=timedelta(seconds=5)
+            awslogs_group=log_group,
+            awslogs_region=log_region,
+            awslogs_stream_prefix="collector/collection-task",
+            awslogs_fetch_interval=timedelta(seconds=5)
         )
 
 
