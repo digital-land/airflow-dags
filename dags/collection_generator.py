@@ -30,37 +30,37 @@ with open(configuration_file_path) as file:
 for collection, datasets in configs.items():
     dag_id = f"{collection}-collection"
 
-    with DAG(
-        f"{collection}-collection",
-        default_args=default_args,
-        description=f"Collection task for the {collection} collection",
-        schedule=None,
-    ) as dag:
-        EcsRunTaskOperator(
-            task_id=f"{collection}-collection",
-            dag=dag,
-            execution_timeout=timedelta(minutes=10),
-            cluster=cluster_name,
-            task_definition="development-mwaa-collection-task",
-            launch_type="FARGATE",
-            overrides={
-                "containerOverrides": [
-                    {
-                        "environment": [
-                            {"name": "COLLECTION_NAME", "value": collection}
-                        ],
-                    },
-                ]
-            },
-            network_configuration={
-                "awsvpcConfiguration": {
-                    "subnets": ["subnet-05a0d548ea8d901ab", "subnet-07252405b5369afd3"],
-                    "securityGroups": ["sg-0fe390dd951829c75"],
-                    "assignPublicIp": "ENABLED",
-                }
-            },
-            awslogs_group="airflow-development-mwaa-Task",
-            awslogs_region="eu-west-2",
-            awslogs_stream_prefix="task",
-            awslogs_fetch_interval=timedelta(seconds=5)
-        )
+    # with DAG(
+    #     f"{collection}-collection",
+    #     default_args=default_args,
+    #     description=f"Collection task for the {collection} collection",
+    #     schedule=None,
+    # ) as dag:
+    #     EcsRunTaskOperator(
+    #         task_id=f"{collection}-collection",
+    #         dag=dag,
+    #         execution_timeout=timedelta(minutes=10),
+    #         cluster=cluster_name,
+    #         task_definition="development-mwaa-collection-task",
+    #         launch_type="FARGATE",
+    #         overrides={
+    #             "containerOverrides": [
+    #                 {
+    #                     "environment": [
+    #                         {"name": "COLLECTION_NAME", "value": collection}
+    #                     ],
+    #                 },
+    #             ]
+    #         },
+    #         network_configuration={
+    #             "awsvpcConfiguration": {
+    #                 "subnets": ["subnet-05a0d548ea8d901ab", "subnet-07252405b5369afd3"],
+    #                 "securityGroups": ["sg-0fe390dd951829c75"],
+    #                 "assignPublicIp": "ENABLED",
+    #             }
+    #         },
+    #         awslogs_group="airflow-development-mwaa-Task",
+    #         awslogs_region="eu-west-2",
+    #         awslogs_stream_prefix="task",
+    #         awslogs_fetch_interval=timedelta(seconds=5)
+    #     )
