@@ -11,6 +11,7 @@ from airflow.providers.amazon.aws.operators.ecs import (
 
 #TO-DO generate name from env
 cluster_name = "development-cluster"
+# This is the same for all tasks so can be an environment variable
 log_group = "airflow-development-mwaa-Task"
 log_region = "eu-west-2"
 collect_task_defn = "development-mwaa-collection-task"
@@ -38,6 +39,7 @@ for collection, datasets in configs.items():
     ) as dag:
         EcsRunTaskOperator(
             task_id=f"{collection}-collection",
+            name=f"{collection}-collection"
             dag=dag,
             execution_timeout=timedelta(minutes=10),
             cluster=cluster_name,
