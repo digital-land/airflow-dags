@@ -48,6 +48,8 @@ for collection, datasets in configs.items():
                 "containerOverrides": [
                     {
                         "name": "development-mwaa-collection-task",
+                        'cpu': 4096,  # 4 vCPU
+                        'memory': 16384  # 2GB Memory
                         "environment": [
                             {"name": "COLLECTION_NAME", "value": collection}
                         ],
