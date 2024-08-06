@@ -63,6 +63,6 @@ for collection, datasets in configs.items():
             },
             awslogs_group="airflow-development-mwaa-Task",
             awslogs_region="eu-west-2",
-            awslogs_stream_prefix="task",
-            awslogs_fetch_interval=timedelta(seconds=5)
+            awslogs_stream_prefix="development-mwaa-collection-task",
+            awslogs_fetch_interval=timedelta(seconds=1)
         )
