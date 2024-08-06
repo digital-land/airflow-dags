@@ -39,7 +39,6 @@ for collection, datasets in configs.items():
     ) as dag:
         EcsRunTaskOperator(
             task_id=f"{collection}-collection",
-            name=f"{collection}-collection",
             dag=dag,
             execution_timeout=timedelta(minutes=10),
             cluster=cluster_name,
