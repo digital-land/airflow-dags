@@ -47,7 +47,7 @@ for collection, datasets in configs.items():
             overrides={
                 "containerOverrides": [
                     {
-                        "name": "collection-task",
+                        "name": "development-mwaa-collection-task",
                         "environment": [
                             {"name": "COLLECTION_NAME", "value": collection}
                         ],
