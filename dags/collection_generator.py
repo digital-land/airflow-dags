@@ -49,7 +49,7 @@ for collection, datasets in configs.items():
                     {
                         "name": "development-mwaa-collection-task",
                         'cpu': 4096,  # 4 vCPU
-                        'memory': 16384  # 2GB Memory
+                        'memory': 16384,  # 2GB Memory
                         "environment": [
                             {"name": "COLLECTION_NAME", "value": collection}
                         ],
