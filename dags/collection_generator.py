@@ -44,8 +44,6 @@ for collection, datasets in configs.items():
             cluster=cluster_name,
             task_definition="development-mwaa-collection-task",
             launch_type="FARGATE",
-            cpu=4096,
-            memory=16384,
             overrides={
                 "containerOverrides": [
                     {
