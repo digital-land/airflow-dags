@@ -13,10 +13,12 @@ with DAG(
     schedule=None,
  ):
     run_org_dag = TriggerDagRunOperator(
+        task_id = 'trigger-organisation-collection-dag',
         trigger_dag_id = f'organisation-collection',
         wait_for_completion = True
     )
     run_ancient_woodland_dag = TriggerDagRunOperator(
+        task_id = 'trigger-ancient-woodland-collection-dag',
         trigger_dag_id = f'ancient-woodland-collection',
         wait_for_completion = True
     )
