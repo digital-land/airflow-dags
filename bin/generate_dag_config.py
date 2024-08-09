@@ -10,6 +10,7 @@ from pathlib import Path
 DEVELOPMENT_COLLECTIONS = [
     'ancient-woodland',
     'organisation',
+    'title-bounday',
 ]
 
 
