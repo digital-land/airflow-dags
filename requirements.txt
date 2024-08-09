@@ -3,3 +3,4 @@ authlib
 Flask
 Flask-AppBuilder
 click
+apache-airflow[amazon]

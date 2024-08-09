@@ -8,7 +8,9 @@ from pathlib import Path
 
 # variabkle to contain the local colections we want to set up limited 
 DEVELOPMENT_COLLECTIONS = [
-    'ancient-woodland'
+    'ancient-woodland',
+    'organisation',
+    'title-boundary',
 ]
 
 
