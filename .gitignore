@@ -2,3 +2,6 @@ var
 .venv
 __pycache__
 .idea
+
+# ignore config file
+dags/config.json

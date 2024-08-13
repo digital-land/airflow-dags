@@ -11,7 +11,11 @@ DEVELOPMENT_COLLECTIONS = [
     'ancient-woodland',
     'organisation',
     'title-boundary',
+    'article-4-direction',
+    'central-activities-zone'
 ]
+
+STAGING_COLLECTIONS = DEVELOPMENT_COLLECTIONS
 
 
 @click.command()
@@ -29,6 +33,14 @@ DEVELOPMENT_COLLECTIONS = [
 )
 def make_colection_config(output_path:Path,env: str):
     config_dict = {}
+
+    if env == 'development':
+        restricted_collections = DEVELOPMENT_COLLECTIONS
+    elif env == 'staging':
+        restricted_collections = STAGING_COLLECTIONS
+    else:
+        restricted_collections = None
+
     with tempfile.TemporaryDirectory() as tmpdir:
         spec_dataset_path = Path(tmpdir) / 'dataset.csv'
         urllib.request.urlretrieve('https://raw.githubusercontent.com/digital-land/specification/main/specification/dataset.csv',Path(tmpdir) / 'dataset.csv')
@@ -37,7 +49,7 @@ def make_colection_config(output_path:Path,env: str):
             dictreader = csv.DictReader(f)
             for row in dictreader:
                 collection = row.get('collection',None)
-                if env != 'development' or collection in DEVELOPMENT_COLLECTIONS:
+                if restricted_collections is None or collection in restricted_collections:
                     dataset = row.get('dataset',None)
                     if collection and dataset:
                         if config_dict.get(collection,None):
