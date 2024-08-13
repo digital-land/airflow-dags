@@ -6,6 +6,11 @@ collection_generator.py
 from airflow import DAG
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 
+import os
+import json
+
+my_dir = os.path.dirname(os.path.abspath(__file__))
+configuration_file_path = os.path.join(my_dir, "config.json")
 
 with DAG(
     dag_id="trigger-collection-dags",
@@ -17,16 +22,18 @@ with DAG(
         trigger_dag_id = f'organisation-collection',
         wait_for_completion = True
     )
-    run_ancient_woodland_dag = TriggerDagRunOperator(
-        task_id = 'trigger-ancient-woodland-collection-dag',
-        trigger_dag_id = f'ancient-woodland-collection',
-        wait_for_completion = True
-    )
-    # run_title_boundary_dag = TriggerDagRunOperator(
-    #     trigger_dag_id = f'title-boundary-collection',
-    #     wait_for_completion = True
-    # )
 
-    run_org_dag >> run_ancient_woodland_dag
-    # run_org_dag >> run_title_boundary_dag
+    with open(configuration_file_path) as file:
+        configs = json.load(file)
+
+
+    for collection, datasets in configs.items():
+        if collection  not in ['organisation','title-boundary']:
+            collection_dag = TriggerDagRunOperator(
+                task_id = f'trigger-{collection}-collection-dag',
+                trigger_dag_id = f'{collection}-collection',
+                wait_for_completion = True
+            )
+
+            run_org_dag >> collection_dag
 

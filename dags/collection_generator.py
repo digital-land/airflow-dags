@@ -52,7 +52,7 @@ for collection, datasets in configs.items():
                         'memory': 32768,  # 2GB Memory
                         'ephemeralStorage': {
                             'sizeInGiB': 100, 
-                        }
+                        },
                         "environment": [
                             {"name": "COLLECTION_NAME", "value": collection}
                         ],
