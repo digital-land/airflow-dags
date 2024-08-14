@@ -49,8 +49,8 @@ for collection, datasets in configs.items():
                 "containerOverrides": [
                     {
                         "name": "development-mwaa-collection-task",
-                        'cpu': int('{{ params.cpu }}'), 
-                        'memory': int('{{ params.memory }}'), 
+                        'cpu': '{{ params.cpu }}', 
+                        'memory': '{{ params.memory }}', 
                         "environment": [
                             {"name": "COLLECTION_NAME", "value": collection}
                         ],
