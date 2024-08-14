@@ -8,6 +8,7 @@ from airflow.providers.amazon.aws.operators.ecs import (
     EcsRegisterTaskDefinitionOperator,
     EcsRunTaskOperator,
 )
+from airflow.models.param import Param
 
 #TO-DO generate name from env
 cluster_name = "development-cluster"
@@ -36,12 +37,18 @@ for collection, datasets in configs.items():
         default_args=default_args,
         description=f"Collection task for the {collection} collection",
         schedule=None,
-        params={"cpu": 8192, "memory": 32768,"timeout":480}
+        params={
+            "cpu": Param(8192, type="integer"),
+            "memory": Param(32768, type="integer"),
+            "timeout": Param(480, type="integer")
+        },
+        render_template_as_native_obj=True
     ) as dag:
+        print(f'running with params:{dag.params}')
         EcsRunTaskOperator(
             task_id=f"{collection}-collection",
             dag=dag,
-            execution_timeout=timedelta(minutes= dag.params.get('timeout')),
+            execution_timeout=timedelta(minutes= "{{ params.my_int_param }}"),
             cluster=cluster_name,
             task_definition="development-mwaa-collection-task",
             launch_type="FARGATE",
@@ -49,8 +56,8 @@ for collection, datasets in configs.items():
                 "containerOverrides": [
                     {
                         "name": "development-mwaa-collection-task",
-                        'cpu': dag.params.get('cpu'), 
-                        'memory': dag.params.get('memory'), 
+                        'cpu': "{{ params.cpu }}", 
+                        'memory': "{{ params.memory }}", 
                         "environment": [
                             {"name": "COLLECTION_NAME", "value": collection}
                         ],
