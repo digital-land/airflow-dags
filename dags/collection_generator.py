@@ -36,7 +36,7 @@ for collection, datasets in configs.items():
         default_args=default_args,
         description=f"Collection task for the {collection} collection",
         schedule=None,
-        params={"cpu": 8192, "memory": 327678,"timeout":480}
+        params={"cpu": 8192, "memory": 32768,"timeout":480}
     ) as dag:
         EcsRunTaskOperator(
             task_id=f"{collection}-collection",
