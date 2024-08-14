@@ -36,11 +36,12 @@ for collection, datasets in configs.items():
         default_args=default_args,
         description=f"Collection task for the {collection} collection",
         schedule=None,
+        params={"cpu": 8192, "memory": 327678,"timeout":480}
     ) as dag:
         EcsRunTaskOperator(
             task_id=f"{collection}-collection",
             dag=dag,
-            execution_timeout=timedelta(minutes=360),
+            execution_timeout=timedelta(minutes=int('{{ params.timeout}}')),
             cluster=cluster_name,
             task_definition="development-mwaa-collection-task",
             launch_type="FARGATE",
@@ -48,8 +49,8 @@ for collection, datasets in configs.items():
                 "containerOverrides": [
                     {
                         "name": "development-mwaa-collection-task",
-                        'cpu': 8192, 
-                        'memory': 32768, 
+                        'cpu': int('{{ params.cpu }}'), 
+                        'memory': int('{{ params.memory }}'), 
                         "environment": [
                             {"name": "COLLECTION_NAME", "value": collection}
                         ],
