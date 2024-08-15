@@ -55,13 +55,13 @@ for collection, datasets in configs.items():
         params={
             "cpu": Param(default=8192, type="integer"),
             "memory": Param(default=32768, type="integer"),
-            "timeout": Param(default=600, type="integer"),
+            "timeout": Param(default=10, type="integer"),
             "transformed-jobs":Param(default=8, type="integer", minimum=0),
             "dataset-jobs":Param(default=8, type="integer", minimum=0)
         },
         render_template_as_native_obj=True
     ) as dag:
-        params = get_params(dag.params)
+        params = get_params(params=dag.params)
         EcsRunTaskOperator(
             task_id=f"{collection}-collection",
             dag=dag,
