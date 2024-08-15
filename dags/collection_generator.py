@@ -40,7 +40,9 @@ for collection, datasets in configs.items():
         params={
             "cpu": Param(8192, type="integer"),
             "memory": Param(32768, type="integer"),
-            "timeout": Param(480, type="integer")
+            "timeout": Param(480, type="integer"),
+            "transformed-jobs":Param(8, type="integer", minimum=0),
+            "dataset-jobs":Param(8, type="integer", minimum=0)
         },
     ) as dag:
         print(f'running with params:{dag.params}')
@@ -58,7 +60,9 @@ for collection, datasets in configs.items():
                         'cpu': dag.params['cpu'], 
                         'memory': dag.params['memory'], 
                         "environment": [
-                            {"name": "COLLECTION_NAME", "value": collection}
+                            {"name": "COLLECTION_NAME", "value": collection},
+                            {"name": "TRANSFORMED_JOBS", "value": dag.params['transformed-jobs']},
+                            {"name": "DATASET_JOBS", "value": dag.params['dataset-jobs']}
                         ],
                     },
                 ]
