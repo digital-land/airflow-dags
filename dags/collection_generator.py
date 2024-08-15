@@ -42,13 +42,12 @@ for collection, datasets in configs.items():
             "memory": Param(32768, type="integer"),
             "timeout": Param(480, type="integer")
         },
-        render_template_as_native_obj=True
     ) as dag:
         print(f'running with params:{dag.params}')
         EcsRunTaskOperator(
             task_id=f"{collection}-collection",
             dag=dag,
-            execution_timeout=timedelta(minutes= "{{ params.timeout }}"),
+            execution_timeout=timedelta(minutes= dag.params['timeout']),
             cluster=cluster_name,
             task_definition="development-mwaa-collection-task",
             launch_type="FARGATE",
@@ -56,8 +55,8 @@ for collection, datasets in configs.items():
                 "containerOverrides": [
                     {
                         "name": "development-mwaa-collection-task",
-                        'cpu': "{{ params.cpu }}", 
-                        'memory': "{{ params.memory }}", 
+                        'cpu': dag.params['cpu'], 
+                        'memory': dag.params['memory'], 
                         "environment": [
                             {"name": "COLLECTION_NAME", "value": collection}
                         ],
