@@ -27,8 +27,8 @@ def get_params(**kwargs):
     timeout = int(kwargs['params'].get('timeout'))
     memory = int(kwargs['params'].get('memory'))
     cpu = int(kwargs['params'].get('cpu'))
-    transformed_jobs = kwargs['params'].get('transformed-jobs')
-    dataset_jobs = kwargs['params'].get('dataset-jobs')
+    transformed_jobs = str(kwargs['params'].get('transformed-jobs'))
+    dataset_jobs = str(kwargs['params'].get('dataset-jobs'))
     
     return {
         'timeout': timeout,
@@ -59,7 +59,6 @@ for collection, datasets in configs.items():
             "transformed-jobs":Param(default='8', type="string"),
             "dataset-jobs":Param(default='8', type="string")
         },
-        render_template_as_native_obj=True
     ) as dag:
         params = get_params(params=dag.params)
         EcsRunTaskOperator(
