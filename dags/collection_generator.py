@@ -23,6 +23,21 @@ default_args = {
     "dagrun_timeout": timedelta(minutes=5),
 }
 
+def get_params(**kwargs):
+    timeout = int(kwargs['params'].get('timeout'))
+    memory = int(kwargs['params'].get('memory'))
+    cpu = int(kwargs['params'].get('cpu'))
+    transformed_jobs = int(kwargs['params'].get('timeout', 600))
+    dataset_jobs = int(kwargs['params'].get('memory', 1024))
+    
+    return {
+        'timeout': timeout,
+        'memory': memory,
+        'cpu': cpu,
+        'transformed-jobs':transformed_jobs,
+        'dataset-jobs':dataset_jobs
+    }
+
 my_dir = os.path.dirname(os.path.abspath(__file__))
 configuration_file_path = os.path.join(my_dir, "config.json")
 with open(configuration_file_path) as file:
@@ -46,10 +61,11 @@ for collection, datasets in configs.items():
         },
         render_template_as_native_obj=True
     ) as dag:
+        params = get_params(dag.params)
         EcsRunTaskOperator(
             task_id=f"{collection}-collection",
             dag=dag,
-            execution_timeout=timedelta(minutes= '{{ params.timeout | int }}'),
+            execution_timeout=timedelta(minutes= params['timeout']),
             cluster=cluster_name,
             task_definition="development-mwaa-collection-task",
             launch_type="FARGATE",
@@ -61,8 +77,8 @@ for collection, datasets in configs.items():
                         'memory': dag.params['memory'], 
                         "environment": [
                             {"name": "COLLECTION_NAME", "value": collection},
-                            {"name": "TRANSFORMED_JOBS", "value": dag.params['transformed-jobs']},
-                            {"name": "DATASET_JOBS", "value": dag.params['dataset-jobs']}
+                            {"name": "TRANSFORMED_JOBS", "value": params['transformed-jobs']},
+                            {"name": "DATASET_JOBS", "value": params['dataset-jobs']}
                         ],
                     },
                 ]
