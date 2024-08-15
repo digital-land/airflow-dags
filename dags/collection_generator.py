@@ -27,8 +27,8 @@ def get_params(**kwargs):
     timeout = int(kwargs['params'].get('timeout'))
     memory = int(kwargs['params'].get('memory'))
     cpu = int(kwargs['params'].get('cpu'))
-    transformed_jobs = int(kwargs['params'].get('timeout', 600))
-    dataset_jobs = int(kwargs['params'].get('memory', 1024))
+    transformed_jobs = kwargs['params'].get('transformed-jobs')
+    dataset_jobs = kwargs['params'].get('dataset-jobs')
     
     return {
         'timeout': timeout,
@@ -56,8 +56,8 @@ for collection, datasets in configs.items():
             "cpu": Param(default=8192, type="integer"),
             "memory": Param(default=32768, type="integer"),
             "timeout": Param(default=10, type="integer"),
-            "transformed-jobs":Param(default=8, type="integer", minimum=0),
-            "dataset-jobs":Param(default=8, type="integer", minimum=0)
+            "transformed-jobs":Param(default=8, type="string"),
+            "dataset-jobs":Param(default=8, type="string")
         },
         render_template_as_native_obj=True
     ) as dag:
@@ -73,8 +73,8 @@ for collection, datasets in configs.items():
                 "containerOverrides": [
                     {
                         "name": "development-mwaa-collection-task",
-                        'cpu': dag.params['cpu'], 
-                        'memory': dag.params['memory'], 
+                        'cpu': params['cpu'], 
+                        'memory': params['memory'], 
                         "environment": [
                             {"name": "COLLECTION_NAME", "value": collection},
                             {"name": "TRANSFORMED_JOBS", "value": params['transformed-jobs']},
