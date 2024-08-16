@@ -83,7 +83,7 @@ for collection, datasets in configs.items():
         collection_ecs_task = EcsRunTaskOperator(
             task_id=f"{collection}-collection",
             dag=dag,
-            execution_timeout=timedelta(minutes='{{ task_instance.xcom_pull(task_ids="convert_params", key="timeout") }}'),
+            execution_timeout='{{ task_instance.xcom_pull(task_ids="convert_params", key="timeout") }}',
             cluster=cluster_name,
             task_definition="development-mwaa-collection-task",
             launch_type="FARGATE",
