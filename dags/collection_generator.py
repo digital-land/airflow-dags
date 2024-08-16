@@ -8,6 +8,7 @@ from airflow.providers.amazon.aws.operators.ecs import (
     EcsRegisterTaskDefinitionOperator,
     EcsRunTaskOperator,
 )
+from airflow.operators.python_operator import PythonOperator
 from airflow.models.param import Param
 
 #TO-DO generate name from env
@@ -23,20 +24,32 @@ default_args = {
     "dagrun_timeout": timedelta(minutes=5),
 }
 
-def get_params(**kwargs):
-    timeout = int(kwargs['params'].get('timeout'))
-    memory = int(kwargs['params'].get('memory'))
-    cpu = int(kwargs['params'].get('cpu'))
+def get_configuration(**kwargs):
+    """
+    function which returns the relevant configuration details
+    and stores them in xcoms for other tasks. this includes:
+    - get and process params into correct formats
+    - read in env variables
+    - access options defined in the task definitions
+    """
+    # retrieve  and process parameters
+    params = kwargs['params']
+
+    timeout = timedelta(minutes=int(params.get('timeout')))
+    memory = int(params.get('memory'))
+    cpu = int(params.get('cpu'))
     transformed_jobs = str(kwargs['params'].get('transformed-jobs'))
     dataset_jobs = str(kwargs['params'].get('dataset-jobs'))
     
-    return {
-        'timeout': timeout,
-        'memory': memory,
-        'cpu': cpu,
-        'transformed-jobs':transformed_jobs,
-        'dataset-jobs':dataset_jobs
-    }
+    # Push values to XCom
+    ti = kwargs['ti']
+    ti.xcom_push(key='timeout', value=timeout)
+    ti.xcom_push(key='memory', value=memory)
+    ti.xcom_push(key='cpu', value=cpu)
+    ti.xcom_push(key='transformed-jobs',value=transformed_jobs)
+    ti.xcom_push(key='dataset-jobs',value=dataset_jobs)
+    
+
 
 my_dir = os.path.dirname(os.path.abspath(__file__))
 configuration_file_path = os.path.join(my_dir, "config.json")
@@ -60,11 +73,17 @@ for collection, datasets in configs.items():
             "dataset-jobs":Param(default='8', type="string")
         },
     ) as dag:
-        params = get_params(params=dag.params)
-        EcsRunTaskOperator(
+        convert_params_task = PythonOperator(
+            task_id='get-configuration',
+            python_callable=get_configuration,
+            provide_context=True,
+            dag=dag,
+        )
+
+        collection_ecs_task = EcsRunTaskOperator(
             task_id=f"{collection}-collection",
             dag=dag,
-            execution_timeout=timedelta(minutes= int("{{ params.timeout }}")),
+            execution_timeout=timedelta(minutes='{{ task_instance.xcom_pull(task_ids="convert_params", key="timeout") }}'),
             cluster=cluster_name,
             task_definition="development-mwaa-collection-task",
             launch_type="FARGATE",
@@ -72,12 +91,12 @@ for collection, datasets in configs.items():
                 "containerOverrides": [
                     {
                         "name": "development-mwaa-collection-task",
-                        'cpu': params['cpu'], 
-                        'memory': params['memory'], 
+                        'cpu': '{{ task_instance.xcom_pull(task_ids="convert_params", key="cpu") }}', 
+                        'memory': '{{ task_instance.xcom_pull(task_ids="convert_params", key="memory") }}', 
                         "environment": [
                             {"name": "COLLECTION_NAME", "value": collection},
-                            {"name": "TRANSFORMED_JOBS", "value": params['transformed-jobs']},
-                            {"name": "DATASET_JOBS", "value": params['dataset-jobs']}
+                            {"name": "TRANSFORMED_JOBS", "value": '{{ task_instance.xcom_pull(task_ids="convert_params", key="transformed-jobs") }}'},
+                            {"name": "DATASET_JOBS", "value": '{{ task_instance.xcom_pull(task_ids="convert_params", key="dataset-jobs") }}'}
                         ],
                     },
                 ]
@@ -94,3 +113,5 @@ for collection, datasets in configs.items():
             awslogs_stream_prefix="task/development-mwaa-collection-task",
             awslogs_fetch_interval=timedelta(seconds=1)
         )
+
+        convert_params_task >> collection_ecs_task
