@@ -78,6 +78,7 @@ for collection, datasets in configs.items():
             "transformed-jobs":Param(default='8', type="string"),
             "dataset-jobs":Param(default='8', type="string")
         },
+        render_template_as_native_obj=True
     ) as dag:
         convert_params_task = PythonOperator(
             task_id='get-configuration',
