@@ -74,9 +74,8 @@ for collection, datasets in configs.items():
         params={
             "cpu": Param(default=8192, type="integer"),
             "memory": Param(default=32768, type="integer"),
-            "timeout": Param(default=10, type="integer"),
-            "transformed-jobs":Param(default='8', type="string"),
-            "dataset-jobs":Param(default='8', type="string")
+            "transformed-jobs":Param(default=8, type="integer"),
+            "dataset-jobs":Param(default=8, type="integer")
         },
         render_template_as_native_obj=True
     ) as dag:
@@ -90,7 +89,7 @@ for collection, datasets in configs.items():
         collection_ecs_task = CustomEcsRunTaskOperator(
             task_id=f"{collection}-collection",
             dag=dag,
-            execution_timeout='{{ task_instance.xcom_pull(task_ids="convert_params", key="timeout") }}',
+            execution_timeout=600,
             cluster=cluster_name,
             task_definition="development-mwaa-collection-task",
             launch_type="FARGATE",
