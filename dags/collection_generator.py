@@ -12,11 +12,6 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.models.param import Param
 
 
-class CustomEcsRunTaskOperator(EcsRunTaskOperator):
-    # Add execution_timeout to template_fields so it can be templated
-    template_fields = EcsRunTaskOperator.template_fields + ('execution_timeout',)
-
-
 #TO-DO generate name from env
 cluster_name = "development-cluster"
 # This is the same for all tasks so can be an environment variable
@@ -86,7 +81,7 @@ for collection, datasets in configs.items():
             dag=dag,
         )
 
-        collection_ecs_task = CustomEcsRunTaskOperator(
+        collection_ecs_task = EcsRunTaskOperator(
             task_id=f"{collection}-collection",
             dag=dag,
             execution_timeout=timedelta(minutes=600),
