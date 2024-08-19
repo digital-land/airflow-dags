@@ -36,8 +36,8 @@ def get_configuration(**kwargs):
     # retrieve  and process parameters
     params = kwargs['params']
 
-    memory = int(params.get('memory'))
-    cpu = int(params.get('cpu'))
+    memory = str(params.get('memory'))
+    cpu = str(params.get('cpu'))
     transformed_jobs = str(kwargs['params'].get('transformed-jobs'))
     dataset_jobs = str(kwargs['params'].get('dataset-jobs'))
     
