@@ -89,7 +89,7 @@ for collection, datasets in configs.items():
         collection_ecs_task = CustomEcsRunTaskOperator(
             task_id=f"{collection}-collection",
             dag=dag,
-            execution_timeout=600,
+            execution_timeout=timedelta(minutes=600),
             cluster=cluster_name,
             task_definition="development-mwaa-collection-task",
             launch_type="FARGATE",
