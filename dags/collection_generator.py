@@ -65,10 +65,10 @@ for collection, datasets in configs.items():
         description=f"Collection task for the {collection} collection",
         schedule=None,
         params={
-            "cpu": Param(default=8192, type="integer"),
-            "memory": Param(default=32768, type="integer"),
-            "transformed-jobs":Param(default=8, type="integer"),
-            "dataset-jobs":Param(default=8, type="integer")
+            "cpu": Param(default='8192', type="string"),
+            "memory": Param(default='32768', type="string"),
+            "transformed-jobs":Param(default='8', type="string"),
+            "dataset-jobs":Param(default='8', type="string")
         },
         render_template_as_native_obj=True
     ) as dag:
