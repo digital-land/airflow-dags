@@ -90,12 +90,12 @@ for collection, datasets in configs.items():
                 "containerOverrides": [
                     {
                         "name": "development-mwaa-collection-task",
-                        'cpu': '{{ task_instance.xcom_pull(task_ids="convert_params", key="cpu") }}', 
-                        'memory': '{{ task_instance.xcom_pull(task_ids="convert_params", key="memory") }}', 
+                        'cpu': '{{ task_instance.xcom_pull(task_ids="get-configuration", key="cpu") }}', 
+                        'memory': '{{ task_instance.xcom_pull(task_ids="get-configuration", key="memory") }}', 
                         "environment": [
                             {"name": "COLLECTION_NAME", "value": collection},
-                            {"name": "TRANSFORMED_JOBS", "value": '{{ task_instance.xcom_pull(task_ids="convert_params", key="transformed-jobs") }}'},
-                            {"name": "DATASET_JOBS", "value": '{{ task_instance.xcom_pull(task_ids="convert_params", key="dataset-jobs") }}'}
+                            {"name": "TRANSFORMED_JOBS", "value": '{{ task_instance.xcom_pull(task_ids="get-configuration", key="transformed-jobs") }}'},
+                            {"name": "DATASET_JOBS", "value": '{{ task_instance.xcom_pull(task_ids="get-configuration", key="dataset-jobs") }}'}
                         ],
                     },
                 ]
