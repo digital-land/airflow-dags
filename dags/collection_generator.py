@@ -36,7 +36,6 @@ def get_configuration(**kwargs):
     # retrieve  and process parameters
     params = kwargs['params']
 
-    timeout = timedelta(minutes=int(params.get('timeout')))
     memory = int(params.get('memory'))
     cpu = int(params.get('cpu'))
     transformed_jobs = str(kwargs['params'].get('transformed-jobs'))
@@ -44,7 +43,6 @@ def get_configuration(**kwargs):
     
     # Push values to XCom
     ti = kwargs['ti']
-    ti.xcom_push(key='timeout', value=timeout)
     ti.xcom_push(key='memory', value=memory)
     ti.xcom_push(key='cpu', value=cpu)
     ti.xcom_push(key='transformed-jobs',value=transformed_jobs)
