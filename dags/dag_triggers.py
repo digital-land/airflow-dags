@@ -24,10 +24,10 @@ with DAG(
     )
 
     with open(configuration_file_path) as file:
-        configs = json.load(file)
+        config = json.load(file)
 
 
-    for collection, datasets in configs.items():
+    for collection, datasets in config['collections'].items():
         if collection  not in ['organisation','title-boundary']:
             collection_dag = TriggerDagRunOperator(
                 task_id = f'trigger-{collection}-collection-dag',

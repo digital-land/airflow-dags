@@ -33,7 +33,8 @@ STAGING_COLLECTIONS = DEVELOPMENT_COLLECTIONS
 )
 def make_colection_config(output_path:Path,env: str):
     config_dict = {}
-
+    config_dict['env'] = env
+    collections_dict = {}
     if env == 'development':
         restricted_collections = DEVELOPMENT_COLLECTIONS
     elif env == 'staging':
@@ -53,10 +54,11 @@ def make_colection_config(output_path:Path,env: str):
                     dataset = row.get('dataset',None)
                     if collection and dataset:
                         if config_dict.get(collection,None):
-                            config_dict[collection].append(dataset)
+                            collections_dict[collection].append(dataset)
                         else:
-                            config_dict[collection] = [dataset]
+                            collections_dict[collection] = [dataset]
 
+        config_dict['collections'] = collections_dict
         with open(output_path,'w') as f:
             json.dump(config_dict,f,indent=4)
 
