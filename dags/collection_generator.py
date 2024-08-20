@@ -11,7 +11,7 @@ from airflow.providers.amazon.aws.operators.ecs import (
 from airflow.operators.python_operator import PythonOperator
 from airflow.models.param import Param
 
-from .utills import get_config, get_task_log_config
+from utills import get_config, get_task_log_config
 
 # read config from file and environment
 my_dir = os.path.dirname(os.path.abspath(__file__))
