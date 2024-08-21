@@ -37,7 +37,7 @@ default_args = {
 }
 
 # set task id for the initialisation task at the start
-configure_dag_task_id = "cconfigure-dag"
+configure_dag_task_id = "configure-dag"
 
 def configure_dag(**kwargs):
     """
@@ -108,12 +108,12 @@ for collection, datasets in config['collections'].items():
                 "containerOverrides": [
                     {
                         "name": collection_task_defn,
-                        'cpu': f'{{ task_instance.xcom_pull(task_ids="{configure_dag_task_id}", key="cpu") }}', 
-                        'memory': f'{{ task_instance.xcom_pull(task_ids="{configure_dag_task_id}", key="memory") }}', 
+                        'cpu': '{{ task_instance.xcom_pull(task_ids="configure-dag", key="cpu") }}', 
+                        'memory': '{{ task_instance.xcom_pull(task_ids="configure-dag", key="memory") }}', 
                         "environment": [
                             {"name": "COLLECTION_NAME", "value": collection},
-                            {"name": "TRANSFORMED_JOBS", "value": f'{{{{ task_instance.xcom_pull(task_ids="{configure_dag_task_id}", key="transformed-jobs") }}}}'},
-                            {"name": "DATASET_JOBS", "value": f'{{{{ task_instance.xcom_pull(task_ids="{configure_dag_task_id}", key="dataset-jobs") }}}}'}
+                            {"name": "TRANSFORMED_JOBS", "value": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="transformed-jobs") }}'},
+                            {"name": "DATASET_JOBS", "value": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="dataset-jobs") }}'}
                         ],
                     },
                 ]
@@ -121,9 +121,9 @@ for collection, datasets in config['collections'].items():
             network_configuration={
                 "awsvpcConfiguration": aws_vpc_config
             },
-            awslogs_group=f'{{{{ task_instance.xcom_pull(task_ids="{configure_dag_task_id}", key="collection-task-log-group") }}}}',
-            awslogs_region=f'{{{{ task_instance.xcom_pull(task_ids="{configure_dag_task_id}", key="collection-task-log-region") }}}}',
-            awslogs_stream_prefix=f'{{{{ task_instance.xcom_pull(task_ids="{configure_dag_task_id}", key="collection-task-log-stream-prefix") }}}}/{collection_task_defn}',
+            awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
+            awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-region") }}',
+            awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}/' + f'{collection_task_defn}',
             awslogs_fetch_interval=timedelta(seconds=1)
         )
 
