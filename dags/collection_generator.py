@@ -95,6 +95,7 @@ for collection, datasets in config['collections'].items():
             python_callable=configure_dag,
             provide_context=True,
             dag=dag,
+            render_template_as_native_obj=True
         )
 
         collection_ecs_task = EcsRunTaskOperator(
@@ -108,12 +109,12 @@ for collection, datasets in config['collections'].items():
                 "containerOverrides": [
                     {
                         "name": collection_task_defn,
-                        'cpu': '{{ task_instance.xcom_pull(task_ids="configure-dag", key="cpu") }}', 
-                        'memory': '{{ task_instance.xcom_pull(task_ids="configure-dag", key="memory") }}', 
+                        'cpu': '{{ task_instance.xcom_pull(task_ids="configure-dag", key="cpu") | int }}', 
+                        'memory': '{{ task_instance.xcom_pull(task_ids="configure-dag", key="memory") | int }}', 
                         "environment": [
                             {"name": "COLLECTION_NAME", "value": collection},
-                            {"name": "TRANSFORMED_JOBS", "value": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="transformed-jobs") }}'},
-                            {"name": "DATASET_JOBS", "value": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="dataset-jobs") }}'}
+                            {"name": "TRANSFORMED_JOBS", "value": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="transformed-jobs") | str }}'},
+                            {"name": "DATASET_JOBS", "value": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="dataset-jobs") | str }}'}
                         ],
                     },
                 ]
