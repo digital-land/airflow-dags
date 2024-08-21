@@ -112,8 +112,8 @@ for collection, datasets in config['collections'].items():
                         'memory': f'{{ task_instance.xcom_pull(task_ids="{configure_dag_task_id}", key="memory") }}', 
                         "environment": [
                             {"name": "COLLECTION_NAME", "value": collection},
-                            {"name": "TRANSFORMED_JOBS", "value": f'{{ task_instance.xcom_pull(task_ids="{configure_dag_task_id}", key="transformed-jobs") }}'},
-                            {"name": "DATASET_JOBS", "value": f'{{ task_instance.xcom_pull(task_ids="{configure_dag_task_id}", key="dataset-jobs") }}'}
+                            {"name": "TRANSFORMED_JOBS", "value": f'{{{{ task_instance.xcom_pull(task_ids="{configure_dag_task_id}", key="transformed-jobs") }}}}'},
+                            {"name": "DATASET_JOBS", "value": f'{{{{ task_instance.xcom_pull(task_ids="{configure_dag_task_id}", key="dataset-jobs") }}}}'}
                         ],
                     },
                 ]
@@ -121,9 +121,9 @@ for collection, datasets in config['collections'].items():
             network_configuration={
                 "awsvpcConfiguration": aws_vpc_config
             },
-            awslogs_group=f'{{ task_instance.xcom_pull(task_ids="{configure_dag_task_id}", key="collection-task-log-group") }}',
-            awslogs_region=f'{{ task_instance.xcom_pull(task_ids="{configure_dag_task_id}", key="collection-task-log-region") }}',
-            awslogs_stream_prefix=f'{{ task_instance.xcom_pull(task_ids="{configure_dag_task_id}", key="collection-task-log-stream-prefix") }}/{collection_task_defn}',
+            awslogs_group=f'{{{{ task_instance.xcom_pull(task_ids="{configure_dag_task_id}", key="collection-task-log-group") }}}}',
+            awslogs_region=f'{{{{ task_instance.xcom_pull(task_ids="{configure_dag_task_id}", key="collection-task-log-region") }}}}',
+            awslogs_stream_prefix=f'{{{{ task_instance.xcom_pull(task_ids="{configure_dag_task_id}", key="collection-task-log-stream-prefix") }}}}/{collection_task_defn}',
             awslogs_fetch_interval=timedelta(seconds=1)
         )
 
