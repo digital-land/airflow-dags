@@ -89,13 +89,13 @@ for collection, datasets in config['collections'].items():
             "transformed-jobs":Param(default='8', type="string"),
             "dataset-jobs":Param(default='8', type="string")
         },
+        render_template_as_native_obj=True
     ) as dag:
         convert_params_task = PythonOperator(
             task_id=configure_dag_task_id,
             python_callable=configure_dag,
             provide_context=True,
             dag=dag,
-            render_template_as_native_obj=True
         )
 
         collection_ecs_task = EcsRunTaskOperator(
