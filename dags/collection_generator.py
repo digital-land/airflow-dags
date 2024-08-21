@@ -50,8 +50,8 @@ def configure_dag(**kwargs):
     # retrieve  and process parameters
     params = kwargs['params']
 
-    memory = str(params.get('memory'))
-    cpu = str(params.get('cpu'))
+    memory = int(params.get('memory'))
+    cpu = int(params.get('cpu'))
     transformed_jobs = str(kwargs['params'].get('transformed-jobs'))
     dataset_jobs = str(kwargs['params'].get('dataset-jobs'))
     
@@ -84,8 +84,8 @@ for collection, datasets in config['collections'].items():
         description=f"Collection task for the {collection} collection",
         schedule=None,
         params={
-            "cpu": Param(default='8192', type="string"),
-            "memory": Param(default='32768', type="string"),
+            "cpu": Param(default=8192, type="integer"),
+            "memory": Param(default=32768, type="integer"),
             "transformed-jobs":Param(default='8', type="string"),
             "dataset-jobs":Param(default='8', type="string")
         },
