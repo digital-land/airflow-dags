@@ -1,5 +1,6 @@
 import json
 import boto3
+import logging
 
 def get_config(path):
     with open(path) as file:
@@ -17,6 +18,8 @@ def get_task_log_config(task_definition_name):
     
     # Describe the task definition
     response = ecs_client.describe_task_definition(taskDefinition=task_definition_name)
+
+    logging.warning(response['taskdefinition'])
     
     # Extract the log configuration from the container definitions
     log_config = response['taskDefinition']['containerDefinitions'][0].get('logConfiguration',{})
