@@ -10,6 +10,21 @@ on:
         description: The environment to deploy to.
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.10
+
+      - run: |
+          pip install -r requirements/dev-requirements.txt
+        
+      - run: |
+          make tests
+
   deploy:
     runs-on: ubuntu-latest
     environment: development
