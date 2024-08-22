@@ -1,0 +1,6 @@
+-r requirements/requirements.txt
+authlib
+Flask
+Flask-AppBuilder
+pytest
+moto

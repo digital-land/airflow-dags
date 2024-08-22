@@ -1,5 +1,6 @@
 import os
 import json
+import boto3
 
 from datetime import datetime, timedelta
 from airflow import DAG
@@ -57,10 +58,12 @@ def configure_dag(**kwargs):
     
 
     # get ecs-task logging configuration
-    collection_task_log_config = get_task_log_config(collection_task_defn)
-    collection_task_log_group = str(collection_task_log_config.get('awslogs-group'))
-    collection_task_log_stream_prefix = str(collection_task_log_config.get('awslogs-stream-prefix'))
-    collection_task_log_region = str(collection_task_log_config.get('awslogs-region'))
+    ecs_client = boto3.client('ecs')
+    collection_task_log_config = get_task_log_config(ecs_client,collection_task_defn)
+    collection_task_log_config_options = collection_task_log_config['options']
+    collection_task_log_group = str(collection_task_log_config_options.get('awslogs-group'))
+    collection_task_log_stream_prefix = str(collection_task_log_config_options.get('awslogs-stream-prefix'))
+    collection_task_log_region = str(collection_task_log_config_options.get('awslogs-region'))
 
 
     # Push values to XCom

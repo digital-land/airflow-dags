@@ -20,3 +20,7 @@ compose-up::
 
 compose-down::
 	docker compose down  --rmi 'all'
+
+
+test::
+	python -m pytest tests/integration
