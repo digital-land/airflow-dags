@@ -20,7 +20,7 @@ config  = get_config(configuration_file_path)
 
 # set some variablles needed for ECS tasks, 
 # TODO get from environment in the future
-ecs_cluster = f"{config['env']}-mwaa-collection-task"
+ecs_cluster = f"{config['env']}-cluster"
 collection_task_defn= f"{config['env']}-mwaa-collection-task"
 aws_vpc_config={
     "subnets": ["subnet-05a0d548ea8d901ab", "subnet-07252405b5369afd3"],
