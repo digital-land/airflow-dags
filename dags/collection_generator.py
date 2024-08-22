@@ -58,10 +58,9 @@ def configure_dag(**kwargs):
 
     # get ecs-task logging configuration
     collection_task_log_config = get_task_log_config(collection_task_defn)
-    collection_task_log_config = collection_task_log_config.get('logConfiguration',{})
-    collection_task_log_group = collection_task_log_config.get('options', {}).get('awslogs-group')
-    collection_task_log_stream_prefix = collection_task_log_config.get('options', {}).get('awslogs-stream-prefix')
-    collection_task_log_region = collection_task_log_config.get('options', {}).get('awslogs-region')
+    collection_task_log_group = str(collection_task_log_config.get('awslogs-group'))
+    collection_task_log_stream_prefix = str(collection_task_log_config.get('awslogs-stream-prefix'))
+    collection_task_log_region = str(collection_task_log_config.get('awslogs-region'))
 
 
     # Push values to XCom
