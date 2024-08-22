@@ -12,6 +12,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      ENVIRONMENT: development
     steps:
       - uses: actions/checkout@v4
 
@@ -21,6 +23,9 @@ jobs:
 
       - run: |
           pip install -r requirements/dev-requirements.txt
+
+      - run: |
+          make dags/config.json
         
       - run: |
           make test
