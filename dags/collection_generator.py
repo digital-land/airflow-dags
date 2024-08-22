@@ -125,7 +125,7 @@ for collection, datasets in config['collections'].items():
             },
             awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
             awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-region") }}',
-            awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}/' + f'{collection_task_defn}',
+            awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}',
             # awslogs_group='airflow-development-mwaa-Task',
             # awslogs_region='eu-west-2',
             # awslogs_stream_prefix='task/development-mwaa-collection-task',
