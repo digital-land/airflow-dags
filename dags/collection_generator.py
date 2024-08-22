@@ -113,8 +113,8 @@ for collection, datasets in config['collections'].items():
                         'memory': '{{ task_instance.xcom_pull(task_ids="configure-dag", key="memory") | int }}', 
                         "environment": [
                             {"name": "COLLECTION_NAME", "value": collection},
-                            {"name": "TRANSFORMED_JOBS", "value": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="transformed-jobs") | str }}'},
-                            {"name": "DATASET_JOBS", "value": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="dataset-jobs") | str }}'}
+                            {"name": "TRANSFORMED_JOBS", "value": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="transformed-jobs") | string }}'},
+                            {"name": "DATASET_JOBS", "value": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="dataset-jobs") | string }}'}
                         ],
                     },
                 ]
