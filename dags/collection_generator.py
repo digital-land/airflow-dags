@@ -62,7 +62,7 @@ def configure_dag(**kwargs):
     collection_task_log_config = get_task_log_config(ecs_client,collection_task_defn)
     collection_task_log_config_options = collection_task_log_config['options']
     collection_task_log_group = str(collection_task_log_config_options.get('awslogs-group'))
-    collection_task_log_stream_prefix = str(collection_task_log_config_options.get('awslogs-stream-prefix'))
+    collection_task_log_stream_prefix = str(collection_task_log_config_options.get('awslogs-stream-prefix')) + f'/{collection_task_defn}'
     collection_task_log_region = str(collection_task_log_config_options.get('awslogs-region'))
 
 
@@ -123,12 +123,12 @@ for collection, datasets in config['collections'].items():
             network_configuration={
                 "awsvpcConfiguration": aws_vpc_config
             },
-            # awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
-            # awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-region") }}',
-            # awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}/' + f'{collection_task_defn}',
-            awslogs_group='airflow-development-mwaa-Task',
-            awslogs_region='eu-west-2',
-            awslogs_stream_prefix='task/development-mwaa-collection-task',
+            awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
+            awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-region") }}',
+            awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}/' + f'{collection_task_defn}',
+            # awslogs_group='airflow-development-mwaa-Task',
+            # awslogs_region='eu-west-2',
+            # awslogs_stream_prefix='task/development-mwaa-collection-task',
             awslogs_fetch_interval=timedelta(seconds=1)
         )
 
