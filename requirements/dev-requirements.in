@@ -1,5 +1,6 @@
-apache-airflow==2.8.1
+-r requirements.txt
 authlib
 Flask
 Flask-AppBuilder
-click
+pytest
+moto

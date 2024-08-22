@@ -10,7 +10,28 @@ on:
         description: The environment to deploy to.
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      ENVIRONMENT: development
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - run: |
+          pip install -r requirements/dev-requirements.txt
+
+      - run: |
+          make dags/config.json
+        
+      - run: |
+          make test
+
   deploy:
+    needs: [test]
     runs-on: ubuntu-latest
     environment: development
     env:
@@ -21,10 +42,10 @@ jobs:
 
       - uses: actions/setup-python@v4
         with:
-          python-version: 3.8
+          python-version: '3.10'
 
       - run: |
-          pip install -r requirements.txt
+          pip install -r requirements/dev-requirements.txt
         
       - run: |
           make dags/config.json

@@ -8,8 +8,14 @@ from pathlib import Path
 
 # variabkle to contain the local colections we want to set up limited 
 DEVELOPMENT_COLLECTIONS = [
-    'ancient-woodland'
+    'ancient-woodland',
+    'organisation',
+    'title-boundary',
+    'article-4-direction',
+    'central-activities-zone'
 ]
+
+STAGING_COLLECTIONS = DEVELOPMENT_COLLECTIONS
 
 
 @click.command()
@@ -27,6 +33,15 @@ DEVELOPMENT_COLLECTIONS = [
 )
 def make_colection_config(output_path:Path,env: str):
     config_dict = {}
+    config_dict['env'] = env
+    collections_dict = {}
+    if env == 'development':
+        restricted_collections = DEVELOPMENT_COLLECTIONS
+    elif env == 'staging':
+        restricted_collections = STAGING_COLLECTIONS
+    else:
+        restricted_collections = None
+
     with tempfile.TemporaryDirectory() as tmpdir:
         spec_dataset_path = Path(tmpdir) / 'dataset.csv'
         urllib.request.urlretrieve('https://raw.githubusercontent.com/digital-land/specification/main/specification/dataset.csv',Path(tmpdir) / 'dataset.csv')
@@ -35,14 +50,15 @@ def make_colection_config(output_path:Path,env: str):
             dictreader = csv.DictReader(f)
             for row in dictreader:
                 collection = row.get('collection',None)
-                if env != 'development' or collection in DEVELOPMENT_COLLECTIONS:
+                if restricted_collections is None or collection in restricted_collections:
                     dataset = row.get('dataset',None)
                     if collection and dataset:
                         if config_dict.get(collection,None):
-                            config_dict[collection].append(dataset)
+                            collections_dict[collection].append(dataset)
                         else:
-                            config_dict[collection] = [dataset]
+                            collections_dict[collection] = [dataset]
 
+        config_dict['collections'] = collections_dict
         with open(output_path,'w') as f:
             json.dump(config_dict,f,indent=4)
 
