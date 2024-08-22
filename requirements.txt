@@ -1,6 +1,0 @@
-apache-airflow==2.8.1
-authlib
-Flask
-Flask-AppBuilder
-click
-apache-airflow[amazon]

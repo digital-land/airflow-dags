@@ -1,4 +1,4 @@
--r requirements/requirements.txt
+-r requirements.txt
 authlib
 Flask
 Flask-AppBuilder

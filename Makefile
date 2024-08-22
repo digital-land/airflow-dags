@@ -22,5 +22,14 @@ compose-down::
 	docker compose down  --rmi 'all'
 
 
-test::
+test:: test-integration test-acceptance
+
+test-integration::
 	python -m pytest tests/integration
+
+test-acceptance::
+	python -m pytest tests/acceptance
+
+compile ::
+	python -m piptools compile --output-file=requirements/requirements.txt requirements/requirements.in
+	python -m piptools compile --output-file=requirements/dev-requirements.txt requirements/dev-requirements.in

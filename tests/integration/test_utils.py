@@ -1,4 +1,4 @@
-from dags.utills import get_task_log_config
+from dags.utils import get_task_log_config
 
 def test_get_task_log_config_gets_config_from_aws(ecs_client):
     # Register a task definition

@@ -9,10 +9,10 @@ from airflow.providers.amazon.aws.operators.ecs import (
     EcsRegisterTaskDefinitionOperator,
     EcsRunTaskOperator,
 )
-from airflow.operators.python_operator import PythonOperator
+from airflow.operators.python import PythonOperator
 from airflow.models.param import Param
 
-from utills import get_config, get_task_log_config
+from dags.utils import get_config, get_task_log_config
 
 # read config from file and environment
 my_dir = os.path.dirname(os.path.abspath(__file__))
@@ -96,7 +96,6 @@ for collection, datasets in config['collections'].items():
         convert_params_task = PythonOperator(
             task_id=configure_dag_task_id,
             python_callable=configure_dag,
-            provide_context=True,
             dag=dag,
         )
 
