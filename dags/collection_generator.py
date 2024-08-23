@@ -89,8 +89,8 @@ for collection, datasets in config['collections'].items():
         params={
             "cpu": Param(default=8192, type="integer"),
             "memory": Param(default=32768, type="integer"),
-            "transformed-jobs":Param(default='8', type="string"),
-            "dataset-jobs":Param(default='8', type="string")
+            "transformed-jobs":Param(default=8, type="integer"),
+            "dataset-jobs":Param(default=8, type="integer")
         },
         render_template_as_native_obj=True
     ) as dag:
