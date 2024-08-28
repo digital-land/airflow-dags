@@ -89,8 +89,8 @@ for collection, datasets in config['collections'].items():
         params={
             "cpu": Param(default=8192, type="integer"),
             "memory": Param(default=32768, type="integer"),
-            "transformed-jobs":Param(default='8', type="string"),
-            "dataset-jobs":Param(default='8', type="string")
+            "transformed-jobs":Param(default=8, type="integer"),
+            "dataset-jobs":Param(default=8, type="integer")
         },
         render_template_as_native_obj=True
     ) as dag:
@@ -115,8 +115,9 @@ for collection, datasets in config['collections'].items():
                         'memory': '{{ task_instance.xcom_pull(task_ids="configure-dag", key="memory") | int }}', 
                         "environment": [
                             {"name": "COLLECTION_NAME", "value": collection},
-                            {"name": "TRANSFORMED_JOBS", "value": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="transformed-jobs") | string }}'},
-                            {"name": "DATASET_JOBS", "value": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="dataset-jobs") | string }}'}
+                            # {"name": "TRANSFORMED_JOBS", "value": str('{{ task_instance.xcom_pull(task_ids="configure-dag", key="transformed-jobs") | string }}')},
+                            {"name": "TRANSFORMED_JOBS", "value":"'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"transformed-jobs\") | string }}'"},
+                            {"name": "DATASET_JOBS", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"dataset-jobs\") | string }}'"}
                         ],
                     },
                 ]
