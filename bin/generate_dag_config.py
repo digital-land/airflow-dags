@@ -6,7 +6,7 @@ import click
 
 from pathlib import Path
 
-# variabkle to contain the local colections we want to set up limited 
+# TODO define and get from specification
 DEVELOPMENT_COLLECTIONS = [
     'ancient-woodland',
     'organisation',
@@ -16,6 +16,11 @@ DEVELOPMENT_COLLECTIONS = [
 ]
 
 STAGING_COLLECTIONS = DEVELOPMENT_COLLECTIONS
+
+#TODO get from specification
+PACKAGES = [
+    'organisation'
+]
 
 
 @click.command()
@@ -59,6 +64,7 @@ def make_colection_config(output_path:Path,env: str):
                             collections_dict[collection] = [dataset]
 
         config_dict['collections'] = collections_dict
+        config_dict['packages'] = PACKAGES
         with open(output_path,'w') as f:
             json.dump(config_dict,f,indent=4)
 
