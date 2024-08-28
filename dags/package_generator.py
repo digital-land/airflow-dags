@@ -76,12 +76,12 @@ def configure_dag(**kwargs):
     ti.xcom_push(key='package-task-log-region',value=package_task_log_region)
 
 
-for package in config['packages'].items():
+for package in config['packages']:
 
     with DAG(
         f"{package}-package",
         default_args=default_args,
-        description=f"Collection task for the {package} collection",
+        description=f"build the {package} package",
         schedule=None,
         params={
             "cpu": Param(default=8192, type="integer"),
