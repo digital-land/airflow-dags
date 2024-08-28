@@ -63,7 +63,7 @@ def configure_dag(**kwargs):
     package_task_log_config_options = package_task_log_config['options']
     package_task_log_group = str(package_task_log_config_options.get('awslogs-group'))
     # add container name to prefix
-    package_task_log_stream_prefix = str(package_task_log_config_options.get('awslogs-stream-prefix')) + f'/{collection_task_defn}'
+    package_task_log_stream_prefix = str(package_task_log_config_options.get('awslogs-stream-prefix')) + f'/{package_task_defn}'
     package_task_log_region = str(package_task_log_config_options.get('awslogs-region'))
 
 

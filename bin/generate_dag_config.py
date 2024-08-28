@@ -22,6 +22,11 @@ PACKAGES = [
     'organisation'
 ]
 
+DEFAULTS = {
+    'cpu':1024,
+    'memory':2048
+}
+
 
 @click.command()
 @click.option(
