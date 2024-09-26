@@ -17,17 +17,12 @@ from utils import get_config, get_task_log_config
 # read config from file and environment
 my_dir = os.path.dirname(os.path.abspath(__file__))
 configuration_file_path = os.path.join(my_dir, "config.json")
-config  = get_config(configuration_file_path) 
+config = get_config(configuration_file_path)
 
-# set some variablles needed for ECS tasks, 
+# set some variables needed for ECS tasks,
 # TODO get from environment in the future
 ecs_cluster = f"{config['env']}-cluster"
 collection_task_defn= f"{config['env']}-mwaa-collection-task"
-aws_vpc_config={
-    "subnets": ["subnet-05a0d548ea8d901ab", "subnet-07252405b5369afd3"],
-    "securityGroups": ["sg-0fe390dd951829c75"],
-    "assignPublicIp": "ENABLED",
-}
 
 # set some default_arrgs for all colllections
 default_args = {
@@ -40,6 +35,7 @@ default_args = {
 # set task id for the initialisation task at the start
 configure_dag_task_id = "configure-dag"
 
+
 def configure_dag(**kwargs):
     """
     function which returns the relevant configuration details
@@ -48,6 +44,12 @@ def configure_dag(**kwargs):
     - read in env variables
     - access options defined in the task definitions
     """
+    aws_vpc_config = {
+        "subnets": kwargs['conf'].get(section='custom', key='ecs_task_subnets').split(","),
+        "securityGroups": kwargs['conf'].get(section='custom', key='ecs_task_security_groups').split(","),
+        "assignPublicIp": "ENABLED",
+    }
+
     # retrieve  and process parameters
     params = kwargs['params']
 
@@ -55,7 +57,6 @@ def configure_dag(**kwargs):
     cpu = int(params.get('cpu'))
     transformed_jobs = str(kwargs['params'].get('transformed-jobs'))
     dataset_jobs = str(kwargs['params'].get('dataset-jobs'))
-    
 
     # get ecs-task logging configuration
     ecs_client = boto3.client('ecs')
@@ -66,16 +67,16 @@ def configure_dag(**kwargs):
     collection_task_log_stream_prefix = str(collection_task_log_config_options.get('awslogs-stream-prefix')) + f'/{collection_task_defn}'
     collection_task_log_region = str(collection_task_log_config_options.get('awslogs-region'))
 
-
     # Push values to XCom
     ti = kwargs['ti']
+    ti.xcom_push(key='aws_vpc_config', value=aws_vpc_config)
     ti.xcom_push(key='memory', value=memory)
     ti.xcom_push(key='cpu', value=cpu)
-    ti.xcom_push(key='transformed-jobs',value=transformed_jobs)
-    ti.xcom_push(key='dataset-jobs',value=dataset_jobs)
+    ti.xcom_push(key='transformed-jobs', value=transformed_jobs)
+    ti.xcom_push(key='dataset-jobs', value=dataset_jobs)
     ti.xcom_push(key='collection-task-log-group', value=collection_task_log_group)
-    ti.xcom_push(key='collection-task-log-stream-prefix',value=collection_task_log_stream_prefix)
-    ti.xcom_push(key='collection-task-log-region',value=collection_task_log_region)
+    ti.xcom_push(key='collection-task-log-stream-prefix', value=collection_task_log_stream_prefix)
+    ti.xcom_push(key='collection-task-log-region', value=collection_task_log_region)
 
 
 for collection, datasets in config['collections'].items():
@@ -123,7 +124,7 @@ for collection, datasets in config['collections'].items():
                 ]
             },
             network_configuration={
-                "awsvpcConfiguration": aws_vpc_config
+                "awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'
             },
             awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
             awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-region") }}',

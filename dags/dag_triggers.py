@@ -13,27 +13,25 @@ my_dir = os.path.dirname(os.path.abspath(__file__))
 configuration_file_path = os.path.join(my_dir, "config.json")
 
 with DAG(
-    dag_id="trigger-collection-dags",
-    description=f"A master Dag which  runs all the pocessing we need each need to process all datasets and packages",
-    schedule=None,
- ):
+        dag_id="trigger-collection-dags",
+        description=f"A master DAG which runs all the processing we need each need to process all datasets and packages",
+        schedule=None,
+):
     run_org_dag = TriggerDagRunOperator(
-        task_id = 'trigger-organisation-collection-dag',
-        trigger_dag_id = f'organisation-collection',
-        wait_for_completion = True
+        task_id='trigger-organisation-collection-dag',
+        trigger_dag_id=f'organisation-collection',
+        wait_for_completion=True
     )
 
     with open(configuration_file_path) as file:
         config = json.load(file)
 
-
     for collection, datasets in config['collections'].items():
-        if collection  not in ['organisation','title-boundary']:
+        if collection not in ['organisation', 'title-boundary']:
             collection_dag = TriggerDagRunOperator(
-                task_id = f'trigger-{collection}-collection-dag',
-                trigger_dag_id = f'{collection}-collection',
-                wait_for_completion = True
+                task_id=f'trigger-{collection}-collection-dag',
+                trigger_dag_id=f'{collection}-collection',
+                wait_for_completion=True
             )
 
             run_org_dag >> collection_dag
-
