@@ -2,11 +2,11 @@ import json
 import boto3
 import logging
 
+
 def get_config(path):
     with open(path) as file:
         config = json.load(file)
     return config
-
 
 
 def get_task_log_config(ecs_client,task_definition_family):
