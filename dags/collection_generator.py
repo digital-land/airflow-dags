@@ -69,6 +69,7 @@ def configure_dag(**kwargs):
 
     # Push values to XCom
     ti = kwargs['ti']
+    ti.xcom_push(key='env', value=config['env'])
     ti.xcom_push(key='aws_vpc_config', value=aws_vpc_config)
     ti.xcom_push(key='memory', value=memory)
     ti.xcom_push(key='cpu', value=cpu)
@@ -90,8 +91,8 @@ for collection, datasets in config['collections'].items():
         params={
             "cpu": Param(default=8192, type="integer"),
             "memory": Param(default=32768, type="integer"),
-            "transformed-jobs":Param(default=8, type="integer"),
-            "dataset-jobs":Param(default=8, type="integer")
+            "transformed-jobs": Param(default=8, type="integer"),
+            "dataset-jobs": Param(default=8, type="integer")
         },
         render_template_as_native_obj=True
     ) as dag:
