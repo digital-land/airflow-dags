@@ -3,28 +3,35 @@ import json
 import tempfile
 import urllib.request
 from pathlib import Path
-from typing import List
 
 import click
 
-from collection_schema import CollectionConfig, CollectionSelection
+from collection_schema import Environments, CollectionSelection, CollectionConfig
 
-collection_config = CollectionConfig(
-    development=[
-        'ancient-woodland',
-        'organisation',
-        'title-boundary',
-        'article-4-direction',
-        'central-activities-zone'
-    ],
-    staging=CollectionSelection.all,
-    production=CollectionSelection.none
+collection_config = Environments(
+    development=CollectionConfig(
+        selection=CollectionSelection.explicit,
+        collections=[
+            'ancient-woodland',
+            'organisation',
+            'title-boundary',
+            'article-4-direction',
+            'central-activities-zone'
+        ]
+    ),
+    staging=CollectionConfig(
+        selection=CollectionSelection.all
+    ),
+    production=CollectionConfig(
+        selection=CollectionSelection.none
+    )
 )
 
 
 def collection_enabled(collection, env):
     env_collection_config = collection_config.for_env(env)
-    return env_collection_config == CollectionSelection.all or collection in env_collection_config
+    return (env_collection_config.selection == CollectionSelection.all
+            or collection in env_collection_config.collections)
 
 
 @click.command()
@@ -45,12 +52,12 @@ def make_dag_config(output_path: Path, env: str):
 
     with tempfile.TemporaryDirectory() as tmpdir:
         dataset_spec_url = 'https://raw.githubusercontent.com/digital-land/specification/main/specification/dataset.csv'
-        spec_dataset_path = Path(tmpdir) / 'dataset.csv'
-        urllib.request.urlretrieve(dataset_spec_url, Path(tmpdir) / 'dataset.csv')
+        dataset_spec_path = Path(tmpdir) / 'dataset.csv'
+        urllib.request.urlretrieve(dataset_spec_url, dataset_spec_path)
 
         collections_dict = {}
 
-        with open(spec_dataset_path, newline="") as f:
+        with open(dataset_spec_path, newline="") as f:
             dictreader = csv.DictReader(f)
             for row in dictreader:
                 collection = row.get('collection', None)

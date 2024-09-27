@@ -7,12 +7,18 @@ from pydantic import BaseModel, StrictStr
 class CollectionSelection(str, Enum):
     none = "none"
     all = "all"
+    explicit = "explicit"
 
 
 class CollectionConfig(BaseModel):
-    development: Union[CollectionSelection, List[StrictStr]]
-    staging: Union[CollectionSelection, List[StrictStr]]
-    production: Union[CollectionSelection, List[StrictStr]]
+    selection: CollectionSelection
+    collections: List[StrictStr] = []
 
-    def for_env(self, env) -> Union[CollectionSelection, List[StrictStr]]:
+
+class Environments(BaseModel):
+    development: CollectionConfig
+    staging: CollectionConfig
+    production: CollectionConfig
+
+    def for_env(self, env) -> CollectionConfig:
         return self.__dict__[env]
