@@ -10,6 +10,22 @@ on:
         description: The environment to deploy to.
 
 jobs:
+  detect-environments:
+    runs-on: ubuntu-latest
+    outputs:
+      environments: ${{ steps.environments.outputs.result }}
+    steps:
+      - uses: actions/github-script@v6
+        id: environments
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          result-encoding: json
+          script: |
+            if (context.payload?.inputs?.environment) return [context.payload?.inputs?.environment];
+            const {data: {environments}} =
+              await github.request(`GET /repos/${process.env.GITHUB_REPOSITORY}/environments`);
+            return environments.map(e => e.name)  
+
   test:
     runs-on: ubuntu-latest
     env:
@@ -31,12 +47,15 @@ jobs:
           make test
 
   deploy:
-    needs: [test]
     runs-on: ubuntu-latest
-    environment: development
+    needs: [test, detect-environments]
+    strategy:
+      matrix:
+        environment: ${{ fromJSON(needs.detect-environments.outputs.environments) }}
+    environment: ${{ matrix.environment }}
     env:
       AWS_S3_BUCKET: ${{ secrets.DAGS_S3_BUCKET }}
-      ENVIRONMENT: development
+      ENVIRONMENT: ${{ matrix.environment }}
     steps:
       - uses: actions/checkout@v4
 

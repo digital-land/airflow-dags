@@ -1,5 +1,6 @@
 from dags.utils import get_task_log_config
 
+
 def test_get_task_log_config_gets_config_from_aws(ecs_client):
     # Register a task definition
     response = ecs_client.register_task_definition(
@@ -21,8 +22,6 @@ def test_get_task_log_config_gets_config_from_aws(ecs_client):
             }
         ],
     )
-
-    
 
     # get the config
     log_config = get_task_log_config(ecs_client,'test-task')

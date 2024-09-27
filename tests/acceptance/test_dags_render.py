@@ -3,6 +3,7 @@ from airflow.models import DagBag
 
 DAG_FOLDER = 'dags'
 
+
 def test_dag_rendering():
     """Test that all DAGs in the DAG bag render correctly without running any tasks."""
     dag_bag = DagBag(dag_folder=DAG_FOLDER, include_examples=False)

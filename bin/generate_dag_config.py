@@ -1,21 +1,37 @@
-import tempfile
-import urllib.request
 import csv
 import json
-import click
-
+import tempfile
+import urllib.request
 from pathlib import Path
 
-# variabkle to contain the local colections we want to set up limited 
-DEVELOPMENT_COLLECTIONS = [
-    'ancient-woodland',
-    'organisation',
-    'title-boundary',
-    'article-4-direction',
-    'central-activities-zone'
-]
+import click
 
-STAGING_COLLECTIONS = DEVELOPMENT_COLLECTIONS
+from collection_schema import Environments, CollectionSelection, CollectionConfig
+
+collection_config = Environments(
+    development=CollectionConfig(
+        selection=CollectionSelection.explicit,
+        collections=[
+            'ancient-woodland',
+            'organisation',
+            'title-boundary',
+            'article-4-direction',
+            'central-activities-zone'
+        ]
+    ),
+    staging=CollectionConfig(
+        selection=CollectionSelection.all
+    ),
+    production=CollectionConfig(
+        selection=CollectionSelection.none
+    )
+)
+
+
+def collection_enabled(collection, env):
+    env_collection_config = collection_config.for_env(env)
+    return (env_collection_config.selection == CollectionSelection.all
+            or collection in env_collection_config.collections)
 
 
 @click.command()
@@ -31,27 +47,23 @@ STAGING_COLLECTIONS = DEVELOPMENT_COLLECTIONS
     default="development",
     help="environment that the json is being created for. If development then a subset of collections are used",
 )
-def make_colection_config(output_path:Path,env: str):
-    config_dict = {}
-    config_dict['env'] = env
-    collections_dict = {}
-    if env == 'development':
-        restricted_collections = DEVELOPMENT_COLLECTIONS
-    elif env == 'staging':
-        restricted_collections = STAGING_COLLECTIONS
-    else:
-        restricted_collections = None
+def make_dag_config(output_path: Path, env: str):
+    config_dict = {'env': env}
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        spec_dataset_path = Path(tmpdir) / 'dataset.csv'
-        urllib.request.urlretrieve('https://raw.githubusercontent.com/digital-land/specification/main/specification/dataset.csv',Path(tmpdir) / 'dataset.csv')
+        dataset_spec_url = 'https://raw.githubusercontent.com/digital-land/specification/main/specification/dataset.csv'
+        dataset_spec_path = Path(tmpdir) / 'dataset.csv'
+        urllib.request.urlretrieve(dataset_spec_url, dataset_spec_path)
 
-        with open(spec_dataset_path,newline="") as f:
+        collections_dict = {}
+
+        with open(dataset_spec_path, newline="") as f:
             dictreader = csv.DictReader(f)
             for row in dictreader:
-                collection = row.get('collection',None)
-                if restricted_collections is None or collection in restricted_collections:
-                    dataset = row.get('dataset',None)
+                collection = row.get('collection', None)
+
+                if collection_enabled(collection, env):
+                    dataset = row.get('dataset', None)
                     if collection and dataset:
                         if config_dict.get(collection,None):
                             collections_dict[collection].append(dataset)
@@ -59,8 +71,9 @@ def make_colection_config(output_path:Path,env: str):
                             collections_dict[collection] = [dataset]
 
         config_dict['collections'] = collections_dict
-        with open(output_path,'w') as f:
-            json.dump(config_dict,f,indent=4)
+        with open(output_path, 'w') as f:
+            json.dump(config_dict, f, indent=4)
+
 
 if __name__ == "__main__":
-    make_colection_config()
+    make_dag_config()
