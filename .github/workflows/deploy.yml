@@ -1,8 +1,8 @@
 name: Deploy dags to aws
 
 on:
-  # push:
-  #   branches: [main]
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       environment:
@@ -29,7 +29,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     env:
-      ENVIRONMENT: development
+      ENVIRONMENT: ${{ matrix.environment }}
     steps:
       - uses: actions/checkout@v4
 
