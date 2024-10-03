@@ -4,3 +4,4 @@ Flask
 Flask-AppBuilder
 pytest
 moto
+pydantic
