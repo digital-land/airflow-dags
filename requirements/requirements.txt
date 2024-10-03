@@ -82,6 +82,7 @@ boto==2.49.0
 boto3==1.35.3
     # via
     #   apache-airflow-providers-amazon
+    #   moto
     #   pyathena
     #   redshift-connector
     #   watchtower
@@ -89,6 +90,7 @@ botocore==1.35.3
     # via
     #   apache-airflow-providers-amazon
     #   boto3
+    #   moto
     #   pyathena
     #   redshift-connector
     #   s3transfer
@@ -125,7 +127,9 @@ cron-descriptor==1.4.3
 croniter==3.0.3
     # via apache-airflow
 cryptography==43.0.0
-    # via apache-airflow
+    # via
+    #   apache-airflow
+    #   moto
 deprecated==1.2.14
     # via
     #   apache-airflow
@@ -233,6 +237,7 @@ jinja2==3.1.4
     #   apache-airflow
     #   flask
     #   flask-babel
+    #   moto
     #   python-nvd3
 jmespath==1.0.1
     # via
@@ -292,6 +297,8 @@ methodtools==0.4.7
     # via apache-airflow
 more-itertools==10.4.0
     # via apache-airflow-providers-common-sql
+moto==5.0.16
+    # via -r requirements/requirements.in
 multidict==6.0.5
     # via
     #   aiohttp
@@ -383,6 +390,7 @@ python-dateutil==2.9.0.post0
     #   botocore
     #   croniter
     #   flask-appbuilder
+    #   moto
     #   pendulum
     #   pyathena
     #   time-machine
@@ -402,6 +410,7 @@ pyyaml==6.0.2
     #   apispec
     #   clickclick
     #   connexion
+    #   responses
 redshift-connector==2.1.3
     # via apache-airflow-providers-amazon
 referencing==0.35.1
@@ -413,11 +422,15 @@ requests==2.32.3
     #   apache-airflow
     #   apache-airflow-providers-http
     #   connexion
+    #   moto
     #   opentelemetry-exporter-otlp-proto-http
     #   redshift-connector
     #   requests-toolbelt
+    #   responses
 requests-toolbelt==1.0.0
     # via apache-airflow-providers-http
+responses==0.25.3
+    # via moto
 rfc3339-validator==0.1.4
     # via apache-airflow
 rich==13.7.1
@@ -499,6 +512,7 @@ urllib3==2.2.2
     # via
     #   botocore
     #   requests
+    #   responses
 watchtower==3.3.1
     # via apache-airflow-providers-amazon
 werkzeug==2.2.3
@@ -509,6 +523,7 @@ werkzeug==2.2.3
     #   flask-appbuilder
     #   flask-jwt-extended
     #   flask-login
+    #   moto
 wirerope==0.4.7
     # via methodtools
 wrapt==1.16.0
@@ -517,6 +532,8 @@ wtforms==3.1.2
     # via
     #   flask-appbuilder
     #   flask-wtf
+xmltodict==0.13.0
+    # via moto
 yarl==1.9.4
     # via aiohttp
 zipp==3.20.0
