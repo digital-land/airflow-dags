@@ -220,6 +220,8 @@ inflection==0.5.1
     # via
     #   apache-airflow-providers-amazon
     #   connexion
+iniconfig==2.0.0
+    # via pytest
 itsdangerous==2.2.0
     # via
     #   apache-airflow
@@ -333,6 +335,7 @@ packaging==24.1
     #   limits
     #   marshmallow
     #   marshmallow-sqlalchemy
+    #   pytest
     #   redshift-connector
     #   sqlalchemy-redshift
 pathspec==0.12.1
@@ -340,7 +343,9 @@ pathspec==0.12.1
 pendulum==3.0.0
     # via apache-airflow
 pluggy==1.5.0
-    # via apache-airflow
+    # via
+    #   apache-airflow
+    #   pytest
 ply==3.11
     # via jsonpath-ng
 prison==0.2.1
@@ -368,6 +373,8 @@ pyjwt==2.9.0
     #   apache-airflow
     #   flask-appbuilder
     #   flask-jwt-extended
+pytest==8.3.3
+    # via -r requirements/requirements.in
 python-daemon==3.0.1
     # via apache-airflow
 python-dateutil==2.9.0.post0
