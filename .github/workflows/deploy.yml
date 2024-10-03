@@ -39,6 +39,11 @@ jobs:
 
       - run: |
           pip install -r requirements/dev-requirements.txt
+        if: ${{ matrix.environment == 'development' }}
+
+      - run: |
+          pip install -r requirements/requirements.txt
+        if: ${{ matrix.environment != 'development' }}
 
       - run: |
           make dags/config.json
