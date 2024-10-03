@@ -46,7 +46,7 @@ jobs:
         if: ${{ matrix.environment != 'development' }}
 
       - run: |
-          make dags/config.json
+          make dags/config.json ENVIRONMENT=${{ matrix.environment }}
         
       - run: |
           make test
