@@ -118,6 +118,7 @@ for collection, datasets in config['collections'].items():
                         'cpu': '{{ task_instance.xcom_pull(task_ids="configure-dag", key="cpu") | int }}', 
                         'memory': '{{ task_instance.xcom_pull(task_ids="configure-dag", key="memory") | int }}', 
                         "environment": [
+                            {"name": "ENVIRONMENT", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"env\") | string }}'"},
                             {"name": "COLLECTION_NAME", "value": collection},
                             {
                                 "name": "COLLECTION_DATASET_BUCKET_NAME",
