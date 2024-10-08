@@ -60,12 +60,13 @@ def configure_dag(**kwargs):
 
     # get ecs-task logging configuration
     ecs_client = boto3.client('ecs')
-    collection_task_log_config = get_task_log_config(ecs_client,collection_task_defn)
+    collection_task_log_config = get_task_log_config(ecs_client, collection_task_defn)
     collection_task_log_config_options = collection_task_log_config['options']
     collection_task_log_group = str(collection_task_log_config_options.get('awslogs-group'))
     # add container name to prefix
     collection_task_log_stream_prefix = str(collection_task_log_config_options.get('awslogs-stream-prefix')) + f'/{collection_task_defn}'
     collection_task_log_region = str(collection_task_log_config_options.get('awslogs-region'))
+    collection_dataset_bucket_name = kwargs['conf'].get(section='custom', key='collection_dataset_bucket_name')
 
     # Push values to XCom
     ti = kwargs['ti']
@@ -78,6 +79,7 @@ def configure_dag(**kwargs):
     ti.xcom_push(key='collection-task-log-group', value=collection_task_log_group)
     ti.xcom_push(key='collection-task-log-stream-prefix', value=collection_task_log_stream_prefix)
     ti.xcom_push(key='collection-task-log-region', value=collection_task_log_region)
+    ti.xcom_push(key='collection-dataset-bucket-name', value=collection_dataset_bucket_name)
 
 
 for collection, datasets in config['collections'].items():
@@ -117,6 +119,9 @@ for collection, datasets in config['collections'].items():
                         'memory': '{{ task_instance.xcom_pull(task_ids="configure-dag", key="memory") | int }}', 
                         "environment": [
                             {"name": "COLLECTION_NAME", "value": collection},
+                            {
+                                "name": "COLLECTION_DATASET_BUCKET_NAME",
+                                "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"collection-dataset-bucket-name\") | string }}'"},
                             # {"name": "TRANSFORMED_JOBS", "value": str('{{ task_instance.xcom_pull(task_ids="configure-dag", key="transformed-jobs") | string }}')},
                             {"name": "TRANSFORMED_JOBS", "value":"'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"transformed-jobs\") | string }}'"},
                             {"name": "DATASET_JOBS", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"dataset-jobs\") | string }}'"}
