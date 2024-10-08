@@ -20,6 +20,10 @@ alembic==1.13.2
     # via
     #   -r requirements/requirements.txt
     #   apache-airflow
+annotated-types==0.7.0
+    # via
+    #   -r requirements/requirements.txt
+    #   pydantic
 anyio==4.4.0
     # via
     #   -r requirements/requirements.txt
@@ -305,7 +309,7 @@ googleapis-common-protos==1.63.2
     #   -r requirements/requirements.txt
     #   opentelemetry-exporter-otlp-proto-grpc
     #   opentelemetry-exporter-otlp-proto-http
-greenlet==3.0.3
+greenlet==3.1.1
     # via
     #   -r requirements/requirements.txt
     #   sqlalchemy
@@ -560,6 +564,12 @@ pycparser==2.22
     # via
     #   -r requirements/requirements.txt
     #   cffi
+pydantic==2.9.2
+    # via -r requirements/requirements.txt
+pydantic-core==2.23.4
+    # via
+    #   -r requirements/requirements.txt
+    #   pydantic
 pygments==2.18.0
     # via
     #   -r requirements/requirements.txt
@@ -742,6 +752,8 @@ typing-extensions==4.12.2
     #   flask-limiter
     #   limits
     #   opentelemetry-sdk
+    #   pydantic
+    #   pydantic-core
 tzdata==2024.1
     # via
     #   -r requirements/requirements.txt
