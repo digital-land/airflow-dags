@@ -122,7 +122,12 @@ for collection, datasets in config['collections'].items():
                             {"name": "COLLECTION_NAME", "value": collection},
                             {
                                 "name": "COLLECTION_DATASET_BUCKET_NAME",
-                                "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"collection-dataset-bucket-name\") | string }}'"},
+                                "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"collection-dataset-bucket-name\") | string }}'"
+                            },
+                            {
+                                "name": "HOISTED_COLLECTION_DATASET_BUCKET_NAME",
+                                "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"collection-dataset-bucket-name\") | string }}'"
+                            },
                             # {"name": "TRANSFORMED_JOBS", "value": str('{{ task_instance.xcom_pull(task_ids="configure-dag", key="transformed-jobs") | string }}')},
                             {"name": "TRANSFORMED_JOBS", "value":"'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"transformed-jobs\") | string }}'"},
                             {"name": "DATASET_JOBS", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"dataset-jobs\") | string }}'"}
