@@ -17,13 +17,16 @@ collection_config = Environments(
             'title-boundary',
             'article-4-direction',
             'central-activities-zone'
-        ]
+        ],
+        schedule='0 10 * * *'  # Daily at 10 AM
     ),
     staging=CollectionConfig(
-        selection=CollectionSelection.all
+        selection=CollectionSelection.all,
+        schedule='0 1 * * *'  # Daily at 1 AM
     ),
     production=CollectionConfig(
-        selection=CollectionSelection.none
+        selection=CollectionSelection.none,
+        schedule='0 1 * * *'  # Daily at 1 AM
     )
 )
 
@@ -48,9 +51,11 @@ def collection_enabled(collection, env):
     help="environment that the json is being created for. If development then a subset of collections are used",
 )
 def make_dag_config(output_path: Path, env: str):
+    env_collection_config = collection_config[env]
+
     config_dict = {
         'env': env,
-        'schedule': '0 11 * * *' # run everyday at 11am         
+        'schedule': env_collection_config.schedule   
     }
 
     with tempfile.TemporaryDirectory() as tmpdir:
