@@ -22,11 +22,11 @@ collection_config = Environments(
     ),
     staging=CollectionConfig(
         selection=CollectionSelection.all,
-        schedule='None'
+        schedule='0 1 * * *'
     ),
     production=CollectionConfig(
         selection=CollectionSelection.none,
-        schedule='None'
+        schedule='0 1 * * *'
     )
 )
 
