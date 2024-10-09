@@ -12,19 +12,21 @@ import json
 my_dir = os.path.dirname(os.path.abspath(__file__))
 configuration_file_path = os.path.join(my_dir, "config.json")
 
+with open(configuration_file_path) as file:
+    config = json.load(file)
+
+dag_schedule = config.get("schedule", None)  # Use "None" as a fallback if "schedule" key is missing
+
 with DAG(
         dag_id="trigger-collection-dags",
         description=f"A master DAG which runs all the processing we need each need to process all datasets and packages",
-        schedule=None,
+        schedule=dag_schedule,
 ):
     run_org_dag = TriggerDagRunOperator(
         task_id='trigger-organisation-collection-dag',
         trigger_dag_id=f'organisation-collection',
         wait_for_completion=True
     )
-
-    with open(configuration_file_path) as file:
-        config = json.load(file)
 
     for collection, datasets in config['collections'].items():
         if collection not in ['organisation', 'title-boundary']:

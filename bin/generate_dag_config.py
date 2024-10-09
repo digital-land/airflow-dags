@@ -48,7 +48,10 @@ def collection_enabled(collection, env):
     help="environment that the json is being created for. If development then a subset of collections are used",
 )
 def make_dag_config(output_path: Path, env: str):
-    config_dict = {'env': env}
+    config_dict = {
+        'env': env,
+        'schedule': '0 11 * * *' # run everyday at 11am         
+    }
 
     with tempfile.TemporaryDirectory() as tmpdir:
         dataset_spec_url = 'https://raw.githubusercontent.com/digital-land/specification/main/specification/dataset.csv'
