@@ -17,7 +17,7 @@ collection_config = Environments(
             'title-boundary',
             'article-4-direction',
             'central-activities-zone'
-        ],
+        ]
         # schedule='0 10 * * *'  # Daily at 10 AM
     ),
     staging=CollectionConfig(
