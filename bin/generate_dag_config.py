@@ -21,10 +21,10 @@ collection_config = Environments(
         # schedule='0 10 * * *'  # Daily at 10 AM
     ),
     staging=CollectionConfig(
-        selection=CollectionSelection.all,
+        selection=CollectionSelection.all
     ),
     production=CollectionConfig(
-        selection=CollectionSelection.none,
+        selection=CollectionSelection.none
     )
 )
 
