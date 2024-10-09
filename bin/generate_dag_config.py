@@ -51,7 +51,7 @@ def collection_enabled(collection, env):
     help="environment that the json is being created for. If development then a subset of collections are used",
 )
 def make_dag_config(output_path: Path, env: str):
-    env_collection_config = collection_config[env]
+    env_collection_config = collection_config.for_env(env)
 
     config_dict = {
         'env': env,
