@@ -493,6 +493,8 @@ urllib3==2.2.2
     # via
     #   botocore
     #   requests
+utils==1.0.2
+    # via -r requirements/requirements.in
 watchtower==3.3.1
     # via apache-airflow-providers-amazon
 werkzeug==2.2.3
