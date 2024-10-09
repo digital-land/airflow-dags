@@ -13,7 +13,7 @@ class CollectionSelection(str, Enum):
 class CollectionConfig(BaseModel):
     selection: CollectionSelection
     collections: List[StrictStr] = []
-    schedule: Optional[StrictStr] = '0 1 * * *' # Default schedule
+    schedule: Optional[StrictStr] = 'None' # Default schedule
 
 
 class Environments(BaseModel):
