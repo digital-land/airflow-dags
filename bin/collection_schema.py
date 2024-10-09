@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Union, Dict
+from typing import List, Union, Dict, Optional
 
 from pydantic import BaseModel, StrictStr
 
@@ -13,6 +13,7 @@ class CollectionSelection(str, Enum):
 class CollectionConfig(BaseModel):
     selection: CollectionSelection
     collections: List[StrictStr] = []
+    schedule: Optional[StrictStr] = '0 1 * * *' # Default schedule
 
 
 class Environments(BaseModel):
