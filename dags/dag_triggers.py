@@ -9,6 +9,8 @@ from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 import os
 import json
 
+from datetime import datetime, timedelta
+
 my_dir = os.path.dirname(os.path.abspath(__file__))
 configuration_file_path = os.path.join(my_dir, "config.json")
 
@@ -21,6 +23,8 @@ with DAG(
         dag_id="trigger-collection-dags",
         description=f"A master DAG which runs all the processing we need each need to process all datasets and packages",
         schedule=dag_schedule,
+        start_date=datetime(2024, 1, 1),
+        catchup=False,
 ):
     run_org_dag = TriggerDagRunOperator(
         task_id='trigger-organisation-collection-dag',
