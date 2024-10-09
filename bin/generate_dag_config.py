@@ -18,15 +18,13 @@ collection_config = Environments(
             'article-4-direction',
             'central-activities-zone'
         ],
-        schedule='None'  # Daily at 10 AM
+        # schedule='0 10 * * *'  # Daily at 10 AM
     ),
     staging=CollectionConfig(
         selection=CollectionSelection.all
-        # schedule='0 1 * * *'
     ),
     production=CollectionConfig(
         selection=CollectionSelection.none
-        # schedule='0 1 * * *'
     )
 )
 
