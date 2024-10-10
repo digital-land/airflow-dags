@@ -17,7 +17,8 @@ collection_config = Environments(
             'title-boundary',
             'article-4-direction',
             'central-activities-zone'
-        ]
+        ],
+        schedule='0 10 * * *'  # Daily at 10 AM
     ),
     staging=CollectionConfig(
         selection=CollectionSelection.all
@@ -48,7 +49,15 @@ def collection_enabled(collection, env):
     help="environment that the json is being created for. If development then a subset of collections are used",
 )
 def make_dag_config(output_path: Path, env: str):
-    config_dict = {'env': env}
+    env_collection_config = collection_config.for_env(env)
+
+    config_dict = {
+        'env': env
+    }
+
+     # Only add 'schedule' if it exists and is not None
+    if env_collection_config.schedule:
+        config_dict['schedule'] = env_collection_config.schedule 
 
     with tempfile.TemporaryDirectory() as tmpdir:
         dataset_spec_url = 'https://raw.githubusercontent.com/digital-land/specification/main/specification/dataset.csv'
