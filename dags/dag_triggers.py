@@ -25,12 +25,12 @@ with DAG(
         schedule=dag_schedule,
         start_date=datetime(2024, 1, 1),
         catchup=False,
-        concurrency=10,
+        # concurrency=10,
 ):
     run_org_dag = TriggerDagRunOperator(
         task_id='trigger-organisation-collection-dag',
         trigger_dag_id=f'organisation-collection',
-        wait_for_completion=True
+        wait_for_completion=False
     )
 
     for collection, datasets in config['collections'].items():
