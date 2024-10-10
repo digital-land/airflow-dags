@@ -19,7 +19,7 @@ collection_config = Environments(
             'central-activities-zone'
         ],
         # schedule='0 10 * * *'  # Daily at 11 AM
-        schedule='0 14 * * *'
+        schedule='45 14 * * *'
     ),
     staging=CollectionConfig(
         selection=CollectionSelection.all

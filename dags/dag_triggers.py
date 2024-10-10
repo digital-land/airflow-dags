@@ -25,6 +25,7 @@ with DAG(
         schedule=dag_schedule,
         start_date=datetime(2024, 1, 1),
         catchup=False,
+        concurrency=10,
 ):
     run_org_dag = TriggerDagRunOperator(
         task_id='trigger-organisation-collection-dag',
