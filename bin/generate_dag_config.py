@@ -10,14 +10,15 @@ from collection_schema import Environments, CollectionSelection, CollectionConfi
 
 collection_config = Environments(
     development=CollectionConfig(
-        selection=CollectionSelection.explicit,
-        collections=[
-            'ancient-woodland',
-            'organisation',
-            'title-boundary',
-            'article-4-direction',
-            'central-activities-zone'
-        ],
+        # selection=CollectionSelection.explicit,
+        # collections=[
+        #     'ancient-woodland',
+        #     'organisation',
+        #     'title-boundary',
+        #     'article-4-direction',
+        #     'central-activities-zone'
+        # ],
+        selection=CollectionSelection.all,
         schedule='0 10 * * *',  # Daily at 10 AM
         max_active_tasks=80
     ),
