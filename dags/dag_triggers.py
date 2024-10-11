@@ -30,16 +30,14 @@ with DAG(
 ):
     run_org_dag = TriggerDagRunOperator(
         task_id='trigger-organisation-collection-dag',
-        trigger_dag_id=f'organisation-collection',
-        wait_for_completion=False
+        trigger_dag_id=f'organisation-collection'
     )
 
     for collection, datasets in config['collections'].items():
         if collection not in ['organisation', 'title-boundary']:
             collection_dag = TriggerDagRunOperator(
                 task_id=f'trigger-{collection}-collection-dag',
-                trigger_dag_id=f'{collection}-collection',
-                wait_for_completion=False
+                trigger_dag_id=f'{collection}-collection'
             )
 
             run_org_dag >> collection_dag
