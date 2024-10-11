@@ -37,7 +37,7 @@ with DAG(
             collection_dag = TriggerDagRunOperator(
                 task_id=f'trigger-{collection}-collection-dag',
                 trigger_dag_id=f'{collection}-collection',
-                wait_for_completion=False
+                wait_for_completion=True
             )
 
             run_org_dag >> collection_dag
