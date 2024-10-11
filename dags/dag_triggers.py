@@ -18,6 +18,7 @@ with open(configuration_file_path) as file:
     config = json.load(file)
 
 dag_schedule = config.get("schedule", None)  # Use "None" as a fallback if "schedule" key is missing
+dag_max_active_tasks = config.get("max_active_tasks")
 
 with DAG(
         dag_id="trigger-collection-dags",
@@ -25,6 +26,7 @@ with DAG(
         schedule=dag_schedule,
         start_date=datetime(2024, 1, 1),
         catchup=False,
+        max_active_tasks=dag_max_active_tasks
 ):
     run_org_dag = TriggerDagRunOperator(
         task_id='trigger-organisation-collection-dag',
