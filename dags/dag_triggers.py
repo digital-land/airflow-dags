@@ -25,6 +25,8 @@ with DAG(
         schedule=dag_schedule,
         start_date=datetime(2024, 1, 1),
         catchup=False,
+        max_active_tasks=100
+
 ):
     run_org_dag = TriggerDagRunOperator(
         task_id='trigger-organisation-collection-dag',
@@ -37,7 +39,7 @@ with DAG(
             collection_dag = TriggerDagRunOperator(
                 task_id=f'trigger-{collection}-collection-dag',
                 trigger_dag_id=f'{collection}-collection',
-                wait_for_completion=False
+                wait_for_completion=True
             )
 
             run_org_dag >> collection_dag
