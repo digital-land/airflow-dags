@@ -14,6 +14,7 @@ class CollectionConfig(BaseModel):
     selection: CollectionSelection
     collections: List[StrictStr] = []
     schedule: Optional[StrictStr] = None
+    max_active_tasks: Optional[int] = 100
 
 
 class Environments(BaseModel):

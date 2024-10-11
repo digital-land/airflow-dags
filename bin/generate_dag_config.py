@@ -10,15 +10,17 @@ from collection_schema import Environments, CollectionSelection, CollectionConfi
 
 collection_config = Environments(
     development=CollectionConfig(
-        selection=CollectionSelection.explicit,
-        collections=[
-            'ancient-woodland',
-            'organisation',
-            'title-boundary',
-            'article-4-direction',
-            'central-activities-zone'
-        ],
-        schedule='0 10 * * *'  # Daily at 10 AM
+        # selection=CollectionSelection.explicit,
+        # collections=[
+        #     'ancient-woodland',
+        #     'organisation',
+        #     'title-boundary',
+        #     'article-4-direction',
+        #     'central-activities-zone'
+        # ],
+        selection=CollectionSelection.all,
+        schedule='0 10 * * *',  # Daily at 10 AM
+        max_active_tasks=80
     ),
     staging=CollectionConfig(
         selection=CollectionSelection.all
@@ -58,6 +60,9 @@ def make_dag_config(output_path: Path, env: str):
      # Only add 'schedule' if it exists and is not None
     if env_collection_config.schedule:
         config_dict['schedule'] = env_collection_config.schedule 
+
+    if env_collection_config.max_active_tasks:
+        config_dict['max_active_tasks'] = env_collection_config.max_active_tasks
 
     with tempfile.TemporaryDirectory() as tmpdir:
         dataset_spec_url = 'https://raw.githubusercontent.com/digital-land/specification/main/specification/dataset.csv'
