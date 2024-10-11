@@ -10,15 +10,16 @@ from collection_schema import Environments, CollectionSelection, CollectionConfi
 
 collection_config = Environments(
     development=CollectionConfig(
-        selection=CollectionSelection.explicit,
-        collections=[
-            'ancient-woodland',
-            'organisation',
-            'title-boundary',
-            'article-4-direction',
-            'central-activities-zone'
-        ],
+        # selection=CollectionSelection.explicit,
+        # collections=[
+        #     'ancient-woodland',
+        #     'organisation',
+        #     'title-boundary',
+        #     'article-4-direction',
+        #     'central-activities-zone'
+        # ],
         # schedule='0 10 * * *'  # Daily at 11 AM
+        selection=CollectionSelection.all,
         schedule='15 15 * * *'
     ),
     staging=CollectionConfig(
