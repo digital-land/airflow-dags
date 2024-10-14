@@ -19,7 +19,7 @@ collection_config = Environments(
         #     'central-activities-zone'
         # ],
         selection=CollectionSelection.all,
-        schedule='0 10 * * *',  # Daily at 10 AM
+        schedule='0 0 * * *',  # time is UTC
         max_active_tasks=80
     ),
     staging=CollectionConfig(
