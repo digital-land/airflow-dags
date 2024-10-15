@@ -23,7 +23,8 @@ collection_config = Environments(
         max_active_tasks=80
     ),
     staging=CollectionConfig(
-        selection=CollectionSelection.all
+        selection=CollectionSelection.all,
+        schedule='0 10 * * *'
     ),
     production=CollectionConfig(
         selection=CollectionSelection.none
