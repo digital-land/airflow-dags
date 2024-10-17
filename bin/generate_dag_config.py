@@ -20,11 +20,11 @@ collection_config = Environments(
         # ],
         selection=CollectionSelection.all,
         schedule='0 0 * * *',  # time is UTC
-        max_active_tasks=80
+        max_active_tasks=50
     ),
     staging=CollectionConfig(
         selection=CollectionSelection.all,
-        schedule='0 10 * * *'
+        schedule='0 0 * * *'
     ),
     production=CollectionConfig(
         selection=CollectionSelection.none
