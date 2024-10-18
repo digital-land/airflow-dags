@@ -90,6 +90,7 @@ for collection, datasets in config['collections'].items():
         default_args=default_args,
         description=f"Collection task for the {collection} collection",
         schedule=None,
+        catchup=False,
         params={
             "cpu": Param(default=8192, type="integer"),
             "memory": Param(default=32768, type="integer"),
