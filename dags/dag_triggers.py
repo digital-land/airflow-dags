@@ -11,6 +11,10 @@ import json
 
 from datetime import datetime, timedelta
 
+from dags.utils import load_specification_datasets
+
+from collection_schema import CollectionSelection
+
 my_dir = os.path.dirname(os.path.abspath(__file__))
 configuration_file_path = os.path.join(my_dir, "config.json")
 
@@ -20,24 +24,36 @@ with open(configuration_file_path) as file:
 dag_schedule = config.get("schedule", None)  # Use "None" as a fallback if "schedule" key is missing
 dag_max_active_tasks = config.get("max_active_tasks")
 
+
+def collection_enabled(collection_name, configuration):
+    return (configuration['collection_selection'] == CollectionSelection.all
+            or (configuration['collection_selection'] == CollectionSelection.explicit
+                and collection_name in configuration['collections'])
+            )
+
+
 with DAG(
         dag_id="trigger-collection-dags",
         description=f"A master DAG which runs all the processing we need each need to process all datasets and packages",
         schedule=dag_schedule,
         start_date=datetime(2024, 1, 1),
         catchup=False,
-        max_active_tasks=dag_max_active_tasks
+        max_active_tasks=dag_max_active_tasks,
+        is_paused_upon_creation=False
 ):
     run_org_dag = TriggerDagRunOperator(
         task_id='trigger-organisation-collection-dag',
         trigger_dag_id=f'organisation-collection'
     )
 
-    for collection, datasets in config['collections'].items():
-        if collection not in ['organisation', 'title-boundary']:
-            collection_dag = TriggerDagRunOperator(
-                task_id=f'trigger-{collection}-collection-dag',
-                trigger_dag_id=f'{collection}-collection'
-            )
+    collections = load_specification_datasets()
 
-            run_org_dag >> collection_dag
+    for collection, datasets in config['scheduled_collections'].items():
+        if collection not in ['organisation', 'title-boundary']:
+            if collection_enabled(collection, config):
+                collection_dag = TriggerDagRunOperator(
+                    task_id=f'trigger-{collection}-collection-dag',
+                    trigger_dag_id=f'{collection}-collection'
+                )
+
+                run_org_dag >> collection_dag

@@ -12,7 +12,7 @@ from airflow.providers.amazon.aws.operators.ecs import (
 from airflow.operators.python import PythonOperator
 from airflow.models.param import Param
 
-from utils import get_config, get_task_log_config
+from utils import get_config, get_task_log_config, load_specification_datasets
 
 # read config from file and environment
 my_dir = os.path.dirname(os.path.abspath(__file__))
@@ -20,7 +20,6 @@ configuration_file_path = os.path.join(my_dir, "config.json")
 config = get_config(configuration_file_path)
 
 # set some variables needed for ECS tasks,
-# TODO get from environment in the future
 ecs_cluster = f"{config['env']}-cluster"
 collection_task_defn= f"{config['env']}-mwaa-collection-task"
 
@@ -82,7 +81,9 @@ def configure_dag(**kwargs):
     ti.xcom_push(key='collection-dataset-bucket-name', value=collection_dataset_bucket_name)
 
 
-for collection, datasets in config['collections'].items():
+collections = load_specification_datasets()
+
+for collection, datasets in collections:
     dag_id = f"{collection}-collection"
 
     with DAG(
@@ -97,7 +98,8 @@ for collection, datasets in config['collections'].items():
             "transformed-jobs": Param(default=8, type="integer"),
             "dataset-jobs": Param(default=8, type="integer")
         },
-        render_template_as_native_obj=True
+        render_template_as_native_obj=True,
+        is_paused_upon_creation=False
     ) as dag:
         convert_params_task = PythonOperator(
             task_id=configure_dag_task_id,
