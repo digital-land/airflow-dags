@@ -11,7 +11,7 @@ import json
 
 from datetime import datetime, timedelta
 
-from dags.utils import load_specification_datasets
+from utils import load_specification_datasets
 
 from collection_schema import CollectionSelection
 
@@ -25,7 +25,7 @@ dag_schedule = config.get("schedule", None)  # Use "None" as a fallback if "sche
 dag_max_active_tasks = config.get("max_active_tasks")
 
 
-def collection_enabled(collection_name, configuration):
+def collection_selected(collection_name, configuration):
     return (configuration['collection_selection'] == CollectionSelection.all
             or (configuration['collection_selection'] == CollectionSelection.explicit
                 and collection_name in configuration['collections'])
@@ -48,9 +48,9 @@ with DAG(
 
     collections = load_specification_datasets()
 
-    for collection, datasets in config['scheduled_collections'].items():
+    for collection, datasets in collections.items():
         if collection not in ['organisation', 'title-boundary']:
-            if collection_enabled(collection, config):
+            if collection_selected(collection, config):
                 collection_dag = TriggerDagRunOperator(
                     task_id=f'trigger-{collection}-collection-dag',
                     trigger_dag_id=f'{collection}-collection'
