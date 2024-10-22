@@ -10,7 +10,7 @@ class CollectionSelection(str, Enum):
     explicit = "explicit"
 
 
-class CollectionConfig(BaseModel):
+class ScheduledCollectionConfig(BaseModel):
     selection: CollectionSelection
     collections: List[StrictStr] = []
     schedule: Optional[StrictStr] = None
@@ -18,9 +18,9 @@ class CollectionConfig(BaseModel):
 
 
 class Environments(BaseModel):
-    development: CollectionConfig
-    staging: CollectionConfig
-    production: CollectionConfig
+    development: ScheduledCollectionConfig
+    staging: ScheduledCollectionConfig
+    production: ScheduledCollectionConfig
 
-    def for_env(self, env) -> CollectionConfig:
+    def for_env(self, env) -> ScheduledCollectionConfig:
         return self.__dict__[env]

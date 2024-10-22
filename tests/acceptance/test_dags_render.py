@@ -17,6 +17,8 @@ def test_dag_rendering():
             # Ensure that the DAG renders correctly
             assert dag is not None, f"DAG '{dag_id}' is None"
             # Additional rendering checks can be added if needed
+            print(dag_id)
+            print(dag.task_ids)
         except Exception as e:
             failed_dags.append(f"DAG '{dag_id}' failed to render: {e}")
 
