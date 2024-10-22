@@ -5,8 +5,8 @@ from pathlib import Path
 
 import click
 
-# Allows read of collection_schema
-sys.path.insert(0, f"{os.getcwd()}/")
+# Allows read of collection_schema within dags directory
+sys.path.append(f"{os.getcwd()}")
 
 from dags.collection_schema import Environments, CollectionSelection, ScheduledCollectionConfig
 
