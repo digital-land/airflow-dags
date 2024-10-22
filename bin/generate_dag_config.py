@@ -14,16 +14,17 @@ scheduled_collection_config = Environments(
     development=ScheduledCollectionConfig(
         selection=CollectionSelection.explicit,
         collections=[
-            'ancient-woodland'
+            'ancient-woodland',
+            'organisation'
         ],
-        # selection=CollectionSelection.all,
         schedule='0 0 * * *',  # time is UTC
         max_active_tasks=50
     ),
     staging=ScheduledCollectionConfig(
         selection=CollectionSelection.explicit,
         collections=[
-            'ancient-woodland'
+            'ancient-woodland',
+            'organisation'
         ],
         schedule='0 0 * * *'
     ),
