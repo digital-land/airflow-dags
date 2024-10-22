@@ -57,9 +57,10 @@ with DAG(
 with DAG(
         dag_id="trigger-collection-dags-manual",
         description=f"A master DAG which runs all collection DAGs on a manual basis",
+        schedule=None,
         catchup=False,
         max_active_tasks=dag_max_active_tasks,
-        is_paused_upon_creation=True
+        is_paused_upon_creation=False
 ):
 
     run_org_dag = TriggerDagRunOperator(
