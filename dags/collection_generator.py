@@ -81,7 +81,7 @@ def configure_dag(**kwargs):
 
 collections = load_specification_datasets()
 
-for collection, datasets in collections:
+for collection, datasets in collections.items():
     dag_id = f"{collection}-collection"
 
     with DAG(
