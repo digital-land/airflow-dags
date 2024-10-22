@@ -44,7 +44,7 @@ with DAG(
     collections = load_specification_datasets()
 
     for collection, datasets in collections.items():
-        if collection not in ['organisation', 'title-boundary']:
+        if collection not in ['organisation']:
             if collection_selected(collection, config):
                 collection_dag = TriggerDagRunOperator(
                     task_id=f'trigger-{collection}-collection-dag',
