@@ -12,12 +12,10 @@ from airflow.providers.amazon.aws.operators.ecs import (
 from airflow.operators.python import PythonOperator
 from airflow.models.param import Param
 
-from utils import get_config, get_task_log_config, load_specification_datasets
+from dags.utils import get_config, get_task_log_config, load_specification_datasets
 
 # read config from file and environment
-my_dir = os.path.dirname(os.path.abspath(__file__))
-configuration_file_path = os.path.join(my_dir, "config.json")
-config = get_config(configuration_file_path)
+config = get_config()
 
 # set some variables needed for ECS tasks,
 ecs_cluster = f"{config['env']}-cluster"

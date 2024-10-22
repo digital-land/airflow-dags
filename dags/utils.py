@@ -1,5 +1,6 @@
 import csv
 import json
+import os
 import tempfile
 import urllib
 from pathlib import Path
@@ -8,7 +9,10 @@ import boto3
 import logging
 
 
-def get_config(path):
+def get_config(path=None):
+    if path is None:
+        my_dir = os.path.dirname(os.path.abspath(__file__))
+        path = os.path.join(my_dir, "config.json")
     with open(path) as file:
         config = json.load(file)
     return config
@@ -30,7 +34,7 @@ def load_specification_datasets():
 
                 dataset = row.get('dataset', None)
                 if collection and dataset:
-                    if collections_dict[collection]:
+                    if collection in collections_dict:
                         collections_dict[collection].append(dataset)
                     else:
                         collections_dict[collection] = [dataset]

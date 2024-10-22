@@ -11,16 +11,11 @@ import json
 
 from datetime import datetime, timedelta
 
-from utils import load_specification_datasets
+from dags.utils import get_config, load_specification_datasets
 
-from collection_schema import CollectionSelection
+from dags.collection_schema import CollectionSelection
 
-my_dir = os.path.dirname(os.path.abspath(__file__))
-configuration_file_path = os.path.join(my_dir, "config.json")
-
-with open(configuration_file_path) as file:
-    config = json.load(file)
-
+config = get_config()
 dag_schedule = config.get("schedule", None)  # Use "None" as a fallback if "schedule" key is missing
 dag_max_active_tasks = config.get("max_active_tasks")
 
