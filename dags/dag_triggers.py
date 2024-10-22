@@ -11,9 +11,9 @@ import json
 
 from datetime import datetime, timedelta
 
-from dags.utils import get_config, load_specification_datasets
+from utils import get_config, load_specification_datasets
 
-from dags.collection_schema import CollectionSelection
+from collection_schema import CollectionSelection
 
 config = get_config()
 dag_schedule = config.get("schedule", None)  # Use "None" as a fallback if "schedule" key is missing

@@ -12,7 +12,7 @@ from airflow.providers.amazon.aws.operators.ecs import (
 from airflow.operators.python import PythonOperator
 from airflow.models.param import Param
 
-from dags.utils import get_config, get_task_log_config, load_specification_datasets
+from utils import get_config, get_task_log_config, load_specification_datasets
 
 # read config from file and environment
 config = get_config()
