@@ -3,11 +3,8 @@ from airflow.models import DagBag
 
 DAG_FOLDER = 'dags'
 
-import sys
-
 
 def test_dag_rendering():
-    print(sys.path)
     """Test that all DAGs in the DAG bag render correctly without running any tasks."""
     dag_bag = DagBag(dag_folder=DAG_FOLDER, include_examples=False)
     assert len(dag_bag.dags) > 0, "No DAGs found in DAG bag!"
@@ -20,6 +17,8 @@ def test_dag_rendering():
             # Ensure that the DAG renders correctly
             assert dag is not None, f"DAG '{dag_id}' is None"
             # Additional rendering checks can be added if needed
+            print(dag_id)
+            print(dag.task_ids)
         except Exception as e:
             failed_dags.append(f"DAG '{dag_id}' failed to render: {e}")
 
