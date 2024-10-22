@@ -36,10 +36,13 @@ with DAG(
         max_active_tasks=dag_max_active_tasks,
         is_paused_upon_creation=False
 ):
-    run_org_dag = TriggerDagRunOperator(
-        task_id='trigger-organisation-collection-dag',
-        trigger_dag_id=f'organisation-collection'
-    )
+    organisation_collection_selected = collection_selected('organisation', config)
+
+    if organisation_collection_selected:
+        run_org_dag = TriggerDagRunOperator(
+            task_id='trigger-organisation-collection-dag',
+            trigger_dag_id=f'organisation-collection'
+        )
 
     collections = load_specification_datasets()
 
@@ -50,5 +53,5 @@ with DAG(
                     task_id=f'trigger-{collection}-collection-dag',
                     trigger_dag_id=f'{collection}-collection'
                 )
-
-                run_org_dag >> collection_dag
+                if organisation_collection_selected:
+                    run_org_dag >> collection_dag
