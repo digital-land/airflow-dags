@@ -29,7 +29,11 @@ scheduled_collection_config = Environments(
         schedule='0 0 * * *'
     ),
     production=ScheduledCollectionConfig(
-        selection=CollectionSelection.none
+        selection=CollectionSelection.explicit,
+        collections=[
+            'ancient-woodland'
+        ],
+        schedule='0 0 * * *'
     )
 )
 
