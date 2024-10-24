@@ -33,7 +33,7 @@ scheduled_collection_config = Environments(
         collections=[
             'ancient-woodland'
         ],
-        schedule='0 0 * * *'
+        schedule='0 9 * * *'
     )
 )
 
