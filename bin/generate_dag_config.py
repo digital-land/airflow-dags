@@ -31,7 +31,11 @@ scheduled_collection_config = Environments(
     production=ScheduledCollectionConfig(
         selection=CollectionSelection.explicit,
         collections=[
-            'ancient-woodland'
+            'organisation',
+            'ancient-woodland',
+            'flood-risk-zone',
+            'article-4-direction',
+            'central-activities-zone'
         ],
         schedule='0 0 * * *'
     )
