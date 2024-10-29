@@ -29,14 +29,7 @@ scheduled_collection_config = Environments(
         schedule='0 0 * * *'
     ),
     production=ScheduledCollectionConfig(
-        selection=CollectionSelection.explicit,
-        collections=[
-            'organisation',
-            'ancient-woodland',
-            'flood-risk-zone',
-            'article-4-direction',
-            'central-activities-zone'
-        ],
+        selection=CollectionSelection.all,
         schedule='0 0 * * *'
     )
 )
