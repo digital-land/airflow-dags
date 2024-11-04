@@ -17,7 +17,7 @@ config = get_config()
 
 # set some variables needed for ECS tasks,
 ecs_cluster = f"{config['env']}-cluster"
-task_definition_name = f"{config['env']}-data-package-builder-task"
+task_definition_name = f"{config['env']}-mwaa-data-package-builder-task"
 
 for package in data_packages:
     with DAG(
