@@ -19,7 +19,7 @@ config = get_config()
 ecs_cluster = f"{config['env']}-cluster"
 task_definition_name = f"{config['env']}-data-package-builder-task"
 
-for package in data_packages.items():
+for package in data_packages:
     with DAG(
             f"{package}-builder",
             default_args=dag_default_args,
