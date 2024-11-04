@@ -17,6 +17,7 @@ dag_default_args = {
     "dagrun_timeout": timedelta(minutes=5),
 }
 
+
 def get_config(path=None):
     if path is None:
         my_dir = os.path.dirname(os.path.abspath(__file__))
