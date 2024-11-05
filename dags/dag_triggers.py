@@ -36,10 +36,16 @@ with DAG(
     organisation_collection_selected = collection_selected('organisation', config)
 
     if organisation_collection_selected:
-        run_org_dag = TriggerDagRunOperator(
+        run_org_collection_dag = TriggerDagRunOperator(
             task_id='trigger-organisation-collection-dag',
             trigger_dag_id=f'organisation-collection'
         )
+        run_org_builder_dag = TriggerDagRunOperator(
+            task_id='trigger-organisation-builder-dag',
+            trigger_dag_id=f'organisation-builder',
+            wait_for_completion=True
+        )
+        run_org_collection_dag >> run_org_builder_dag
 
     collections = load_specification_datasets()
 
@@ -51,7 +57,7 @@ with DAG(
                     trigger_dag_id=f'{collection}-collection'
                 )
                 if organisation_collection_selected:
-                    run_org_dag >> collection_dag
+                    run_org_builder_dag >> collection_dag
 
 
 with DAG(
@@ -63,10 +69,18 @@ with DAG(
         is_paused_upon_creation=False
 ):
 
-    run_org_dag = TriggerDagRunOperator(
+    run_org_collection_dag = TriggerDagRunOperator(
         task_id='trigger-organisation-collection-dag',
         trigger_dag_id=f'organisation-collection'
     )
+
+    run_org_builder_dag = TriggerDagRunOperator(
+        task_id='trigger-organisation-builder-dag',
+        trigger_dag_id=f'organisation-builder',
+        wait_for_completion=True
+    )
+
+    run_org_collection_dag >> run_org_builder_dag
 
     collections = load_specification_datasets()
 
@@ -78,4 +92,4 @@ with DAG(
                 trigger_dag_id=f'{collection}-collection'
             )
 
-            run_org_dag >> collection_dag
+            run_org_builder_dag >> collection_dag
