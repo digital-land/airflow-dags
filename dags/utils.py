@@ -88,7 +88,7 @@ def setup_configure_dag_callable(config, task_definition_name):
         cpu = int(params.get('cpu'))
         transformed_jobs = str(kwargs['params'].get('transformed-jobs'))
         dataset_jobs = str(kwargs['params'].get('dataset-jobs'))
-        incremental_loading_override = str(kwargs['params'].get('incremental-loading-override'))
+        incremental_loading_override = bool(kwargs['params'].get('incremental-loading-override'))
 
         # get ecs-task logging configuration
         ecs_client = boto3.client('ecs')
