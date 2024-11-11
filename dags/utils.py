@@ -81,13 +81,14 @@ def setup_configure_dag_callable(config, task_definition_name):
             "assignPublicIp": "ENABLED",
         }
 
-        # retrieve  and process parameters
+        # retrieve and process parameters
         params = kwargs['params']
 
         memory = int(params.get('memory'))
         cpu = int(params.get('cpu'))
         transformed_jobs = str(kwargs['params'].get('transformed-jobs'))
         dataset_jobs = str(kwargs['params'].get('dataset-jobs'))
+        incremental_loading_override = str(kwargs['params'].get('incremental-loading-override'))
 
         # get ecs-task logging configuration
         ecs_client = boto3.client('ecs')
@@ -112,5 +113,6 @@ def setup_configure_dag_callable(config, task_definition_name):
         ti.xcom_push(key='collection-task-log-stream-prefix', value=collection_task_log_stream_prefix)
         ti.xcom_push(key='collection-task-log-region', value=collection_task_log_region)
         ti.xcom_push(key='collection-dataset-bucket-name', value=collection_dataset_bucket_name)
+        ti.xcom_push(key='incremental-loading-override', value=incremental_loading_override)
 
     return configure_dag
