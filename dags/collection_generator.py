@@ -50,7 +50,7 @@ for collection, datasets in collections.items():
         collection_ecs_task = EcsRunTaskOperator(
             task_id=f"{collection}-collection",
             dag=dag,
-            execution_timeout=timedelta(minutes=900),
+            execution_timeout=timedelta(minutes=1800),
             cluster=ecs_cluster,
             task_definition=collection_task_name,
             launch_type="FARGATE",
