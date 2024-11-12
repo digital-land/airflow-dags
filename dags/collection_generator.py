@@ -75,7 +75,7 @@ for collection, datasets in collections.items():
                             # {"name": "TRANSFORMED_JOBS", "value": str('{{ task_instance.xcom_pull(task_ids="configure-dag", key="transformed-jobs") | string }}')},
                             {"name": "TRANSFORMED_JOBS", "value":"'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"transformed-jobs\") | string }}'"},
                             {"name": "DATASET_JOBS", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"dataset-jobs\") | string }}'"},
-                            {"name": "INCREMENTAL_LOADING_OVERRIDE", "value": "'{{ \"yes\" if task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"incremental-loading-override\") else \"\" }}'"}
+                            {"name": "INCREMENTAL_LOADING_OVERRIDEINCREMENTAL_LOADING_OVERRIDE", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"incremental-loading-override\") }}'"}
                         ],
                     },
                 ]
