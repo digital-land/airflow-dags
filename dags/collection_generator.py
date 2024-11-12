@@ -36,7 +36,8 @@ for collection, datasets in collections.items():
             "cpu": Param(default=8192, type="integer"),
             "memory": Param(default=32768, type="integer"),
             "transformed-jobs": Param(default=8, type="integer"),
-            "dataset-jobs": Param(default=8, type="integer")
+            "dataset-jobs": Param(default=8, type="integer"),
+            "incremental-loading-override": Param(default=False, type="boolean"),
         },
         render_template_as_native_obj=True,
         is_paused_upon_creation=False
@@ -73,7 +74,8 @@ for collection, datasets in collections.items():
                             },
                             # {"name": "TRANSFORMED_JOBS", "value": str('{{ task_instance.xcom_pull(task_ids="configure-dag", key="transformed-jobs") | string }}')},
                             {"name": "TRANSFORMED_JOBS", "value":"'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"transformed-jobs\") | string }}'"},
-                            {"name": "DATASET_JOBS", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"dataset-jobs\") | string }}'"}
+                            {"name": "DATASET_JOBS", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"dataset-jobs\") | string }}'"},
+                            {"name": "INCREMENTAL_LOADING_OVERRIDE", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"incremental-loading-override\") | string }}'"}
                         ],
                     },
                 ]
