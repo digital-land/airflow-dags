@@ -5,12 +5,12 @@ import boto3
 from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.decorators import dag
-from airflow.providers.standard.operators.bash import BashOperator
 from airflow.providers.amazon.aws.operators.ecs import (
     EcsRegisterTaskDefinitionOperator,
     EcsRunTaskOperator,
 )
 from airflow.providers.slack.notifications.slack import send_slack_notification
+from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
 from airflow.models.param import Param
 
