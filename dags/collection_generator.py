@@ -101,7 +101,7 @@ for collection, datasets in collections.items():
         configure_dag_task >> collection_ecs_task
 
 with DAG(
-    "Slack Tester",
+    "slack-notifcation-tester",
     start_date=datetime(2024, 1, 1),
     on_success_callback=[
         send_slack_notification(
