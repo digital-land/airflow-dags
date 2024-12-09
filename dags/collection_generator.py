@@ -102,7 +102,8 @@ for collection, datasets in collections.items():
 
 with DAG(
     "slack-notifcation-tester",
-    start_date=datetime(2024, 1, 1),
+    is_paused_upon_creation=False,
+    schedule=None,
     on_success_callback=[
         send_slack_notification(
             text="The DAG {{ dag.dag_id }} succeeded",
