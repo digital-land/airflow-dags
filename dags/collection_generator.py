@@ -5,10 +5,12 @@ import boto3
 from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.decorators import dag
+from airflow.providers.standard.operators.bash import BashOperator
 from airflow.providers.amazon.aws.operators.ecs import (
     EcsRegisterTaskDefinitionOperator,
     EcsRunTaskOperator,
 )
+from airflow.providers.slack.notifications.slack import send_slack_notification
 from airflow.operators.python import PythonOperator
 from airflow.models.param import Param
 
@@ -40,7 +42,14 @@ for collection, datasets in collections.items():
             "incremental-loading-override": Param(default=False, type="boolean"),
         },
         render_template_as_native_obj=True,
-        is_paused_upon_creation=False
+        is_paused_upon_creation=False,
+        on_failure_callback=[
+            send_slack_notification(
+                text="The task {{ ti.task_id }} failed",
+                channel="#general",
+                username="Airflow",
+            )
+        ],
     ) as dag:
         configure_dag_task = PythonOperator(
             task_id="configure-dag",
@@ -90,3 +99,26 @@ for collection, datasets in collections.items():
         )
 
         configure_dag_task >> collection_ecs_task
+
+with DAG(
+    name="Slack Tester",
+    start_date=datetime(2024, 1, 1),
+    on_success_callback=[
+        send_slack_notification(
+            text="The DAG {{ dag.dag_id }} succeeded",
+            channel="#dl-developers",
+            username="Airflow",
+        )
+    ],
+):
+    BashOperator(
+        task_id="mytask",
+        on_failure_callback=[
+            send_slack_notification(
+                text="The task {{ ti.task_id }} failed",
+                channel="#dl-developers",
+                username="Airflow",
+            )
+        ],
+        bash_command="fail",
+    )
