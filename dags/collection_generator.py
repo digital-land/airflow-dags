@@ -13,6 +13,8 @@ from airflow.providers.slack.notifications.slack import send_slack_notification
 from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
 from airflow.models.param import Param
+from airflow.models import Variable
+from airflow.models.connection import Connection
 
 from utils import dag_default_args, get_config, load_specification_datasets, setup_configure_dag_callable
 
@@ -100,6 +102,17 @@ for collection, datasets in collections.items():
 
         configure_dag_task >> collection_ecs_task
 
+
+slack_default_connection = Connection(
+    conn_id="slack_api_default",
+    conn_type="slack",
+    password=Variable.get("slack-api-key"),
+    extra={
+        # Specify extra parameters here
+        "timeout": "42",
+    },
+)
+
 with DAG(
     "slack-notifcation-tester",
     is_paused_upon_creation=False,
@@ -111,13 +124,18 @@ with DAG(
             username="Airflow",
         )
     ],
-):
+) as dag:
+    configure_dag_task = PythonOperator(
+        task_id="configure-dag",
+        python_callable=setup_configure_dag_callable(config, collection_task_name),
+        dag=dag,
+    )
     BashOperator(
         task_id="mytask",
         on_failure_callback=[
             send_slack_notification(
                 text="The task {{ ti.task_id }} failed",
-                channel="#dl-developers",
+                channel="#planning-data-platform",
                 username="Airflow",
             )
         ],
