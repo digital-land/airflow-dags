@@ -6,8 +6,6 @@ import urllib
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from airflow.providers.slack.notifications.slack import send_slack_notification
-
 import boto3
 import logging
 
