@@ -15,8 +15,9 @@ from airflow.operators.python import PythonOperator
 from airflow.models.param import Param
 from airflow.models import Variable
 from airflow.models.connection import Connection
+from airflow.providers.slack.notifications.slack import send_slack_notification
 
-from utils import dag_default_args, get_config, load_specification_datasets, setup_configure_dag_callable, send_slack_notification
+from utils import dag_default_args, get_config, load_specification_datasets, setup_configure_dag_callable
 
 # read config from file and environment
 config = get_config()
@@ -102,13 +103,21 @@ for collection, datasets in collections.items():
 
         configure_dag_task >> collection_ecs_task
 
+failure_callbacks = []
+if config['env'] == 'production':
+    failure_callbacks.append(
+        send_slack_notification(
+            text="The DAG {{ dag.dag_id }} failed",
+            channel="#planning-data-platform",
+            username="Airflow"
+        )
+    )
+
 with DAG(
     "slack-notifcation-tester",
     is_paused_upon_creation=False,
     schedule=None,
-    on_failure_callback=[
-        send_slack_notification(config, "The DAG {{ dag.dag_id }} failed")
-    ]
+    on_failure_callback=failure_callbacks
 ) as dag:
     configure_dag_task = PythonOperator(
         task_id="configure-dag",

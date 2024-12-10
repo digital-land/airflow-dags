@@ -118,12 +118,3 @@ def setup_configure_dag_callable(config, task_definition_name):
         ti.xcom_push(key='incremental-loading-override', value=incremental_loading_override)
 
     return configure_dag
-
-
-def send_slack_notification(config, message):
-    if config['env'] == 'production':
-        send_slack_notification(
-            text=message,
-            channel="#planning-data-platform",
-            username="Airflow"
-        )
