@@ -1,5 +1,6 @@
 apache-airflow==2.9.2
 apache-airflow-providers-amazon
+apache-airflow-providers-slack
 boto
 pydantic
 click

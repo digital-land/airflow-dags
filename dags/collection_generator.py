@@ -9,8 +9,13 @@ from airflow.providers.amazon.aws.operators.ecs import (
     EcsRegisterTaskDefinitionOperator,
     EcsRunTaskOperator,
 )
+
+from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
 from airflow.models.param import Param
+from airflow.models import Variable
+from airflow.models.connection import Connection
+from airflow.providers.slack.notifications.slack import send_slack_notification
 
 from utils import dag_default_args, get_config, load_specification_datasets, setup_configure_dag_callable
 
@@ -22,6 +27,16 @@ ecs_cluster = f"{config['env']}-cluster"
 collection_task_name = f"{config['env']}-mwaa-collection-task"
 
 collections = load_specification_datasets()
+
+failure_callbacks = []
+if config['env'] == 'production':
+    failure_callbacks.append(
+        send_slack_notification(
+            text="The DAG {{ dag.dag_id }} failed",
+            channel="#planning-data-platform",
+            username="Airflow"
+        )
+    )
 
 for collection, datasets in collections.items():
     dag_id = f"{collection}-collection"
@@ -40,7 +55,8 @@ for collection, datasets in collections.items():
             "incremental-loading-override": Param(default=False, type="boolean"),
         },
         render_template_as_native_obj=True,
-        is_paused_upon_creation=False
+        is_paused_upon_creation=False,
+        on_failure_callback=failure_callbacks,
     ) as dag:
         configure_dag_task = PythonOperator(
             task_id="configure-dag",
