@@ -28,6 +28,16 @@ collection_task_name = f"{config['env']}-mwaa-collection-task"
 
 collections = load_specification_datasets()
 
+failure_callbacks = []
+if config['env'] == 'production':
+    failure_callbacks.append(
+        send_slack_notification(
+            text="The DAG {{ dag.dag_id }} failed",
+            channel="#planning-data-platform",
+            username="Airflow"
+        )
+    )
+
 for collection, datasets in collections.items():
     dag_id = f"{collection}-collection"
 
@@ -46,13 +56,7 @@ for collection, datasets in collections.items():
         },
         render_template_as_native_obj=True,
         is_paused_upon_creation=False,
-        on_failure_callback=[
-            send_slack_notification(
-                text="The task {{ ti.task_id }} failed",
-                channel="#general",
-                username="Airflow",
-            )
-        ],
+        on_failure_callback=failure_callbacks,
     ) as dag:
         configure_dag_task = PythonOperator(
             task_id="configure-dag",
@@ -102,29 +106,3 @@ for collection, datasets in collections.items():
         )
 
         configure_dag_task >> collection_ecs_task
-
-failure_callbacks = []
-if config['env'] == 'production':
-    failure_callbacks.append(
-        send_slack_notification(
-            text="The DAG {{ dag.dag_id }} failed",
-            channel="#planning-data-platform",
-            username="Airflow"
-        )
-    )
-
-with DAG(
-    "slack-notifcation-tester",
-    is_paused_upon_creation=False,
-    schedule=None,
-    on_failure_callback=failure_callbacks
-) as dag:
-    configure_dag_task = PythonOperator(
-        task_id="configure-dag",
-        python_callable=setup_configure_dag_callable(config, collection_task_name),
-        dag=dag,
-    )
-    BashOperator(
-        task_id="mytask",
-        bash_command="fail",
-    )
