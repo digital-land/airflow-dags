@@ -9,14 +9,14 @@ from airflow.providers.amazon.aws.operators.ecs import (
     EcsRegisterTaskDefinitionOperator,
     EcsRunTaskOperator,
 )
-from airflow.providers.slack.notifications.slack import send_slack_notification
+
 from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
 from airflow.models.param import Param
 from airflow.models import Variable
 from airflow.models.connection import Connection
 
-from utils import dag_default_args, get_config, load_specification_datasets, setup_configure_dag_callable
+from utils import dag_default_args, get_config, load_specification_datasets, setup_configure_dag_callable, send_slack_notification
 
 # read config from file and environment
 config = get_config()
@@ -102,28 +102,13 @@ for collection, datasets in collections.items():
 
         configure_dag_task >> collection_ecs_task
 
-
-slack_default_connection = Connection(
-    conn_id="slack_api_default",
-    conn_type="slack",
-    password=Variable.get("slack-api-key"),
-    extra={
-        # Specify extra parameters here
-        "timeout": "42",
-    },
-)
-
 with DAG(
     "slack-notifcation-tester",
     is_paused_upon_creation=False,
     schedule=None,
-    on_success_callback=[
-        send_slack_notification(
-            text="The DAG {{ dag.dag_id }} succeeded",
-            channel="#dl-developers",
-            username="Airflow",
-        )
-    ],
+    on_failure_callback=[
+        send_slack_notification(config, "The DAG {{ dag.dag_id }} failed")
+    ]
 ) as dag:
     configure_dag_task = PythonOperator(
         task_id="configure-dag",
@@ -132,12 +117,5 @@ with DAG(
     )
     BashOperator(
         task_id="mytask",
-        on_failure_callback=[
-            send_slack_notification(
-                text="The task {{ ti.task_id }} failed",
-                channel="#planning-data-platform",
-                username="Airflow",
-            )
-        ],
         bash_command="fail",
     )
