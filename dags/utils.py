@@ -89,6 +89,7 @@ def setup_configure_dag_callable(config, task_definition_name):
         transformed_jobs = str(kwargs['params'].get('transformed-jobs'))
         dataset_jobs = str(kwargs['params'].get('dataset-jobs'))
         incremental_loading_override = bool(kwargs['params'].get('incremental-loading-override'))
+        regenerate_log_override = bool(kwargs['params'].get('regenerate-log-override'))
 
         # get ecs-task logging configuration
         ecs_client = boto3.client('ecs')
@@ -114,5 +115,6 @@ def setup_configure_dag_callable(config, task_definition_name):
         ti.xcom_push(key='collection-task-log-region', value=collection_task_log_region)
         ti.xcom_push(key='collection-dataset-bucket-name', value=collection_dataset_bucket_name)
         ti.xcom_push(key='incremental-loading-override', value=incremental_loading_override)
+        ti.xcom_push(key='regenerate-log-override', value=regenerate_log_override)
 
     return configure_dag
