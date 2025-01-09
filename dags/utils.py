@@ -142,7 +142,7 @@ def setup_configure_dag_callable(config, task_definition_name):
             key="incremental-loading-override", value=incremental_loading_override
         )
 
-        if task_definition_name.endswith("digital-land-builder-task"):
+        if "build-performance-db" in kwargs["params"]:
             ti.xcom_push(
                 key="build-perfomance-db",
                 value=bool(kwargs["params"].get("build-performance-db")),
