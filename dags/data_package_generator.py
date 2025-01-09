@@ -21,17 +21,17 @@ task_definition_name = f"{config['env']}-mwaa-data-package-builder-task"
 
 for package in data_packages:
     with DAG(
-            f"{package}-builder",
-            default_args=dag_default_args,
-            description=f"Data package builder task for the {package} data package",
-            schedule=None,
-            catchup=False,
-            params={
-                "cpu": Param(default=8192, type="integer"),
-                "memory": Param(default=32768, type="integer")
-            },
-            render_template_as_native_obj=True,
-            is_paused_upon_creation=False
+        f"{package}-builder",
+        default_args=dag_default_args,
+        description=f"Data package builder task for the {package} data package",
+        schedule=None,
+        catchup=False,
+        params={
+            "cpu": Param(default=8192, type="integer"),
+            "memory": Param(default=32768, type="integer"),
+        },
+        render_template_as_native_obj=True,
+        is_paused_upon_creation=False,
     ) as dag:
         configure_dag_task = PythonOperator(
             task_id="configure-dag",
@@ -50,20 +50,22 @@ for package in data_packages:
                 "containerOverrides": [
                     {
                         "name": task_definition_name,
-                        'cpu': '{{ task_instance.xcom_pull(task_ids="configure-dag", key="cpu") | int }}',
-                        'memory': '{{ task_instance.xcom_pull(task_ids="configure-dag", key="memory") | int }}',
+                        "cpu": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="cpu") | int }}',
+                        "memory": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="memory") | int }}',
                         "environment": [
-                            {"name": "ENVIRONMENT",
-                             "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"env\") | string }}'"},
+                            {
+                                "name": "ENVIRONMENT",
+                                "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="env") | string }}\'',
+                            },
                             {"name": "DATA_PACKAGE_NAME", "value": package},
                             {
                                 "name": "READ_S3_BUCKET",
-                                "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"collection-dataset-bucket-name\") | string }}'"
+                                "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}\'',
                             },
                             {
                                 "name": "WRITE_S3_BUCKET",
-                                "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"collection-dataset-bucket-name\") | string }}'"
-                            }
+                                "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}\'',
+                            },
                         ],
                     },
                 ]
@@ -74,7 +76,7 @@ for package in data_packages:
             awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
             awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-region") }}',
             awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}',
-            awslogs_fetch_interval=timedelta(seconds=1)
+            awslogs_fetch_interval=timedelta(seconds=1),
         )
 
         configure_dag_task >> builder_ecs_task

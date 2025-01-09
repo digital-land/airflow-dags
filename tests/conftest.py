@@ -13,6 +13,7 @@ def mock_aws_credentials():
     os.environ["AWS_SECURITY_TOKEN"] = "mock_security_token"
     os.environ["AWS_SESSION_TOKEN"] = "mock_session_token"
 
+
 @pytest.fixture
 def ecs_client(mock_aws_credentials):
     with mock_aws():

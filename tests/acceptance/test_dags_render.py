@@ -1,7 +1,7 @@
 import pytest
 from airflow.models import DagBag
 
-DAG_FOLDER = 'dags'
+DAG_FOLDER = "dags"
 
 
 def test_dag_rendering():
@@ -11,7 +11,7 @@ def test_dag_rendering():
 
     # Collect any DAGs that failed to load
     failed_dags = []
-    
+
     for dag_id, dag in dag_bag.dags.items():
         try:
             # Ensure that the DAG renders correctly

@@ -17,7 +17,12 @@ from airflow.models import Variable
 from airflow.models.connection import Connection
 from airflow.providers.slack.notifications.slack import send_slack_notification
 
-from utils import dag_default_args, get_config, load_specification_datasets, setup_configure_dag_callable
+from utils import (
+    dag_default_args,
+    get_config,
+    load_specification_datasets,
+    setup_configure_dag_callable,
+)
 
 # read config from file and environment
 config = get_config()
@@ -29,12 +34,12 @@ collection_task_name = f"{config['env']}-mwaa-collection-task"
 collections = load_specification_datasets()
 
 failure_callbacks = []
-if config['env'] == 'production':
+if config["env"] == "production":
     failure_callbacks.append(
         send_slack_notification(
             text="The DAG {{ dag.dag_id }} failed",
             channel="#planning-data-platform",
-            username="Airflow"
+            username="Airflow",
         )
     )
 
@@ -75,23 +80,35 @@ for collection, datasets in collections.items():
                 "containerOverrides": [
                     {
                         "name": collection_task_name,
-                        'cpu': '{{ task_instance.xcom_pull(task_ids="configure-dag", key="cpu") | int }}', 
-                        'memory': '{{ task_instance.xcom_pull(task_ids="configure-dag", key="memory") | int }}', 
+                        "cpu": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="cpu") | int }}',
+                        "memory": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="memory") | int }}',
                         "environment": [
-                            {"name": "ENVIRONMENT", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"env\") | string }}'"},
+                            {
+                                "name": "ENVIRONMENT",
+                                "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="env") | string }}\'',
+                            },
                             {"name": "COLLECTION_NAME", "value": collection},
                             {
                                 "name": "COLLECTION_DATASET_BUCKET_NAME",
-                                "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"collection-dataset-bucket-name\") | string }}'"
+                                "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}\'',
                             },
                             {
                                 "name": "HOISTED_COLLECTION_DATASET_BUCKET_NAME",
-                                "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"collection-dataset-bucket-name\") | string }}'"
+                                "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}\'',
                             },
                             # {"name": "TRANSFORMED_JOBS", "value": str('{{ task_instance.xcom_pull(task_ids="configure-dag", key="transformed-jobs") | string }}')},
-                            {"name": "TRANSFORMED_JOBS", "value":"'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"transformed-jobs\") | string }}'"},
-                            {"name": "DATASET_JOBS", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"dataset-jobs\") | string }}'"},
-                            {"name": "INCREMENTAL_LOADING_OVERRIDE", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"incremental-loading-override\") | string }}'"}
+                            {
+                                "name": "TRANSFORMED_JOBS",
+                                "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="transformed-jobs") | string }}\'',
+                            },
+                            {
+                                "name": "DATASET_JOBS",
+                                "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="dataset-jobs") | string }}\'',
+                            },
+                            {
+                                "name": "INCREMENTAL_LOADING_OVERRIDE",
+                                "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="incremental-loading-override") | string }}\'',
+                            },
                         ],
                     },
                 ]
@@ -102,7 +119,7 @@ for collection, datasets in collections.items():
             awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
             awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-region") }}',
             awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}',
-            awslogs_fetch_interval=timedelta(seconds=1)
+            awslogs_fetch_interval=timedelta(seconds=1),
         )
 
         configure_dag_task >> collection_ecs_task
