@@ -90,7 +90,7 @@ def setup_configure_dag_callable(config, task_definition_name):
         dataset_jobs = str(kwargs['params'].get('dataset-jobs'))
         incremental_loading_override = bool(kwargs['params'].get('incremental-loading-override'))
         regenerate_log_override = bool(kwargs['params'].get('regenerate-log-override'))
-        refill_todays_logs = bool(kwargs['params'].get('refill-todays-logs')
+        refill_todays_logs = bool(kwargs['params'].get('refill-todays-logs'))
 
         # get ecs-task logging configuration
         ecs_client = boto3.client('ecs')
