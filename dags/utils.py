@@ -117,6 +117,6 @@ def setup_configure_dag_callable(config, task_definition_name):
         ti.xcom_push(key='collection-dataset-bucket-name', value=collection_dataset_bucket_name)
         ti.xcom_push(key='incremental-loading-override', value=incremental_loading_override)
         ti.xcom_push(key='regenerate-log-override', value=regenerate_log_override)
-        ti.xcom.push(key='refill-todays-logs', value=refill_todays_logs)
+        ti.xcom_push(key='refill-todays-logs', value=refill_todays_logs)
 
     return configure_dag
