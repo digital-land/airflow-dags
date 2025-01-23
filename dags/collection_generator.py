@@ -54,6 +54,7 @@ for collection, datasets in collections.items():
             "dataset-jobs": Param(default=8, type="integer"),
             "incremental-loading-override": Param(default=False, type="boolean"),
             "regenerate-log-override": Param(default=True, type="boolean"),
+            "refill-todays-logs": Param(default=False, type="boolean"),
         },
         render_template_as_native_obj=True,
         is_paused_upon_creation=False,
@@ -93,7 +94,8 @@ for collection, datasets in collections.items():
                             {"name": "TRANSFORMED_JOBS", "value":"'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"transformed-jobs\") | string }}'"},
                             {"name": "DATASET_JOBS", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"dataset-jobs\") | string }}'"},
                             {"name": "INCREMENTAL_LOADING_OVERRIDE", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"incremental-loading-override\") | string }}'"},
-                            {"name": "REGENERATE_LOG_OVERRIDE", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"regenerate-log-override\") | string }}'"}
+                            {"name": "REGENERATE_LOG_OVERRIDE", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"regenerate-log-override\") | string }}'"},
+                            {"name": "REFILL_TODAYS_LOGS", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"refill-todays-logs\") | string }}'"}
                         ],
                     },
                 ]
