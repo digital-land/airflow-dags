@@ -76,7 +76,7 @@ with DAG(
                     "name": collection_task_name,
                     'cpu': '{{ task_instance.xcom_pull(task_ids="configure-dag", key="cpu") | int }}', 
                     'memory': '{{ task_instance.xcom_pull(task_ids="configure-dag", key="memory") | int }}', 
-                    "entryPoint": ["./run-collect-and-transform.sh"],
+                    "command": ["./run-collect-and-transform.sh"],
                     "environment": [
                         {"name": "ENVIRONMENT", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"env\") | string }}'"},
                         {"name": "COLLECTION_NAME", "value": collection},
