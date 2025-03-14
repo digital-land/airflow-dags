@@ -9,11 +9,22 @@ from airflow.providers.amazon.aws.operators.ecs import (
 )
 from airflow.operators.python import PythonOperator
 from airflow.models.param import Param
+from airflow.providers.slack.notifications.slack import send_slack_notification
 
 data_packages = ["organisation"]
 
 # read config from file and environment
 config = get_config()
+
+failure_callbacks = []
+if config['env'] == 'production':
+    failure_callbacks.append(
+        send_slack_notification(
+            text="The DAG {{ dag.dag_id }} failed",
+            channel="#planning-data-platform",
+            username="Airflow"
+        )
+    )
 
 # set some variables needed for ECS tasks,
 ecs_cluster = f"{config['env']}-cluster"
@@ -31,7 +42,8 @@ for package in data_packages:
                 "memory": Param(default=32768, type="integer")
             },
             render_template_as_native_obj=True,
-            is_paused_upon_creation=False
+            is_paused_upon_creation=False,
+            on_failure_callback=failure_callbacks,
     ) as dag:
         configure_dag_task = PythonOperator(
             task_id="configure-dag",
