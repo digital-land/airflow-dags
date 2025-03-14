@@ -17,7 +17,7 @@ data_packages = ["organisation"]
 config = get_config()
 
 failure_callbacks = []
-if config['env'] == 'development':
+if config['env'] == 'production':
     failure_callbacks.append(
         send_slack_notification(
             text="The DAG {{ dag.dag_id }} failed",
