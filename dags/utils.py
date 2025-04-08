@@ -30,7 +30,7 @@ def get_config(path=None):
 def load_specification_datasets():
     with tempfile.TemporaryDirectory() as tmpdir:
 
-        dataset_spec_url = 'https://raw.githubusercontent.com/digital-land/specification/main/specification/dataset.csv'
+        dataset_spec_url = 'https://raw.githubusercontent.com/digital-land/specification/planning-application-collection/specification/dataset.csv'
         dataset_spec_path = Path(tmpdir) / 'dataset.csv'
         urllib.request.urlretrieve(dataset_spec_url, dataset_spec_path)
 
