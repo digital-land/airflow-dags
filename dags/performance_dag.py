@@ -1,6 +1,7 @@
 from datetime import timedelta
 from airflow import DAG
 from airflow.operators.python import PythonOperator
+from airflow.models.param import Param
 from utils import dag_default_args, get_config, setup_configure_dag_callable
 from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
 
@@ -14,6 +15,11 @@ with DAG(
     description="Generate provision-quality parquet and upload to S3",
     schedule=None,
     catchup=False,
+    params={
+        "cpu": Param(default=8192, type="integer"),
+        "memory": Param(default=32768, type="integer"),
+    },
+    is_paused_upon_creation=False,
 ) as dag:
 
     configure_dag_task = PythonOperator(
