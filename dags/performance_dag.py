@@ -19,6 +19,7 @@ with DAG(
         "cpu": Param(default=8192, type="integer"),
         "memory": Param(default=32768, type="integer"),
     },
+    render_template_as_native_obj=True,
     is_paused_upon_creation=False,
 ) as dag:
 
