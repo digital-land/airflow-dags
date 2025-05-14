@@ -56,7 +56,7 @@ with DAG(
         },
         awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
         awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-region") }}',
-        awslogs_stream_prefix='performance-build',
+        awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}',
         awslogs_fetch_interval=timedelta(seconds=1)
     )
 
