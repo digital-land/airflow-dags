@@ -7,7 +7,7 @@ from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
 
 config = get_config()
 ecs_cluster = f"{config['env']}-cluster"
-collection_task_name = f"{config['env']}-mwaa-collection-task"
+digital_land_builder_task_name = f"{config['env']}-mwaa-digital-land-builder-task"
 
 with DAG(
     dag_id="build-digital-land-builder",
@@ -25,7 +25,7 @@ with DAG(
 
     configure_dag_task = PythonOperator(
         task_id="configure-dag",
-        python_callable=setup_configure_dag_callable(config, collection_task_name),
+        python_callable=setup_configure_dag_callable(config, digital_land_builder_task_name),
         dag=dag,
     )
 
@@ -34,13 +34,12 @@ with DAG(
         dag=dag,
         execution_timeout=timedelta(minutes=60),
         cluster=ecs_cluster,
-        task_definition=collection_task_name,
+        task_definition=digital_land_builder_task_name,
         launch_type="FARGATE",
         overrides={
             "containerOverrides": [
                 {
-                    "name": collection_task_name,
-                    "command": ["./build-digtial-land-builder.sh"],
+                    "name": digital_land_builder_task_name,
                     "environment": [
                         {"name": "ENVIRONMENT", "value": config["env"]},
                     ],
