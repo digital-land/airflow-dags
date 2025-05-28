@@ -32,7 +32,7 @@ with DAG(
     build_digital_land_builder = EcsRunTaskOperator(
         task_id="build-digital-land-builder",
         dag=dag,
-        execution_timeout=timedelta(minutes=60),
+        execution_timeout=timedelta(minutes=1800),
         cluster=ecs_cluster,
         task_definition=digital_land_builder_task_name,
         launch_type="FARGATE",
@@ -42,6 +42,10 @@ with DAG(
                     "name": digital_land_builder_task_name,
                     "environment": [
                         {"name": "ENVIRONMENT", "value": config["env"]},
+                        {
+                                "name": "COLLECTION_DATASET_BUCKET_NAME",
+                                "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"collection-dataset-bucket-name\") | string }}'"
+                            },
                     ],
                 }
             ]
