@@ -78,6 +78,7 @@ with DAG(
         is_paused_upon_creation=False
 ):
 
+    collection_tasks = []
     run_org_collection_dag = TriggerDagRunOperator(
         task_id='trigger-organisation-collection-dag',
         trigger_dag_id=f'organisation-collection'
