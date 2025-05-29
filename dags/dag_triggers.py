@@ -34,6 +34,7 @@ with DAG(
         is_paused_upon_creation=False
 ):
     organisation_collection_selected = collection_selected('organisation', config)
+    collection_tasks = []
 
     if organisation_collection_selected:
         run_org_collection_dag = TriggerDagRunOperator(
@@ -56,6 +57,7 @@ with DAG(
                     task_id=f'trigger-{collection}-collection-dag',
                     trigger_dag_id=f'{collection}-collection'
                 )
+                collection_tasks.append(collection_dag)
                 if organisation_collection_selected:
                     run_org_builder_dag >> collection_dag
 
@@ -64,7 +66,8 @@ with DAG(
                     task_id='trigger-digital-land-builder-dag',
                     trigger_dag_id='build-digital-land-builder'
                 )
-    collection_dag >> dlb_dag
+    for task in collection_tasks:
+        task >> dlb_dag
 
 with DAG(
         dag_id="trigger-collection-dags-manual",
@@ -97,6 +100,7 @@ with DAG(
                 task_id=f'trigger-{collection}-collection-dag',
                 trigger_dag_id=f'{collection}-collection'
             )
+            collection_tasks.append(collection_dag)
 
             run_org_builder_dag >> collection_dag
     
@@ -104,4 +108,6 @@ with DAG(
                     task_id='trigger-digital-land-builder-dag',
                     trigger_dag_id='build-digital-land-builder'
                 )
-    collection_dag >> dlb_dag
+    
+    for task in collection_tasks:
+        task >> dlb_dag
