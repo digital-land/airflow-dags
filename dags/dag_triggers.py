@@ -59,6 +59,12 @@ with DAG(
                 if organisation_collection_selected:
                     run_org_builder_dag >> collection_dag
 
+    
+    dlb_dag = TriggerDagRunOperator(
+                    task_id='trigger-digital-land-builder-dag',
+                    trigger_dag_id='build-digital-land-builder'
+                )
+    collection_dag >> dlb_dag
 
 with DAG(
         dag_id="trigger-collection-dags-manual",
