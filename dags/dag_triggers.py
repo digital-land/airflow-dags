@@ -5,7 +5,6 @@ collection_generator.py
 """
 from airflow import DAG
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
-from airflow.sensors.external_task_sensor import ExternalTaskSensor
 
 from datetime import datetime, timedelta
 
@@ -35,7 +34,7 @@ with DAG(
         is_paused_upon_creation=False
 ):
     organisation_collection_selected = collection_selected('organisation', config)
-    collection_sensors = []
+    collection_tasks = []
 
     if organisation_collection_selected:
         run_org_collection_dag = TriggerDagRunOperator(
@@ -56,20 +55,12 @@ with DAG(
             if collection_selected(collection, config):
                 collection_dag = TriggerDagRunOperator(
                     task_id=f'trigger-{collection}-collection-dag',
-                    trigger_dag_id=f'{collection}-collection'
+                    trigger_dag_id=f'{collection}-collection',
+                    wait_for_completion=True
                 )
-
-                wait_for_collection = ExternalTaskSensor(
-                    task_id=f'wait-for-{collection}-collection',
-                    external_dag_id=f'{collection}-collection',
-                    external_task_id=None,
-                )
+                collection_tasks.append(collection_dag)
                 if organisation_collection_selected:
                     run_org_builder_dag >> collection_dag
-                
-                collection_dag >> wait_for_collection
-                
-                collection_sensors.append(wait_for_collection)
 
     
     dlb_dag = TriggerDagRunOperator(
@@ -77,10 +68,8 @@ with DAG(
                     trigger_dag_id='build-digital-land-builder',
                     wait_for_completion=True
                 )
-    
-    
-    for sensor in collection_sensors:
-        sensor >> dlb_dag
+    for task in collection_tasks:
+        task >> dlb_dag
 
 with DAG(
         dag_id="trigger-collection-dags-manual",
@@ -91,7 +80,7 @@ with DAG(
         is_paused_upon_creation=False
 ):
 
-    collection_sensors = []
+    collection_tasks = []
     run_org_collection_dag = TriggerDagRunOperator(
         task_id='trigger-organisation-collection-dag',
         trigger_dag_id=f'organisation-collection'
@@ -114,25 +103,14 @@ with DAG(
                 task_id=f'trigger-{collection}-collection-dag',
                 trigger_dag_id=f'{collection}-collection'
             )
+            collection_tasks.append(collection_dag)
 
-            wait_for_collection = ExternalTaskSensor(
-                    task_id=f'wait-for-{collection}-collection',
-                    external_dag_id=f'{collection}-collection',
-                    external_task_id=None,
-                )
             run_org_builder_dag >> collection_dag
-    
-            collection_dag >> wait_for_collection
-            
-            collection_sensors.append(wait_for_collection)
-
     
     dlb_dag = TriggerDagRunOperator(
                     task_id='trigger-digital-land-builder-dag',
-                    trigger_dag_id='build-digital-land-builder',
-                    wait_for_completion=True
+                    trigger_dag_id='build-digital-land-builder'
                 )
     
-    
-    for sensor in collection_sensors:
-        sensor >> dlb_dag
+    for task in collection_tasks:
+        task >> dlb_dag
