@@ -39,7 +39,8 @@ with DAG(
     if organisation_collection_selected:
         run_org_collection_dag = TriggerDagRunOperator(
             task_id='trigger-organisation-collection-dag',
-            trigger_dag_id=f'organisation-collection'
+            trigger_dag_id=f'organisation-collection',
+            wait_for_completion=True
         )
         run_org_builder_dag = TriggerDagRunOperator(
             task_id='trigger-organisation-builder-dag',
@@ -83,7 +84,8 @@ with DAG(
     collection_tasks = []
     run_org_collection_dag = TriggerDagRunOperator(
         task_id='trigger-organisation-collection-dag',
-        trigger_dag_id=f'organisation-collection'
+        trigger_dag_id=f'organisation-collection',
+        wait_for_completion=True
     )
 
     run_org_builder_dag = TriggerDagRunOperator(
@@ -101,7 +103,8 @@ with DAG(
 
             collection_dag = TriggerDagRunOperator(
                 task_id=f'trigger-{collection}-collection-dag',
-                trigger_dag_id=f'{collection}-collection'
+                trigger_dag_id=f'{collection}-collection',
+                wait_for_completion=True
             )
             collection_tasks.append(collection_dag)
 
@@ -109,7 +112,8 @@ with DAG(
     
     dlb_dag = TriggerDagRunOperator(
                     task_id='trigger-digital-land-builder-dag',
-                    trigger_dag_id='build-digital-land-builder'
+                    trigger_dag_id='build-digital-land-builder',
+                    wait_for_completion=True
                 )
     
     for task in collection_tasks:
