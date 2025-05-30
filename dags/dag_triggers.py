@@ -5,6 +5,7 @@ collection_generator.py
 """
 from airflow import DAG
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
+from airflow.utils.trigger_rule import TriggerRule
 
 from datetime import datetime, timedelta
 
@@ -57,7 +58,7 @@ with DAG(
                 collection_dag = TriggerDagRunOperator(
                     task_id=f'trigger-{collection}-collection-dag',
                     trigger_dag_id=f'{collection}-collection',
-                    wait_for_completion=True
+                    wait_for_completion=True,
                 )
                 collection_tasks.append(collection_dag)
                 if organisation_collection_selected:
@@ -67,7 +68,8 @@ with DAG(
     dlb_dag = TriggerDagRunOperator(
                     task_id='trigger-digital-land-builder-dag',
                     trigger_dag_id='build-digital-land-builder',
-                    wait_for_completion=True
+                    wait_for_completion=True,
+                    trigger_rule=TriggerRule.ALL_DONE
                 )
     for task in collection_tasks:
         task >> dlb_dag
@@ -113,7 +115,8 @@ with DAG(
     dlb_dag = TriggerDagRunOperator(
                     task_id='trigger-digital-land-builder-dag',
                     trigger_dag_id='build-digital-land-builder',
-                    wait_for_completion=True
+                    wait_for_completion=True,
+                    trigger_rule=TriggerRule.ALL_DONE
                 )
     
     for task in collection_tasks:
