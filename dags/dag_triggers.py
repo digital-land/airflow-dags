@@ -5,6 +5,7 @@ collection_generator.py
 """
 from airflow import DAG
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
+from airflow.utils.trigger_rule import TriggerRule
 
 from datetime import datetime, timedelta
 
@@ -34,11 +35,13 @@ with DAG(
         is_paused_upon_creation=False
 ):
     organisation_collection_selected = collection_selected('organisation', config)
+    collection_tasks = []
 
     if organisation_collection_selected:
         run_org_collection_dag = TriggerDagRunOperator(
             task_id='trigger-organisation-collection-dag',
-            trigger_dag_id=f'organisation-collection'
+            trigger_dag_id=f'organisation-collection',
+            wait_for_completion=True
         )
         run_org_builder_dag = TriggerDagRunOperator(
             task_id='trigger-organisation-builder-dag',
@@ -54,11 +57,22 @@ with DAG(
             if collection_selected(collection, config):
                 collection_dag = TriggerDagRunOperator(
                     task_id=f'trigger-{collection}-collection-dag',
-                    trigger_dag_id=f'{collection}-collection'
+                    trigger_dag_id=f'{collection}-collection',
+                    wait_for_completion=True,
                 )
+                collection_tasks.append(collection_dag)
                 if organisation_collection_selected:
                     run_org_builder_dag >> collection_dag
 
+    
+    dlb_dag = TriggerDagRunOperator(
+                    task_id='trigger-digital-land-builder-dag',
+                    trigger_dag_id='build-digital-land-builder',
+                    wait_for_completion=True,
+                    trigger_rule=TriggerRule.ALL_DONE
+                )
+    for task in collection_tasks:
+        task >> dlb_dag
 
 with DAG(
         dag_id="trigger-collection-dags-manual",
@@ -69,9 +83,11 @@ with DAG(
         is_paused_upon_creation=False
 ):
 
+    collection_tasks = []
     run_org_collection_dag = TriggerDagRunOperator(
         task_id='trigger-organisation-collection-dag',
-        trigger_dag_id=f'organisation-collection'
+        trigger_dag_id=f'organisation-collection',
+        wait_for_completion=True
     )
 
     run_org_builder_dag = TriggerDagRunOperator(
@@ -89,7 +105,19 @@ with DAG(
 
             collection_dag = TriggerDagRunOperator(
                 task_id=f'trigger-{collection}-collection-dag',
-                trigger_dag_id=f'{collection}-collection'
+                trigger_dag_id=f'{collection}-collection',
+                wait_for_completion=True
             )
+            collection_tasks.append(collection_dag)
 
             run_org_builder_dag >> collection_dag
+    
+    dlb_dag = TriggerDagRunOperator(
+                    task_id='trigger-digital-land-builder-dag',
+                    trigger_dag_id='build-digital-land-builder',
+                    wait_for_completion=True,
+                    trigger_rule=TriggerRule.ALL_DONE
+                )
+    
+    for task in collection_tasks:
+        task >> dlb_dag
