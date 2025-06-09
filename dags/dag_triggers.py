@@ -31,7 +31,7 @@ with DAG(
         schedule=dag_schedule,
         start_date=datetime(2024, 1, 1),
         catchup=False,
-        max_active_tasks=dag_max_active_tasks,
+        max_active_tasks=7,
         is_paused_upon_creation=False
 ):
     organisation_collection_selected = collection_selected('organisation', config)
@@ -79,7 +79,9 @@ with DAG(
         description=f"A master DAG which runs all collection DAGs on a manual basis",
         schedule=None,
         catchup=False,
-        max_active_tasks=dag_max_active_tasks,
+        # limited as a lot of tasks won't complete until new tasks are spawned
+        # TODO could utilise pools to stop these dags clogging the system
+        max_active_tasks=7,
         is_paused_upon_creation=False
 ):
 
