@@ -116,7 +116,7 @@ with DAG(
                         {"name": "ENVIRONMENT", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"env\") | string }}'"},
                         {
                             "name": "S3_OBJECT_ARN",
-                            "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"s3-objectt-arn\") | string }}'"
+                            "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"s3-object-arn\") | string }}'"
                         },
                     ],
                 },
