@@ -163,7 +163,7 @@ for collection, datasets in collections.items():
                 overrides={
                     "containerOverrides": [
                         {
-                            "name": f"{config['env']}-mwaa-postgres-loader-task",
+                            "name": f"{sqlite_injection_task_container_name}",
                             'cpu': '{{ task_instance.xcom_pull(task_ids="configure-dag", key="cpu") | int }}', 
                             'memory': '{{ task_instance.xcom_pull(task_ids="configure-dag", key="memory") | int }}', 
                             "environment": [
