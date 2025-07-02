@@ -20,13 +20,16 @@ from airflow.models import Variable
 from airflow.models.connection import Connection
 from airflow.providers.slack.notifications.slack import send_slack_notification
 
-from utils import dag_default_args,get_config, load_specification_datasets,get_dataset_collection, get_task_log_config
+from utils import dag_default_args,get_config, load_specification_datasets,get_dataset_collection, get_task_log_config,get_datasets
 
 config = get_config()
 collections_dict = load_specification_datasets()
 
 # define some inputs
-collection_datasets = ['central-activities-zone']
+collection_datasets = get_datasets(collections_dict)
+# append digital-land so data contained in there can be loaded
+collection_datasets.append('digital-land')
+
 ecs_cluster = f"{config['env']}-cluster"
 sqlite_injection_task_name = f"{config['env']}-sqlite-ingestion-task"
 container_name = f"{config['env']}-sqlite-ingestion"
@@ -55,7 +58,11 @@ with DAG(
         # and key are
         collection_dataset_bucket_name = kwargs['conf'].get(section='custom', key='collection_dataset_bucket_name')
         dataset = str(params.get('dataset'))
-        collection = get_dataset_collection(collections_dict,dataset)
+        if dataset == 'digital-land':
+            collection = 'digital-land-builder'
+        else:
+            collection = get_dataset_collection(collections_dict,dataset)
+
         s3_object_arn = f"arn:aws:s3:::{collection_dataset_bucket_name}/{collection}-collection/dataset/{dataset}.sqlite3"
 
         # getmemory and cpu from params
@@ -98,8 +105,8 @@ with DAG(
         dag=dag,
     )
 
-    collection_ecs_task = EcsRunTaskOperator(
-        task_id="load-dataset",
+    load_dataset_ecs_task = EcsRunTaskOperator(
+        task_id=f"manual-load-dataset",
         dag=dag,
         execution_timeout=timedelta(minutes=1800),
         cluster=ecs_cluster,
@@ -130,4 +137,4 @@ with DAG(
         awslogs_fetch_interval=timedelta(seconds=1)
     )
 
-    configure_dag_task >> collection_ecs_task
+    configure_dag_task >> load_dataset_ecs_task

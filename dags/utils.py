@@ -129,3 +129,14 @@ def get_dataset_collection(collections_dict, dataset):
         if dataset in datasets:
             return collection
     return None
+
+def get_datasets(collections_dict):
+    """
+    Given a dictionary of collections and datasets, return the list of datasets for a given collection.
+    If the collection is not found, return an empty list.
+    """
+    all_datasets = []
+    for collection, datasets in collections_dict.items():
+            all_datasets.extend(datasets)
+            
+    return all_datasets
