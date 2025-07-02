@@ -23,14 +23,13 @@ from airflow.providers.slack.notifications.slack import send_slack_notification
 from utils import dag_default_args,get_config, load_specification_datasets,get_dataset_collection, get_task_log_config
 
 config = get_config()
+collections_dict = load_specification_datasets()
 
 # define some inputs
 collection_datasets = ['central-activities-zone']
 ecs_cluster = f"{config['env']}-cluster"
 sqlite_injection_task_name = f"{config['env']}-sqlite-ingestion-task"
 container_name = f"{config['env']}-sqlite-ingestion"
-
-collections_dict = load_specification_datasets()
 
 with DAG(
     "manual-postgres-loader",
@@ -100,7 +99,7 @@ with DAG(
     )
 
     collection_ecs_task = EcsRunTaskOperator(
-        task_id=f"load-dataset",
+        task_id="load-dataset",
         dag=dag,
         execution_timeout=timedelta(minutes=1800),
         cluster=ecs_cluster,
@@ -125,9 +124,9 @@ with DAG(
         network_configuration={
             "awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'
         },
-        awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
-        awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-region") }}',
-        awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}',
+        awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="sqlite-injection-task-log-group") }}',
+        awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="sqlite-injection-task-log-region") }}',
+        awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="sqlite-injection-task-log-stream-prefix") }}',
         awslogs_fetch_interval=timedelta(seconds=1)
     )
 
