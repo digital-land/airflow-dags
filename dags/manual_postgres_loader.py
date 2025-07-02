@@ -28,6 +28,7 @@ config = get_config()
 collection_datasets = ['central-activities-zone']
 ecs_cluster = f"{config['env']}-cluster"
 sqlite_injection_task_name = f"{config['env']}-sqlite-ingestion-task"
+container_name = f"{config['env']}-sqlite-ingestion"
 
 collections_dict = load_specification_datasets()
 
@@ -83,7 +84,7 @@ with DAG(
         sqlite_injection_task_log_config_options = sqlite_injection_task_log_config['options']
         sqlite_injection_task_log_group = str(sqlite_injection_task_log_config_options.get('awslogs-group'))
         sqlite_injection_task_log_stream_prefix = (str(sqlite_injection_task_log_config_options.get('awslogs-stream-prefix'))
-                                             + f'/{sqlite_injection_task_name}')
+                                             + f'/{container_name}')
         sqlite_injection_task_log_region = str(sqlite_injection_task_log_config_options.get('awslogs-region'))
 
         # all the info we need to feed into the ECS task
@@ -108,7 +109,7 @@ with DAG(
         overrides={
             "containerOverrides": [
                 {
-                    "name": sqlite_injection_task_name,
+                    "name": container_name,
                     'cpu': '{{ task_instance.xcom_pull(task_ids="configure-dag", key="cpu") | int }}', 
                     'memory': '{{ task_instance.xcom_pull(task_ids="configure-dag", key="memory") | int }}', 
                     "environment": [
@@ -117,14 +118,6 @@ with DAG(
                             "name": "S3_OBJECT_ARN",
                             "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"s3-objectt-arn\") | string }}'"
                         },
-                        {
-                            "name": "HOISTED_COLLECTION_DATASET_BUCKET_NAME",
-                            "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"collection-dataset-bucket-name\") | string }}'"
-                        },
-                        # {"name": "TRANSFORMED_JOBS", "value": str('{{ task_instance.xcom_pull(task_ids="configure-dag", key="transformed-jobs") | string }}')},
-                        {"name": "TRANSFORMED_JOBS", "value":"'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"transformed-jobs\") | string }}'"},
-                        {"name": "INCREMENTAL_LOADING_OVERRIDE", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"incremental-loading-override\") | string }}'"},
-                        {"name": "REGENERATE_LOG_OVERRIDE", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"regenerate-log-override\") | string }}'"}
                     ],
                 },
             ]
