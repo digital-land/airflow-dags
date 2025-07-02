@@ -183,3 +183,5 @@ for collection, datasets in collections.items():
                 awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="sqlite-ingestion-task-log-region") }}',
                 awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="sqlite-ingestion-task-log-stream-prefix") }}',
                 awslogs_fetch_interval=timedelta(seconds=1)
+            )
+            collection_ecs_task >> postgres_loader_task
