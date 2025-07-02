@@ -39,8 +39,8 @@ with DAG(
     schedule=None,
     catchup=False,
     params={
-        "cpu": Param(default=8192, type="integer"),
-        "memory": Param(default=16384, type="integer"),
+        "cpu": Param(default=1024, type="integer"),
+        "memory": Param(default=4096, type="integer"),
         "dataset": Param(type="string",enum=collection_datasets),
     },
     render_template_as_native_obj=True,
