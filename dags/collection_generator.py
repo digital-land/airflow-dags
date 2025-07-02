@@ -158,7 +158,7 @@ for collection, datasets in collections.items():
                 dag=dag,
                 execution_timeout=timedelta(minutes=1800),
                 cluster=ecs_cluster,
-                task_definition=f"{config['env']}-mwaa-postgres-loader-task",
+                task_definition=sqlite_injection_task_name,
                 launch_type="FARGATE",
                 overrides={
                     "containerOverrides": [
