@@ -27,6 +27,7 @@ def get_config(path=None):
     return config
 
 
+# TBD no idea why this isn't in the config rather than directly loading stuff from the spec
 def load_specification_datasets():
     with tempfile.TemporaryDirectory() as tmpdir:
 
@@ -118,3 +119,13 @@ def setup_configure_dag_callable(config, task_definition_name):
         ti.xcom_push(key='regenerate-log-override', value=regenerate_log_override)
 
     return configure_dag
+
+def get_dataset_collection(collections_dict, dataset):
+    """
+    Given a dictionary of collections and datasets, return the collection name for a given dataset.
+    If the dataset is not found, return None.
+    """
+    for collection, datasets in collections_dict.items():
+        if dataset in datasets:
+            return collection
+    return None
