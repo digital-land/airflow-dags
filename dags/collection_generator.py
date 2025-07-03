@@ -154,7 +154,7 @@ for collection, datasets in collections.items():
         # start with  postgres tasks
         for dataset in datasets:
             postgres_loader_task = EcsRunTaskOperator(
-                task_id=f"{collection}-{dataset}-postgres-loader",
+                task_id=f"{dataset}-postgres-loader",
                 dag=dag,
                 execution_timeout=timedelta(minutes=1800),
                 cluster=ecs_cluster,
@@ -163,9 +163,7 @@ for collection, datasets in collections.items():
                 overrides={
                     "containerOverrides": [
                         {
-                            "name": f"{sqlite_injection_task_container_name}",
-                            'cpu': '{{ task_instance.xcom_pull(task_ids="configure-dag", key="cpu") | int }}', 
-                            'memory': '{{ task_instance.xcom_pull(task_ids="configure-dag", key="memory") | int }}', 
+                            "name": f"{sqlite_injection_task_container_name}", 
                             "environment": [
                                 {"name": "ENVIRONMENT", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"env\") | string }}'"},
                                 {
