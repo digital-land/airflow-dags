@@ -9,7 +9,7 @@ from airflow.utils.trigger_rule import TriggerRule
 
 from datetime import datetime, timedelta
 
-from utils import get_config, load_specification_datasets
+from utils import get_config, load_specification_datasets, sort_collections_dict
 
 from collection_schema import CollectionSelection
 
@@ -51,7 +51,7 @@ with DAG(
         )
         run_org_collection_dag >> run_org_builder_dag
 
-    collections = load_specification_datasets()
+    collections = sort_collections_dict(load_specification_datasets())
 
     for collection, datasets in collections.items():
         if collection not in ['organisation','document','title-boundary']:
