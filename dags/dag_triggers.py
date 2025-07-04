@@ -46,7 +46,8 @@ with DAG(
         run_org_builder_dag = TriggerDagRunOperator(
             task_id='trigger-organisation-builder-dag',
             trigger_dag_id=f'organisation-builder',
-            wait_for_completion=True
+            wait_for_completion=True,
+            trigger_rule=TriggerRule.ALL_DONE
         )
         run_org_collection_dag >> run_org_builder_dag
 
@@ -59,6 +60,7 @@ with DAG(
                     task_id=f'trigger-{collection}-collection-dag',
                     trigger_dag_id=f'{collection}-collection',
                     wait_for_completion=True,
+                    trigger_rule=TriggerRule.ALL_DONE
                 )
                 collection_tasks.append(collection_dag)
                 if organisation_collection_selected:
