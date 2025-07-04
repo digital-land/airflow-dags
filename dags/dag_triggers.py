@@ -31,7 +31,7 @@ with DAG(
         schedule=dag_schedule,
         start_date=datetime(2024, 1, 1),
         catchup=False,
-        max_active_tasks=7,
+        max_active_tasks=10,
         is_paused_upon_creation=False
 ):
     organisation_collection_selected = collection_selected('organisation', config)
@@ -83,7 +83,7 @@ with DAG(
         catchup=False,
         # limited as a lot of tasks won't complete until new tasks are spawned
         # TODO could utilise pools to stop these dags clogging the system
-        max_active_tasks=7,
+        max_active_tasks=10,
         is_paused_upon_creation=False
 ):
 

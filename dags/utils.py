@@ -163,3 +163,19 @@ def get_datasets(collections_dict):
             all_datasets.extend(datasets)
 
     return all_datasets
+
+def sort_collections_dict(collections_dict):
+    """
+    Given a dictionary of collections and datasets, return a sorted list of collections.
+    The sorting is done based on the collection name.
+    """
+    priority = ["tree-preservation-order", "transport-access-node","flood-risk-zone","listed-building","conservation-area"]
+
+    def sort_key(item):
+        key, value = item
+        if key in priority:
+            return (0, priority.index(key))  # Priority group
+        return (1, value)
+
+    sorted_collections = dict(sorted(collections_dict.items(), key=sort_key))
+    return sorted_collections
