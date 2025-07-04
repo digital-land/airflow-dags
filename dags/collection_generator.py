@@ -2,19 +2,15 @@ import os
 import json
 import boto3
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 from airflow import DAG
 from airflow.decorators import dag
 from airflow.providers.amazon.aws.operators.ecs import (
-    EcsRegisterTaskDefinitionOperator,
     EcsRunTaskOperator,
 )
 
-from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
 from airflow.models.param import Param
-from airflow.models import Variable
-from airflow.models.connection import Connection
 from airflow.providers.slack.notifications.slack import send_slack_notification
 
 from utils import dag_default_args, get_config, load_specification_datasets, setup_configure_dag_callable,push_log_variables, push_vpc_config
