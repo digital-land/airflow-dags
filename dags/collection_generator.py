@@ -23,6 +23,8 @@ ecs_cluster = f"{config['env']}-cluster"
 collection_task_name = f"{config['env']}-mwaa-collection-task"
 sqlite_injection_task_name = f"{config['env']}-sqlite-ingestion-task"
 sqlite_injection_task_container_name = f"{config['env']}-sqlite-ingestion"
+efs_sync_task_name = f"{config['env']}-efs-sync-task"
+efs_sync_task_container_name = f"{config['env']}-efs-sync"
 
 collections = load_specification_datasets()
 
@@ -93,6 +95,8 @@ for collection, datasets in collections.items():
             push_log_variables(ti,task_definition_name=collection_task_name,container_name=collection_task_name,prefix='collection-task')
             # push sqlite_ingestion task variables
             push_log_variables(ti,task_definition_name=sqlite_injection_task_name,container_name=sqlite_injection_task_container_name,prefix='sqlite-ingestion-task')
+            # add efs-sync-task
+            push_log_variables(ti,task_definition_name=efs_sync_task_name,container_name=efs_sync_task_container_name,prefix='efs-sync-task')
             # push aws vpc config
             push_vpc_config(ti, kwargs['conf'])
 
@@ -179,3 +183,34 @@ for collection, datasets in collections.items():
                 awslogs_fetch_interval=timedelta(seconds=1)
             )
             collection_ecs_task >> postgres_loader_task
+
+            # define and run efs sync task
+            efs_sync_task = EcsRunTaskOperator(
+                task_id=f"{dataset}-efs-sync",
+                dag=dag,
+                execution_timeout=timedelta(minutes=1800),
+                cluster=ecs_cluster,
+                task_definition=efs_sync_task_name,
+                launch_type="FARGATE",
+                overrides={
+                    "containerOverrides": [
+                        {
+                            "name": f"{efs_sync_task_container_name}", 
+                            "environment": [
+                                {"name": "ENVIRONMENT", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"env\") | string }}'"},
+                                {
+                                    "name": "S3_OBJECT_ARN",
+                                    "value": "'arn:aws:s3:::{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"collection-dataset-bucket-name\") | string }}" + f"/{collection}-collection/dataset/{dataset}.sqlite3'"
+                                },
+                            ],
+                        },
+                    ]
+                },
+                network_configuration={
+                    "awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'
+                },
+                awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="efs-sync-task-log-group") }}',
+                awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="efs-sync-task-log-region") }}',
+                awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="efs-sync-task-log-stream-prefix") }}',
+                awslogs_fetch_interval=timedelta(seconds=1)
+            )
