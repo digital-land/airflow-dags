@@ -214,3 +214,4 @@ for collection, datasets in collections.items():
                 awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="efs-sync-task-log-stream-prefix") }}',
                 awslogs_fetch_interval=timedelta(seconds=1)
             )
+            collection_ecs_task >> efs_sync_task
