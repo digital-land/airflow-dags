@@ -104,7 +104,7 @@ with DAG(
                         },
                         {
                             "name": "READ_S3_BUCKET",
-                            "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"collection_dataset_bucket_name\") | string }}'"
+                            "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"collection-dataset-bucket-name\") | string }}'"
                         },
                         {
                             "name": "WRITE_S3_BUCKET",
