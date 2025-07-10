@@ -33,7 +33,7 @@ collection_datasets.append('digital-land')
 ecs_cluster = f"{config['env']}-cluster"
 sqlite_injection_task_name = f"{config['env']}-tile-builder-task"
 container_name = f"{config['env']}-tile-builder"
-tiles_bucket_name = f'{config['env']}-tiles-data'
+tiles_bucket_name = f"{config['env']}-tiles-data"
 
 with DAG(
     "manual-tiles-loader",
