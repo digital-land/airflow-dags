@@ -31,7 +31,7 @@ collection_datasets = get_datasets(collections_dict)
 collection_datasets.append('digital-land')
 
 ecs_cluster = f"{config['env']}-cluster"
-sqlite_injection_task_name = f"{config['env']}-tile-builder-task"
+task_name = f"{config['env']}-tile-builder-task"
 container_name = f"{config['env']}-tile-builder"
 tiles_bucket_name = f"{config['env']}-tiles-data"
 
@@ -73,7 +73,7 @@ with DAG(
 
 
         # push task log details
-        push_log_variables(ti,task_definition_name=sqlite_injection_task_name,container_name=sqlite_injection_task_container_name,prefix='tiles-builder-task')
+        push_log_variables(ti,task_definition_name=task_name,container_name=container_name,prefix='tiles-builder-task')
         # add vpc details
         push_vpc_config(ti, kwargs['conf'])
 
@@ -83,12 +83,12 @@ with DAG(
         dag=dag,
     )
 
-    load_dataset_ecs_task = EcsRunTaskOperator(
+    load_tiles_ecs_task = EcsRunTaskOperator(
         task_id=f"manual-load-dataset",
         dag=dag,
         execution_timeout=timedelta(minutes=1800),
         cluster=ecs_cluster,
-        task_definition=sqlite_injection_task_name,
+        task_definition=task_name,
         launch_type="FARGATE",
         overrides={
             "containerOverrides": [
@@ -123,4 +123,4 @@ with DAG(
         awslogs_fetch_interval=timedelta(seconds=1)
     )
 
-    configure_dag_task >> load_dataset_ecs_task
+    configure_dag_task >> load_tiles_ecs_task
