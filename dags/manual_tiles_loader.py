@@ -53,7 +53,7 @@ with DAG(
     def configure_dag(**kwargs):
         # get params from DAG params 
         params = kwargs['params']
-
+        ti = kwargs['ti']
         # based on the dataset provided need to create an ARN
         # this isn't actually used to download the dataset but the bucket name 
         # and key are
@@ -65,7 +65,6 @@ with DAG(
         # getmemory and cpu from params
         memory = int(params.get('memory'))
         cpu = int(params.get('cpu'))
-        ti = kwargs['ti']
         ti.xcom_push(key='env', value=config['env'])
         ti.xcom_push(key='memory', value=memory)
         ti.xcom_push(key='cpu', value=cpu)
