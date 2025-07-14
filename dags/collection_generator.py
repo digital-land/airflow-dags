@@ -205,7 +205,7 @@ for collection, datasets in collections.items():
                                 {"name": "ENVIRONMENT", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"env\") | string }}'"},
                                 {
                                     "name": "DATASET",
-                                    "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"dataset\") | string }}'"
+                                    "value": f"{dataset}"
                                 },
                                 {
                                     "name": "READ_S3_BUCKET",
