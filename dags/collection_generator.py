@@ -23,6 +23,8 @@ ecs_cluster = f"{config['env']}-cluster"
 collection_task_name = f"{config['env']}-mwaa-collection-task"
 sqlite_injection_task_name = f"{config['env']}-sqlite-ingestion-task"
 sqlite_injection_task_container_name = f"{config['env']}-sqlite-ingestion"
+tiles_builder_task_name = f"{config['env']}-tile-builder-task"
+tiles_builder_container_name = f"{config['env']}-tile-builder"
 
 collections = load_specification_datasets()
 
@@ -89,10 +91,17 @@ for collection, datasets in collections.items():
             collection_dataset_bucket_name = kwargs['conf'].get(section='custom', key='collection_dataset_bucket_name')
             ti.xcom_push(key='collection-dataset-bucket-name', value=collection_dataset_bucket_name)
 
+            # add tiles bucket name for the tiles processing
+            tiles_bucket_name = kwargs['conf'].get(section='custom', key='tiles_bucket_name')
+            ti.xcom_push(key='tiles-bucket-name', value=tiles_bucket_name)
+
             # push collection-task log variables
             push_log_variables(ti,task_definition_name=collection_task_name,container_name=collection_task_name,prefix='collection-task')
             # push sqlite_ingestion task variables
             push_log_variables(ti,task_definition_name=sqlite_injection_task_name,container_name=sqlite_injection_task_container_name,prefix='sqlite-ingestion-task')
+
+            # push tiles builder task variables
+            push_log_variables(ti,task_definition_name=tiles_builder_task_name,container_name=tiles_builder_container_name,prefix='tiles-builder-task')
             # push aws vpc config
             push_vpc_config(ti, kwargs['conf'])
 
@@ -179,3 +188,45 @@ for collection, datasets in collections.items():
                 awslogs_fetch_interval=timedelta(seconds=1)
             )
             collection_ecs_task >> postgres_loader_task
+
+            # need to add a tiles loader task here
+            tiles_builder_task = EcsRunTaskOperator(
+                task_id=f"{dataset}-tiles-builder",
+                dag=dag,
+                execution_timeout=timedelta(minutes=1800),
+                cluster=ecs_cluster,
+                task_definition=tiles_builder_task_name,
+                launch_type="FARGATE",
+                overrides={
+                    "containerOverrides": [
+                        {
+                            "name": f"{tiles_builder_container_name}", 
+                            "environment": [
+                                {"name": "ENVIRONMENT", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"env\") | string }}'"},
+                                {
+                                    "name": "DATASET",
+                                    "value": f"{dataset}"
+                                },
+                                {
+                                    "name": "READ_S3_BUCKET",
+                                    "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"collection-dataset-bucket-name\") | string }}'"
+                                },
+                                {
+                                    "name": "WRITE_S3_BUCKET",
+                                    "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"tiles-bucket-name\") | string }}'"
+                                },
+                            ],
+                        },
+                    ]
+                },
+                network_configuration={
+                    "awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'
+                },
+                awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="tiles-builder-task-log-group") }}',
+                awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="tiles-builder-task-log-region") }}',
+                awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="tiles-builder-task-log-stream-prefix") }}',
+                awslogs_fetch_interval=timedelta(seconds=1)
+            )
+            collection_ecs_task >> tiles_builder_task
+
+
