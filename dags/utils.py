@@ -40,7 +40,7 @@ def load_specification_datasets():
         with open(dataset_spec_path, newline="") as f:
             dictreader = csv.DictReader(f)
             for row in dictreader:
-                datasets_dict['dataset'] = row
+                datasets_dict[row['dataset']] = row
 
         return datasets_dict
     
@@ -56,9 +56,9 @@ def get_collections_dict(datasets):
         dataset_name = dataset.get('dataset', None)
         if collection and dataset_name:
             if collection in collections_dict:
-                collections_dict[collection].append(dataset)
+                collections_dict[collection].append(dataset_name)
             else:
-                collections_dict[collection] = [dataset]
+                collections_dict[collection] = [dataset_name]
     return collections_dict
 
 
