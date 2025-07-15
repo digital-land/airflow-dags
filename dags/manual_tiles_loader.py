@@ -24,7 +24,7 @@ from utils import dag_default_args,get_config, load_specification_datasets,get_d
 
 config = get_config()
 datasets_dict = load_specification_datasets()
-collections_dict = get_collections_dict(datasets_dict)
+collections_dict = get_collections_dict(datasets_dict.values())
 
 # define some inputs
 datasets = [dataset['dataset'] for dataset in datasets_dict.values() if dataset.get('typology', None) == 'geography' and dataset.get('collection', None) is not None] 
