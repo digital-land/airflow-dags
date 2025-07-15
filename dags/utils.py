@@ -39,9 +39,8 @@ def load_specification_datasets():
 
         with open(dataset_spec_path, newline="") as f:
             dictreader = csv.DictReader(f)
-            datasets = []
             for row in dictreader:
-                datasets['dataset'] = row
+                datasets_dict['dataset'] = row
 
         return datasets_dict
     
