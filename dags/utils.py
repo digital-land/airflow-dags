@@ -35,21 +35,32 @@ def load_specification_datasets():
         dataset_spec_path = Path(tmpdir) / 'dataset.csv'
         urllib.request.urlretrieve(dataset_spec_url, dataset_spec_path)
 
-        collections_dict = {}
+        datasets_dict = {}
 
         with open(dataset_spec_path, newline="") as f:
             dictreader = csv.DictReader(f)
+            datasets = []
             for row in dictreader:
-                collection = row.get('collection', None)
+                datasets['dataset'] = row
 
-                dataset = row.get('dataset', None)
-                if collection and dataset:
-                    if collection in collections_dict:
-                        collections_dict[collection].append(dataset)
-                    else:
-                        collections_dict[collection] = [dataset]
+        return datasets_dict
+    
 
-        return collections_dict
+def get_collection_dict(datasets):
+    """
+    Given a list of datasets, return a dictionary where the keys are the collection names
+    and the values are lists of datasets in that collection.
+    """
+    collections_dict = {}
+    for dataset in datasets:
+        collection = dataset.get('collection', None)
+        dataset_name = dataset.get('dataset', None)
+        if collection and dataset_name:
+            if collection in collections_dict:
+                collections_dict[collection].append(dataset)
+            else:
+                collections_dict[collection] = [dataset]
+    return collections_dict
 
 
 def get_task_log_config(ecs_client, task_definition_family):
