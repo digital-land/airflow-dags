@@ -27,7 +27,7 @@ datasets_dict = load_specification_datasets()
 collections_dict = get_collections_dict(datasets_dict)
 
 # define some inputs
-datasets = [dataset['dataset'] for dataset in datasets_dict if dataset.get('typology', None) == 'geography' and dataset.get('collection', None) is not None] 
+datasets = [dataset['dataset'] for dataset in datasets_dict.values() if dataset.get('typology', None) == 'geography' and dataset.get('collection', None) is not None] 
 # append digital-land so data contained in there can be loaded
 
 ecs_cluster = f"{config['env']}-cluster"
