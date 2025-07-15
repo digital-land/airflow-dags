@@ -20,7 +20,7 @@ from airflow.models import Variable
 from airflow.models.connection import Connection
 from airflow.providers.slack.notifications.slack import send_slack_notification
 
-from utils import dag_default_args,get_config, load_specification_datasets,get_dataset_collection, get_task_log_config,get_datasets
+from utils import dag_default_args,get_config, load_specification_datasets,get_dataset_collection, get_task_log_config
 
 config = get_config()
 datasets_dict = load_specification_datasets()

@@ -46,7 +46,7 @@ def load_specification_datasets():
         return datasets_dict
     
 
-def get_collection_dict(datasets):
+def get_collections_dict(datasets):
     """
     Given a list of datasets, return a dictionary where the keys are the collection names
     and the values are lists of datasets in that collection.

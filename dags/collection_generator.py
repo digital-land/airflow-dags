@@ -13,7 +13,7 @@ from airflow.operators.python import PythonOperator
 from airflow.models.param import Param
 from airflow.providers.slack.notifications.slack import send_slack_notification
 
-from utils import dag_default_args, get_config, load_specification_datasets, setup_configure_dag_callable,push_log_variables, push_vpc_config, get_collection_dict
+from utils import dag_default_args, get_config, load_specification_datasets, setup_configure_dag_callable,push_log_variables, push_vpc_config, get_collections_dict
 
 # read config from file and environment
 config = get_config()
@@ -27,7 +27,7 @@ tiles_builder_task_name = f"{config['env']}-tile-builder-task"
 tiles_builder_container_name = f"{config['env']}-tile-builder"
 
 datasets_dict = load_specification_datasets()
-collections = get_collection_dict(datasets_dict.values())
+collections = get_collections_dict(datasets_dict.values())
 
 failure_callbacks = []
 if config['env'] == 'production':
