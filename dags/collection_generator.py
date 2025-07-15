@@ -13,7 +13,7 @@ from airflow.operators.python import PythonOperator
 from airflow.models.param import Param
 from airflow.providers.slack.notifications.slack import send_slack_notification
 
-from utils import dag_default_args, get_config, load_specification_datasets, setup_configure_dag_callable,push_log_variables, push_vpc_config
+from utils import dag_default_args, get_config, load_specification_datasets, setup_configure_dag_callable,push_log_variables, push_vpc_config, get_collections_dict
 
 # read config from file and environment
 config = get_config()
@@ -26,7 +26,8 @@ sqlite_injection_task_container_name = f"{config['env']}-sqlite-ingestion"
 tiles_builder_task_name = f"{config['env']}-tile-builder-task"
 tiles_builder_container_name = f"{config['env']}-tile-builder"
 
-collections = load_specification_datasets()
+datasets_dict = load_specification_datasets()
+collections = get_collections_dict(datasets_dict.values())
 
 failure_callbacks = []
 if config['env'] == 'production':
@@ -38,7 +39,7 @@ if config['env'] == 'production':
         )
     )
 
-for collection, datasets in collections.items():
+for collection, collection_datasets in collections.items():
     dag_id = f"{collection}-collection"
 
     with DAG(
@@ -157,7 +158,7 @@ for collection, datasets in collections.items():
 
         # now add loaders for datasets
         # start with  postgres tasks
-        for dataset in datasets:
+        for dataset in collection_datasets:
             postgres_loader_task = EcsRunTaskOperator(
                 task_id=f"{dataset}-postgres-loader",
                 dag=dag,
@@ -189,44 +190,45 @@ for collection, datasets in collections.items():
             )
             collection_ecs_task >> postgres_loader_task
 
+            if datasets_dict[dataset].get('typology') == 'geography':
             # need to add a tiles loader task here
-            tiles_builder_task = EcsRunTaskOperator(
-                task_id=f"{dataset}-tiles-builder",
-                dag=dag,
-                execution_timeout=timedelta(minutes=1800),
-                cluster=ecs_cluster,
-                task_definition=tiles_builder_task_name,
-                launch_type="FARGATE",
-                overrides={
-                    "containerOverrides": [
-                        {
-                            "name": f"{tiles_builder_container_name}", 
-                            "environment": [
-                                {"name": "ENVIRONMENT", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"env\") | string }}'"},
-                                {
-                                    "name": "DATASET",
-                                    "value": f"{dataset}"
-                                },
-                                {
-                                    "name": "READ_S3_BUCKET",
-                                    "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"collection-dataset-bucket-name\") | string }}'"
-                                },
-                                {
-                                    "name": "WRITE_S3_BUCKET",
-                                    "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"tiles-bucket-name\") | string }}'"
-                                },
-                            ],
-                        },
-                    ]
-                },
-                network_configuration={
-                    "awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'
-                },
-                awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="tiles-builder-task-log-group") }}',
-                awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="tiles-builder-task-log-region") }}',
-                awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="tiles-builder-task-log-stream-prefix") }}',
-                awslogs_fetch_interval=timedelta(seconds=1)
-            )
-            collection_ecs_task >> tiles_builder_task
+                tiles_builder_task = EcsRunTaskOperator(
+                    task_id=f"{dataset}-tiles-builder",
+                    dag=dag,
+                    execution_timeout=timedelta(minutes=1800),
+                    cluster=ecs_cluster,
+                    task_definition=tiles_builder_task_name,
+                    launch_type="FARGATE",
+                    overrides={
+                        "containerOverrides": [
+                            {
+                                "name": f"{tiles_builder_container_name}", 
+                                "environment": [
+                                    {"name": "ENVIRONMENT", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"env\") | string }}'"},
+                                    {
+                                        "name": "DATASET",
+                                        "value": f"{dataset}"
+                                    },
+                                    {
+                                        "name": "READ_S3_BUCKET",
+                                        "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"collection-dataset-bucket-name\") | string }}'"
+                                    },
+                                    {
+                                        "name": "WRITE_S3_BUCKET",
+                                        "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"tiles-bucket-name\") | string }}'"
+                                    },
+                                ],
+                            },
+                        ]
+                    },
+                    network_configuration={
+                        "awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'
+                    },
+                    awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="tiles-builder-task-log-group") }}',
+                    awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="tiles-builder-task-log-region") }}',
+                    awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="tiles-builder-task-log-stream-prefix") }}',
+                    awslogs_fetch_interval=timedelta(seconds=1)
+                )
+                collection_ecs_task >> tiles_builder_task
 
 

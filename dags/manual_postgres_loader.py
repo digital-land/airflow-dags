@@ -20,15 +20,16 @@ from airflow.models import Variable
 from airflow.models.connection import Connection
 from airflow.providers.slack.notifications.slack import send_slack_notification
 
-from utils import dag_default_args,get_config, load_specification_datasets,get_dataset_collection, get_task_log_config,get_datasets
+from utils import dag_default_args,get_config, load_specification_datasets,get_dataset_collection, get_task_log_config, get_collections_dict
 
 config = get_config()
-collections_dict = load_specification_datasets()
+datasets_dict = load_specification_datasets()
+collections_dict = get_collections_dict(datasets_dict.values())
 
 # define some inputs
-collection_datasets = get_datasets(collections_dict)
+datasets = [dataset['dataset'] for dataset in datasets_dict.values() if dataset.get('collection', None) is not None] 
 # append digital-land so data contained in there can be loaded
-collection_datasets.append('digital-land')
+datasets.append('digital-land')
 
 ecs_cluster = f"{config['env']}-cluster"
 sqlite_injection_task_name = f"{config['env']}-sqlite-ingestion-task"
@@ -43,7 +44,7 @@ with DAG(
     params={
         "cpu": Param(default=1024, type="integer"),
         "memory": Param(default=4096, type="integer"),
-        "dataset": Param(type="string",enum=collection_datasets),
+        "dataset": Param(type="string",enum=datasets),
     },
     render_template_as_native_obj=True,
     is_paused_upon_creation=False,
