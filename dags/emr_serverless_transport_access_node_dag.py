@@ -25,7 +25,7 @@ with DAG(
 
     # EMR Serverless configuration from Airflow Variables (set via UI)
     EMR_APPLICATION_ID = Variable.get("emr_application_id")
-    EXECUTION_ROLE_ARN = Variable.get("emr_execution_role_arn")
+    EXECUTION_ROLE_ARN = Variable.get("emr_execution_role_secret")
     S3_BUCKET = Variable.get("s3_data_bucket", default_var="development-collection-data")
     
     # Dynamic job parameters from Airflow Variables
