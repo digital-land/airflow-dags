@@ -20,8 +20,8 @@ default_args = {
 
 def wait_for_emr_job_completion(**context):
     """Wait for EMR Serverless job to complete"""
-    # Get job run ID from previous task
-    job_run_id = context['task_instance'].xcom_pull(task_ids='submit_emr_job', key='job_run_id')
+    # Fix: Get job run ID from the correct task
+    job_run_id = context['task_instance'].xcom_pull(task_ids='extract_job_id', key='job_run_id')
     
     if not job_run_id:
         raise ValueError("No job_run_id found from previous task")
