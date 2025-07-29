@@ -89,7 +89,8 @@ with DAG(
     S3_ENTRY_POINT = f"s3://{S3_BUCKET}/emr-data-processing/src0/entry_script/run_main.py"
     S3_WHEEL_FILE = f"s3://{S3_BUCKET}/emr-data-processing/src0/whl_pkg/pyspark_jobs-0.1.0-py3-none-any.whl"
     S3_LOG_URI = f"s3://{S3_BUCKET}/emr-data-processing/logs/"
-    S3_DATA_PATH = f"s3://{S3_BUCKET}/data/"  # Add this missing variable
+    # Fix: Remove the "/data/" part from the path
+    S3_DATA_PATH = f"s3://{S3_BUCKET}/"  # Changed from f"s3://{S3_BUCKET}/data/"
 
     # Task 1: Submit EMR Serverless job and capture job run ID
     submit_emr_job = BashOperator(
