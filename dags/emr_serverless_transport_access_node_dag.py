@@ -1,7 +1,11 @@
 from airflow import DAG
 from airflow.operators.bash import BashOperator
+from airflow.operators.python import PythonOperator
 from airflow.models import Variable
 from datetime import datetime, timedelta
+import boto3
+import time
+import json
 
 # Default arguments for the DAG
 default_args = {
@@ -13,6 +17,40 @@ default_args = {
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
 }
+
+def wait_for_emr_job_completion(**context):
+    """Wait for EMR Serverless job to complete"""
+    # Get job run ID from previous task
+    job_run_id = context['task_instance'].xcom_pull(task_ids='submit_emr_job', key='job_run_id')
+    
+    if not job_run_id:
+        raise ValueError("No job_run_id found from previous task")
+    
+    emr_client = boto3.client('emr-serverless', region_name='eu-west-2')
+    application_id = Variable.get("emr_application_id")
+    
+    print(f"Monitoring EMR Serverless job: {job_run_id}")
+    
+    while True:
+        response = emr_client.get_job_run(
+            applicationId=application_id,
+            jobRunId=job_run_id
+        )
+        
+        job_state = response['jobRun']['state']
+        print(f"Job state: {job_state}")
+        
+        if job_state == 'SUCCESS':
+            print("Job completed successfully!")
+            return job_run_id
+        elif job_state in ['FAILED', 'CANCELLED']:
+            raise Exception(f"Job failed with state: {job_state}")
+        elif job_state in ['PENDING', 'SCHEDULED', 'RUNNING']:
+            print(f"Job still running, waiting 30 seconds...")
+            time.sleep(30)
+        else:
+            print(f"Unknown job state: {job_state}, continuing to wait...")
+            time.sleep(30)
 
 # Define the DAG to run EMR Serverless PySpark job
 with DAG(
@@ -38,27 +76,56 @@ with DAG(
     S3_LOG_URI = f"s3://{S3_BUCKET}/emr-data-processing/logs/"
     S3_DATA_PATH = f"s3://{S3_BUCKET}/"
 
-    # Task to run EMR Serverless PySpark job
-    run_transport_access_node_job = BashOperator(
-        task_id='run_transport_access_node_job',
-        bash_command=f'''aws emr-serverless start-job-run \\
-  --name "{DATA_SET}-job" \\
-  --application-id {EMR_APPLICATION_ID} \\
-  --execution-role-arn {EXECUTION_ROLE_ARN} \\
-  --job-driver '{{
-    "sparkSubmit": {{
-      "entryPoint": "{S3_ENTRY_POINT}",
-      "entryPointArguments": ["--load_type", "{LOAD_TYPE}", "--data_set", "{DATA_SET}", "--path", "{S3_DATA_PATH}"],
-      "sparkSubmitParameters": "--py-files {S3_WHEEL_FILE}"
-    }}
-  }}' \\
-  --configuration-overrides '{{
-    "monitoringConfiguration": {{
-      "s3MonitoringConfiguration": {{
-        "logUri": "{S3_LOG_URI}"
-      }}
-    }}
-  }}' ''',
+    # Task 1: Submit EMR Serverless job and capture job run ID
+    submit_emr_job = BashOperator(
+        task_id='submit_emr_job',
+        bash_command=f'''
+        JOB_OUTPUT=$(aws emr-serverless start-job-run \\
+          --name "{DATA_SET}-job" \\
+          --application-id {EMR_APPLICATION_ID} \\
+          --execution-role-arn {EXECUTION_ROLE_ARN} \\
+          --job-driver '{{
+            "sparkSubmit": {{
+              "entryPoint": "{S3_ENTRY_POINT}",
+              "entryPointArguments": ["--load_type", "{LOAD_TYPE}", "--data_set", "{DATA_SET}", "--path", "{S3_DATA_PATH}"],
+              "sparkSubmitParameters": "--py-files {S3_WHEEL_FILE}"
+            }}
+          }}' \\
+          --configuration-overrides '{{
+            "monitoringConfiguration": {{
+              "s3MonitoringConfiguration": {{
+                "logUri": "{S3_LOG_URI}"
+              }}
+            }}
+          }}' --output json)
+        
+        echo "EMR Job submitted successfully"
+        echo "Job Output: $JOB_OUTPUT"
+        
+        # Extract job run ID and push to XCom
+        JOB_RUN_ID=$(echo $JOB_OUTPUT | jq -r '.jobRunId')
+        echo "Job Run ID: $JOB_RUN_ID"
+        
+        # Push to XCom for next task
+        python3 -c "
+import sys
+sys.path.append('/opt/airflow')
+from airflow.models import TaskInstance
+from airflow import settings
+ti = TaskInstance.get_current()
+ti.xcom_push(key='job_run_id', value='$JOB_RUN_ID')
+        "
+        ''',
+        do_xcom_push=True
     )
 
-    run_transport_access_node_job
+    # Task 2: Wait for EMR job completion
+    wait_for_completion = PythonOperator(
+        task_id='wait_for_emr_completion',
+        python_callable=wait_for_emr_job_completion,
+        timeout=timedelta(hours=2),  # Adjust timeout as needed
+        poke_interval=30  # Check every 30 seconds
+    )
+
+    # Set task dependencies
+    submit_emr_job >> wait_for_completion
