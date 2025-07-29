@@ -31,25 +31,40 @@ def wait_for_emr_job_completion(**context):
     
     print(f"Monitoring EMR Serverless job: {job_run_id}")
     
+    # Set timeout (2 hours = 7200 seconds)
+    timeout_seconds = 7200
+    start_time = time.time()
+    
     while True:
-        response = emr_client.get_job_run(
-            applicationId=application_id,
-            jobRunId=job_run_id
-        )
+        # Check if we've exceeded timeout
+        if time.time() - start_time > timeout_seconds:
+            raise Exception(f"Job monitoring timed out after {timeout_seconds} seconds")
         
-        job_state = response['jobRun']['state']
-        print(f"Job state: {job_state}")
-        
-        if job_state == 'SUCCESS':
-            print("Job completed successfully!")
-            return job_run_id
-        elif job_state in ['FAILED', 'CANCELLED']:
-            raise Exception(f"Job failed with state: {job_state}")
-        elif job_state in ['PENDING', 'SCHEDULED', 'RUNNING']:
-            print(f"Job still running, waiting 30 seconds...")
-            time.sleep(30)
-        else:
-            print(f"Unknown job state: {job_state}, continuing to wait...")
+        try:
+            response = emr_client.get_job_run(
+                applicationId=application_id,
+                jobRunId=job_run_id
+            )
+            
+            job_state = response['jobRun']['state']
+            print(f"Job state: {job_state}")
+            
+            if job_state == 'SUCCESS':
+                print("Job completed successfully!")
+                return job_run_id
+            elif job_state in ['FAILED', 'CANCELLED']:
+                raise Exception(f"Job failed with state: {job_state}")
+            elif job_state in ['PENDING', 'SCHEDULED', 'RUNNING']:
+                print(f"Job still running, waiting 30 seconds...")
+                time.sleep(30)
+            else:
+                print(f"Unknown job state: {job_state}, continuing to wait...")
+                time.sleep(30)
+                
+        except Exception as e:
+            if "timed out" in str(e):
+                raise
+            print(f"Error checking job status: {e}, retrying in 30 seconds...")
             time.sleep(30)
 
 # Define the DAG to run EMR Serverless PySpark job
@@ -74,7 +89,7 @@ with DAG(
     S3_ENTRY_POINT = f"s3://{S3_BUCKET}/emr-data-processing/src0/entry_script/run_main.py"
     S3_WHEEL_FILE = f"s3://{S3_BUCKET}/emr-data-processing/src0/whl_pkg/pyspark_jobs-0.1.0-py3-none-any.whl"
     S3_LOG_URI = f"s3://{S3_BUCKET}/emr-data-processing/logs/"
-    S3_DATA_PATH = f"s3://{S3_BUCKET}/"
+    S3_DATA_PATH = f"s3://{S3_BUCKET}/data/"  # Add this missing variable
 
     # Task 1: Submit EMR Serverless job and capture job run ID
     submit_emr_job = BashOperator(
@@ -102,30 +117,28 @@ with DAG(
         echo "EMR Job submitted successfully"
         echo "Job Output: $JOB_OUTPUT"
         
-        # Extract job run ID and push to XCom
+        # Extract job run ID
         JOB_RUN_ID=$(echo $JOB_OUTPUT | jq -r '.jobRunId')
         echo "Job Run ID: $JOB_RUN_ID"
-        
-        # Push to XCom for next task
-        python3 -c "
-import sys
-sys.path.append('/opt/airflow')
-from airflow.models import TaskInstance
-from airflow import settings
-ti = TaskInstance.get_current()
-ti.xcom_push(key='job_run_id', value='$JOB_RUN_ID')
-        "
+        echo "$JOB_RUN_ID" > /tmp/job_run_id.txt
         ''',
-        do_xcom_push=True
+        do_xcom_push=False
+    )
+
+    # Python task to extract job run ID and push to XCom
+    extract_job_id = PythonOperator(
+        task_id='extract_job_id',
+        python_callable=lambda **context: context['task_instance'].xcom_push(
+            key='job_run_id', 
+            value=open('/tmp/job_run_id.txt').read().strip()
+        )
     )
 
     # Task 2: Wait for EMR job completion
     wait_for_completion = PythonOperator(
         task_id='wait_for_emr_completion',
-        python_callable=wait_for_emr_job_completion,
-        timeout=timedelta(hours=2),  # Adjust timeout as needed
-        poke_interval=30  # Check every 30 seconds
+        python_callable=wait_for_emr_job_completion
     )
 
     # Set task dependencies
-    submit_emr_job >> wait_for_completion
+    submit_emr_job >> extract_job_id >> wait_for_completion
