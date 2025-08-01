@@ -89,6 +89,7 @@ with DAG(
     S3_ENTRY_POINT = f"s3://{S3_BUCKET}/emr-data-processing/src0/entry_script/run_main.py"
     S3_WHEEL_FILE = f"s3://{S3_BUCKET}/emr-data-processing/src0/whl_pkg/pyspark_jobs-0.1.0-py3-none-any.whl"
     S3_LOG_URI = f"s3://{S3_BUCKET}/emr-data-processing/logs/"
+    S3_DEPENDENCIES_PATH = f"s3://{S3_BUCKET}/emr-data-processing/src0/dependencies/pyspark_jobs_with_deps.zip"
     # Fix: Remove the "/data/" part from the path
     S3_DATA_PATH = f"s3://{S3_BUCKET}/"  # Changed from f"s3://{S3_BUCKET}/data/"
 
@@ -104,7 +105,7 @@ with DAG(
             "sparkSubmit": {{
               "entryPoint": "{S3_ENTRY_POINT}",
               "entryPointArguments": ["--load_type", "{LOAD_TYPE}", "--data_set", "{DATA_SET}", "--path", "{S3_DATA_PATH}"],
-              "sparkSubmitParameters": "--py-files {S3_WHEEL_FILE}"
+              "sparkSubmitParameters": "--py-files {S3_WHEEL_FILE},{S3_DEPENDENCIES_PATH}"
             }}
           }}' \\
           --configuration-overrides '{{
