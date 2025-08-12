@@ -69,7 +69,7 @@ def wait_for_emr_job_completion(**context):
 
 # Define the DAG to run EMR Serverless PySpark job
 with DAG(
-    dag_id='emr_sl_transport_access_node_collection',
+    dag_id='emr_sl_transport_access_node_collection_test',
     default_args=default_args,
     description='Run transport-access-node PySpark job on EMR Serverless',
     schedule_interval=None,  # Manual trigger only
