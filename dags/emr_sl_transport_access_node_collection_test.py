@@ -79,19 +79,21 @@ with DAG(
     # EMR Serverless configuration from Airflow Variables (set via UI)
     EMR_APPLICATION_ID = Variable.get("emr_application_id")
     EXECUTION_ROLE_ARN = Variable.get("emr_execution_role_secret")
-    S3_BUCKET = Variable.get("s3_data_bucket", default_var="development-collection-data")
+    S3_BUCKET = Variable.get("s3_pyspark_jobs_codepackage", default_var="development-pyspark-jobs-codepackage")
     
     # Dynamic job parameters from Airflow Variables
     LOAD_TYPE = Variable.get("load_type", default_var="full")
+    LOAD_TYPE="sample"
     DATA_SET = Variable.get("data_set", default_var="transport-access-node")
-    
+    ENV = Variable.get("env", default_var="dev") # dev, staging, prod
+    S3_SOURCE_DATA_PATH = Variable.get("source_data_path", default_var="") # dev, staging, prod
     # Construct S3 paths
-    S3_ENTRY_POINT = f"s3://{S3_BUCKET}/emr-data-processing/src0/entry_script/run_main.py"
-    S3_WHEEL_FILE = f"s3://{S3_BUCKET}/emr-data-processing/src0/whl_pkg/pyspark_jobs-0.1.0-py3-none-any.whl"
-    S3_LOG_URI = f"s3://{S3_BUCKET}/emr-data-processing/logs/"
-    S3_DEPENDENCIES_PATH = f"s3://{S3_BUCKET}/emr-data-processing/src0/dependencies/pyspark_jobs_with_deps.zip"
+    S3_ENTRY_POINT = f"s3://{S3_BUCKET}/pkg/entry_script/run_main.py"
+    S3_WHEEL_FILE = f"s3://{S3_BUCKET}/pkg/whl_pkg/pyspark_jobs-0.1.0-py3-none-any.whl"
+    S3_LOG_URI = f"s3://{S3_BUCKET}/logs/"
+    S3_DEPENDENCIES_PATH = f"s3://{S3_BUCKET}/pkg/dependencies/pyspark_jobs_with_deps.zip"
     # Fix: Remove the "/data/" part from the path
-    S3_DATA_PATH = f"s3://{S3_BUCKET}/"  # Changed from f"s3://{S3_BUCKET}/data/"
+    S3_DATA_PATH = f"s3://{S3_SOURCE_DATA_PATH}/"  # Changed from f"s3://{S3_BUCKET}/data/"
 
     # Task 1: Submit EMR Serverless job and capture job run ID
     submit_emr_job = BashOperator(
@@ -104,7 +106,7 @@ with DAG(
           --job-driver '{{
             "sparkSubmit": {{
               "entryPoint": "{S3_ENTRY_POINT}",
-              "entryPointArguments": ["--load_type", "{LOAD_TYPE}", "--data_set", "{DATA_SET}", "--path", "{S3_DATA_PATH}"],
+              "entryPointArguments": ["--load_type", "{LOAD_TYPE}", "--data_set", "{DATA_SET}", "--path", "{S3_DATA_PATH}","--env" , {ENV}],
               "sparkSubmitParameters": "--py-files {S3_WHEEL_FILE},{S3_DEPENDENCIES_PATH}"
             }}
           }}' \\
