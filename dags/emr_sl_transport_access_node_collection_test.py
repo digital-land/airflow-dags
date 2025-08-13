@@ -20,7 +20,6 @@ default_args = {
 
 def wait_for_emr_job_completion(**context):
     """Wait for EMR Serverless job to complete"""
-    # Fix: Get job run ID from the correct task
     job_run_id = context['task_instance'].xcom_pull(task_ids='extract_job_id', key='job_run_id')
     
     if not job_run_id:
@@ -31,8 +30,8 @@ def wait_for_emr_job_completion(**context):
     
     print(f"Monitoring EMR Serverless job: {job_run_id}")
     
-    # Set timeout (5 minutes = 200 seconds)
-    timeout_seconds = 200
+    # Set timeout (5 minutes = 300 seconds)
+    timeout_seconds = 300
     start_time = time.time()
     
     while True:
@@ -52,9 +51,13 @@ def wait_for_emr_job_completion(**context):
             if job_state == 'SUCCESS':
                 print("Job completed successfully!")
                 return job_run_id
-            elif job_state in ['FAILED', 'CANCELLED']:
-                raise Exception(f"Job failed with state: {job_state}")
-            elif job_state in ['PENDING', 'SCHEDULED', 'RUNNING']:
+            elif job_state == 'FAILED':
+                print("Job failed - stopping DAG execution")
+                raise Exception(f"EMR job failed with state: {job_state}")
+            elif job_state in ['CANCELLED', 'CANCELLING']:
+                print("Job was cancelled - stopping DAG execution")
+                raise Exception(f"EMR job cancelled with state: {job_state}")
+            elif job_state in ['PENDING', 'SCHEDULED', 'RUNNING', 'SUBMITTED']:
                 print(f"Job still running, waiting 30 seconds...")
                 time.sleep(30)
             else:
@@ -62,7 +65,7 @@ def wait_for_emr_job_completion(**context):
                 time.sleep(30)
                 
         except Exception as e:
-            if "timed out" in str(e):
+            if "timed out" in str(e) or "failed" in str(e) or "cancelled" in str(e):
                 raise
             print(f"Error checking job status: {e}, retrying in 30 seconds...")
             time.sleep(30)
