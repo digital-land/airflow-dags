@@ -88,7 +88,7 @@ with DAG(
     LOAD_TYPE = Variable.get("load_type", default_var="full")
     LOAD_TYPE="sample"
     DATA_SET = Variable.get("data_set", default_var="transport-access-node")
-    ENV = Variable.get("env", default_var="dev") # dev, staging, prod
+    ENV = Variable.get("env", default_var="development") # development, staging, production
     S3_SOURCE_DATA_PATH = Variable.get("source_data_path", default_var="") # dev, staging, prod
     # Construct S3 paths
     S3_ENTRY_POINT = f"s3://{S3_BUCKET}/pkg/entry_script/run_main.py"
