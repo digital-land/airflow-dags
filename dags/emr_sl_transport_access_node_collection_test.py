@@ -94,7 +94,7 @@ with DAG(
     S3_ENTRY_POINT = f"s3://{S3_BUCKET}/pkg/entry_script/run_main.py"
     S3_WHEEL_FILE = f"s3://{S3_BUCKET}/pkg/whl_pkg/pyspark_jobs-0.1.0-py3-none-any.whl"
     S3_LOG_URI = f"s3://{S3_BUCKET}/logs/"
-    S3_DEPENDENCIES_PATH = f"s3://{S3_BUCKET}/pkg/dependencies/dependencies.tar.gz"
+    S3_DEPENDENCIES_PATH = f"s3://{S3_BUCKET}/pkg/dependencies/dependencies.zip"
     # Fix: Remove the "/data/" part from the path
     S3_DATA_PATH = f"s3://{S3_SOURCE_DATA_PATH}/"  # Changed from f"s3://{S3_BUCKET}/data/"
 
