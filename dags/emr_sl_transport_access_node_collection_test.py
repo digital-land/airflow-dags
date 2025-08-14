@@ -86,7 +86,7 @@ with DAG(
     
     # Dynamic job parameters from Airflow Variables
     LOAD_TYPE = Variable.get("load_type", default_var="full")
-    LOAD_TYPE="sample"
+    #LOAD_TYPE="sample" #sample, full and delta
     DATA_SET = Variable.get("data_set", default_var="transport-access-node")
     ENV = Variable.get("env", default_var="development") # development, staging, production
     S3_SOURCE_DATA_PATH = Variable.get("source_data_path", default_var="") # dev, staging, prod
