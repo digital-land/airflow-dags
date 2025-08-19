@@ -107,7 +107,7 @@ with DAG(
           --job-driver '{{
             "sparkSubmit": {{
               "entryPoint": "{S3_ENTRY_POINT}",
-              "entryPointArguments": ["--load_type", "{LOAD_TYPE}", "--data_set", "{DATA_SET}", "--path", "{S3_DATA_PATH}", "--env", "{ENV}"],
+              "entryPointArguments": ["--load_type", "{LOAD_TYPE}", "--data_set", "{DATA_SET}", "--path", "{S3_DATA_PATH}", "--env", "{ENV}", "--s3_bucket", "{S3_BUCKET}"],
               "sparkSubmitParameters": "--py-files {S3_WHEEL_FILE},{S3_DEPENDENCIES_PATH} --jars {S3_POSTGRESQL_JAR}"
             }}
           }}' \\
