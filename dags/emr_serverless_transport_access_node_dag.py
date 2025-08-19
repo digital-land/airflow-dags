@@ -80,7 +80,6 @@ with DAG(
     EMR_APPLICATION_ID = Variable.get("emr_application_id")
     EXECUTION_ROLE_ARN = Variable.get("emr_execution_role_secret")
     S3_BUCKET = Variable.get("s3_data_bucket", default_var="development-collection-data")
-    S3_STAGING_BUCKET = Variable.get("s3_pyspark_jobs_codepackage", default_var="development-pyspark-jobs-codepackage")
     
     # Dynamic job parameters from Airflow Variables
     LOAD_TYPE = Variable.get("load_type", default_var="full")
@@ -105,7 +104,7 @@ with DAG(
           --job-driver '{{
             "sparkSubmit": {{
               "entryPoint": "{S3_ENTRY_POINT}",
-              "entryPointArguments": ["--load_type", "{LOAD_TYPE}", "--data_set", "{DATA_SET}", "--path", "{S3_DATA_PATH}", "--env", "{ENV}", "--s3_bucket", "{S3_STAGING_BUCKET}"],
+              "entryPointArguments": ["--load_type", "{LOAD_TYPE}", "--data_set", "{DATA_SET}", "--path", "{S3_DATA_PATH}", "--env", "{ENV}"],
               "sparkSubmitParameters": "--py-files {S3_WHEEL_FILE}"
             }}
           }}' \\
