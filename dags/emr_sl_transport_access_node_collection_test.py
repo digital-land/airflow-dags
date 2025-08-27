@@ -30,8 +30,8 @@ def wait_for_emr_job_completion(**context):
     
     print(f"Monitoring EMR Serverless job: {job_run_id}")
     
-    # Set timeout (5 minutes = 300 seconds)
-    timeout_seconds = 300
+    # Set timeout (15 minutes = 900 seconds)
+    timeout_seconds = 900
     start_time = time.time()
     
     try:
@@ -77,8 +77,9 @@ def wait_for_emr_job_completion(**context):
                 if job_state == 'SUCCESS':
                     print("Job completed successfully!")
                     return job_run_id
-                elif job_state in ['FAILED', 'CANCELLED']:
-                    raise Exception(f"Job failed with state: {job_state}")
+                elif job_state in ['FAILED', 'CANCELLED', 'CANCELLING']:
+                    state_details = response.get('jobRun', {}).get('stateDetails', '')
+                    raise Exception(f"EMR job {job_state}: {state_details}")
                 elif job_state in ['PENDING', 'SCHEDULED', 'RUNNING']:
                     print(f"Job still running, waiting 30 seconds...")
                     time.sleep(30)
