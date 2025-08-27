@@ -20,7 +20,6 @@ default_args = {
 
 def wait_for_emr_job_completion(**context):
     """Wait for EMR Serverless job to complete"""
-    # Fix: Get job run ID from the correct task
     job_run_id = context['task_instance'].xcom_pull(task_ids='extract_job_id', key='job_run_id')
     
     if not job_run_id:
@@ -31,8 +30,8 @@ def wait_for_emr_job_completion(**context):
     
     print(f"Monitoring EMR Serverless job: {job_run_id}")
     
-    # Set timeout (2 hours = 7200 seconds)
-    timeout_seconds = 7200
+    # Set timeout (15 minutes = 900 seconds)
+    timeout_seconds = 900
     start_time = time.time()
     
     while True:
@@ -47,23 +46,30 @@ def wait_for_emr_job_completion(**context):
             )
             
             job_state = response['jobRun']['state']
-            print(f"Job state: {job_state}")
+            state_details = response.get('jobRun', {}).get('stateDetails', '')
+            
+            print(f"Job state: {job_state} - {state_details}")
             
             if job_state == 'SUCCESS':
                 print("Job completed successfully!")
                 return job_run_id
-            elif job_state in ['FAILED', 'CANCELLED']:
-                raise Exception(f"Job failed with state: {job_state}")
+            elif job_state in ['FAILED', 'CANCELLED', 'CANCELLING']:
+                state_details = response.get('jobRun', {}).get('stateDetails', '')
+                raise Exception(f"EMR job {job_state}: {state_details}")
             elif job_state in ['PENDING', 'SCHEDULED', 'RUNNING']:
                 print(f"Job still running, waiting 30 seconds...")
                 time.sleep(30)
             else:
-                print(f"Unknown job state: {job_state}, continuing to wait...")
+                # Handle any unknown states by logging and continuing
+                print(f"Unknown job state: {job_state} - {state_details}, continuing to wait...")
                 time.sleep(30)
                 
         except Exception as e:
-            if "timed out" in str(e):
+            # If it's our intentional failure (cancelled/failed job), re-raise it
+            if "EMR job" in str(e) or "timed out" in str(e):
                 raise
+            
+            # For other exceptions (network issues, etc), log and retry
             print(f"Error checking job status: {e}, retrying in 30 seconds...")
             time.sleep(30)
 
