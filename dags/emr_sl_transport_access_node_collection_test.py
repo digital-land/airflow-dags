@@ -34,41 +34,78 @@ def wait_for_emr_job_completion(**context):
     timeout_seconds = 300
     start_time = time.time()
     
-    while True:
-        # Check if we've exceeded timeout
-        if time.time() - start_time > timeout_seconds:
-            raise Exception(f"Job monitoring timed out after {timeout_seconds} seconds")
-        
-        try:
-            response = emr_client.get_job_run(
-                applicationId=application_id,
-                jobRunId=job_run_id
-            )
+    try:
+        while True:
+            # Check if we've exceeded timeout
+            if time.time() - start_time > timeout_seconds:
+                print(f"Job monitoring timed out after {timeout_seconds} seconds")
+                print(f"Attempting to cancel EMR Serverless job: {job_run_id}")
+                
+                try:
+                    # Cancel the EMR Serverless job to prevent further costs
+                    cancel_response = emr_client.cancel_job_run(
+                        applicationId=application_id,
+                        jobRunId=job_run_id
+                    )
+                    print(f"Job cancellation initiated: {cancel_response}")
+                    
+                    # Wait a bit for cancellation to take effect
+                    time.sleep(10)
+                    
+                    # Check final state
+                    final_response = emr_client.get_job_run(
+                        applicationId=application_id,
+                        jobRunId=job_run_id
+                    )
+                    final_state = final_response['jobRun']['state']
+                    print(f"Final job state after cancellation: {final_state}")
+                    
+                except Exception as cancel_error:
+                    print(f"Error cancelling job: {cancel_error}")
+                
+                raise Exception(f"Job monitoring timed out after {timeout_seconds} seconds. Job cancellation attempted.")
             
-            job_state = response['jobRun']['state']
-            print(f"Job state: {job_state}")
-            
-            if job_state == 'SUCCESS':
-                print("Job completed successfully!")
-                return job_run_id
-            elif job_state == 'FAILED':
-                print("Job failed - stopping DAG execution")
-                raise Exception(f"EMR job failed with state: {job_state}")
-            elif job_state in ['CANCELLED', 'CANCELLING']:
-                print("Job was cancelled - stopping DAG execution")
-                raise Exception(f"EMR job cancelled with state: {job_state}")
-            elif job_state in ['PENDING', 'SCHEDULED', 'RUNNING', 'SUBMITTED']:
-                print(f"Job still running, waiting 30 seconds...")
-                time.sleep(30)
-            else:
-                print(f"Unknown job state: {job_state}, continuing to wait...")
+            try:
+                response = emr_client.get_job_run(
+                    applicationId=application_id,
+                    jobRunId=job_run_id
+                )
+                
+                job_state = response['jobRun']['state']
+                print(f"Job state: {job_state}")
+                
+                if job_state == 'SUCCESS':
+                    print("Job completed successfully!")
+                    return job_run_id
+                elif job_state in ['FAILED', 'CANCELLED']:
+                    raise Exception(f"Job failed with state: {job_state}")
+                elif job_state in ['PENDING', 'SCHEDULED', 'RUNNING']:
+                    print(f"Job still running, waiting 30 seconds...")
+                    time.sleep(30)
+                else:
+                    print(f"Unknown job state: {job_state}, continuing to wait...")
+                    time.sleep(30)
+                    
+            except Exception as e:
+                if "timed out" in str(e):
+                    raise
+                print(f"Error checking job status: {e}, retrying in 30 seconds...")
                 time.sleep(30)
                 
-        except Exception as e:
-            if "timed out" in str(e) or "failed" in str(e) or "cancelled" in str(e):
-                raise
-            print(f"Error checking job status: {e}, retrying in 30 seconds...")
-            time.sleep(30)
+    except Exception as outer_error:
+        # Ensure we attempt to cancel the job if any unexpected error occurs
+        if "timed out" not in str(outer_error):
+            print(f"Unexpected error occurred: {outer_error}")
+            print(f"Attempting to cancel EMR Serverless job: {job_run_id}")
+            try:
+                emr_client.cancel_job_run(
+                    applicationId=application_id,
+                    jobRunId=job_run_id
+                )
+                print("Job cancellation initiated due to unexpected error")
+            except Exception as cancel_error:
+                print(f"Error cancelling job due to unexpected error: {cancel_error}")
+        raise
 
 # Define the DAG to run EMR Serverless PySpark job
 with DAG(
