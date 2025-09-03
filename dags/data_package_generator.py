@@ -21,7 +21,7 @@ if config['env'] == 'production':
     failure_callbacks.append(
         send_slack_notification(
             text="The DAG {{ dag.dag_id }} failed",
-            channel="#planning-data-platform",
+            channel="#planning-data-alerts",
             username="Airflow"
         )
     )
