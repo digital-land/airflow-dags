@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import boto3
 import time
 import json
-from dags.utils.aws_secrets_manager import get_secret_emr_compatible
+from utils.aws_secrets_manager import get_secret_emr_compatible
 
 # Retrieve secrets from AWS Secrets Manager
 def get_secrets(secret_name):    
