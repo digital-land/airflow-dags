@@ -175,6 +175,7 @@ with DAG(
     EXECUTION_ROLE_ARN = get_secrets("emr_execution_role")
 
     S3_BUCKET = f"{ENV}-pyspark-jobs-codepackage"
+    S3_LOG_BUCKET = f"{ENV}-pyspark-jobs-logs"
     
     LOAD_TYPE = get_secrets("load_type") #sample, full and delta
     
@@ -184,7 +185,7 @@ with DAG(
     # S3 paths
     S3_ENTRY_POINT = f"s3://{S3_BUCKET}/pkg/entry_script/run_main.py"
     S3_WHEEL_FILE = f"s3://{S3_BUCKET}/pkg/whl_pkg/pyspark_jobs-0.1.0-py3-none-any.whl"
-    S3_LOG_URI = f"s3://{S3_BUCKET}/logs/"
+    S3_LOG_URI = f"s3://{S3_LOG_BUCKET}/logs/"
     S3_DEPENDENCIES_PATH = f"s3://{S3_BUCKET}/pkg/dependencies/dependencies.zip"
     S3_POSTGRESQL_JAR = f"s3://{S3_BUCKET}/pkg/jars/postgresql-42.7.4.jar"  
     S3_DATA_PATH = f"s3://{S3_SOURCE_DATA_PATH}/"
