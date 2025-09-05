@@ -202,7 +202,7 @@ with DAG(
         
         # Submit EMR job and capture output
         JOB_OUTPUT=$(aws emr-serverless start-job-run \\
-          --name "{DATA_SET}-job-$(date +%Y%m%d-%H%M%S)" \\
+          --name "{DATA_SET}-job" \\
           --application-id {EMR_APPLICATION_ID} \\
           --execution-role-arn {EXECUTION_ROLE_ARN} \\
           --job-driver '{{
