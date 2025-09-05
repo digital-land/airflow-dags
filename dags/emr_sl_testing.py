@@ -89,7 +89,8 @@ def wait_for_emr_job_completion(**context):
                 except Exception as cancel_error:
                     print(f"Error cancelling job: {cancel_error}")
                 
-                raise Exception(f"Job monitoring timed out after {timeout_seconds} seconds. Job cancellation attempted.")
+                from airflow.exceptions import AirflowSkipException
+                raise AirflowSkipException(f"Job monitoring timed out after {timeout_seconds} seconds. Job cancellation attempted.")
             
             try:
                 response = emr_client.get_job_run(
@@ -296,7 +297,8 @@ with DAG(
     # Task 2: Wait for EMR job completion
     wait_for_completion = PythonOperator(
         task_id='wait_for_emr_completion',
-        python_callable=wait_for_emr_job_completion
+        python_callable=wait_for_emr_job_completion,
+        retries=0  # Don't retry if EMR job times out/fails
     )
 
     # Set task dependencies
