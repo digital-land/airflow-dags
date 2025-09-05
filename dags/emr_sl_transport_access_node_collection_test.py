@@ -7,7 +7,7 @@ import boto3
 import time
 import json
 import logging
-from utils.aws_secrets_manager import get_secret_emr_compatible
+from aws_secrets_manager import get_secret_emr_compatible
 
 # Retrieve secrets from AWS Secrets Manager
 def get_secrets(secret_name):    
