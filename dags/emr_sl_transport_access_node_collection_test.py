@@ -6,7 +6,11 @@ from datetime import datetime, timedelta
 import boto3
 import time
 import json
+import logging
 from utils.aws_secrets_manager import get_secret_emr_compatible
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 # Retrieve secrets from AWS Secrets Manager
 def get_secrets(secret_name):    
