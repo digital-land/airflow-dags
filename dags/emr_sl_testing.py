@@ -177,7 +177,7 @@ with DAG(
     
     LOAD_TYPE = get_secrets("load_type") #sample, full and delta
     
-    DATA_SET = ("agricultural-land-classification")
+    DATA_SET = ("ancient-woodland")
     
     S3_SOURCE_DATA_PATH = f"{ENV}-collection-data"
     # S3 paths
