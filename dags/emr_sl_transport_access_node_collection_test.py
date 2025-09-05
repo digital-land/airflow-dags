@@ -9,12 +9,8 @@ import json
 import logging
 from utils.aws_secrets_manager import get_secret_emr_compatible
 
-# Set up logging
-logger = logging.getLogger(__name__)
-
 # Retrieve secrets from AWS Secrets Manager
 def get_secrets(secret_name):    
-    logger.info("get_secrets: Attempting to retrieve deployment secrets from AWS Secrets Manager")
     aws_secrets_json = get_secret_emr_compatible("development/deployment_variables")
 
     # Parse the JSON string
@@ -22,8 +18,7 @@ def get_secrets(secret_name):
 
     secret_value = secrets.get(secret_name)
 
-    return secret_value
-    
+    return secret_value    
 
 # Default arguments for the DAG
 default_args = {
