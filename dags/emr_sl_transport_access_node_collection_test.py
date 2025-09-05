@@ -6,6 +6,20 @@ from datetime import datetime, timedelta
 import boto3
 import time
 import json
+from dags.utils.aws_secrets_manager import get_secret_emr_compatible
+
+# Retrieve secrets from AWS Secrets Manager
+def get_secrets(secret_name):    
+    logger.info("get_secrets: Attempting to retrieve deployment secrets from AWS Secrets Manager")
+    aws_secrets_json = get_secret_emr_compatible("development/deployment_variables")
+
+    # Parse the JSON string
+    secrets = json.loads(aws_secrets_json)   
+
+    secret_value = secrets.get(secret_name)
+
+    return secret_value
+    
 
 # Default arguments for the DAG
 default_args = {
@@ -116,26 +130,25 @@ with DAG(
     schedule_interval=None,  # Manual trigger only
     catchup=False,
 ) as dag:
+    # EMR Serverless configuration from AWS Secrets Manager key value pairs
+    ENV = get_secrets("environment") # development, staging, production
+    EMR_APPLICATION_ID = get_secrets("emr_application_id")
+    EXECUTION_ROLE_ARN = get_secrets("emr_execution_role")
 
-    # EMR Serverless configuration from Airflow Variables (set via UI)
-    EMR_APPLICATION_ID = Variable.get("emr_application_id")
-    EXECUTION_ROLE_ARN = Variable.get("emr_execution_role_secret")
-    S3_BUCKET = Variable.get("s3_pyspark_jobs_codepackage", default_var="development-pyspark-jobs-codepackage")
+    S3_BUCKET = f"{ENV}-pyspark-jobs-codepackage"
     
-    # Dynamic job parameters from Airflow Variables
-    LOAD_TYPE = Variable.get("load_type", default_var="full")
-    #LOAD_TYPE="sample" #sample, full and delta
-    DATA_SET = Variable.get("data_set", default_var="transport-access-node")
-    ENV = Variable.get("env", default_var="development") # development, staging, production
-    S3_SOURCE_DATA_PATH = Variable.get("source_data_path", default_var="") # dev, staging, prod
-    # Construct S3 paths
+    LOAD_TYPE = get_secrets("load_type") #sample, full and delta
+    
+    DATA_SET = ("transport-access-node")
+    
+    S3_SOURCE_DATA_PATH = f"{ENV}-collection-data"
+    # S3 paths
     S3_ENTRY_POINT = f"s3://{S3_BUCKET}/pkg/entry_script/run_main.py"
     S3_WHEEL_FILE = f"s3://{S3_BUCKET}/pkg/whl_pkg/pyspark_jobs-0.1.0-py3-none-any.whl"
     S3_LOG_URI = f"s3://{S3_BUCKET}/logs/"
     S3_DEPENDENCIES_PATH = f"s3://{S3_BUCKET}/pkg/dependencies/dependencies.zip"
-    S3_POSTGRESQL_JAR = f"s3://{S3_BUCKET}/pkg/jars/postgresql-42.7.4.jar"
-    # Fix: Remove the "/data/" part from the path
-    S3_DATA_PATH = f"s3://{S3_SOURCE_DATA_PATH}/"  # Changed from f"s3://{S3_BUCKET}/data/"
+    S3_POSTGRESQL_JAR = f"s3://{S3_BUCKET}/pkg/jars/postgresql-42.7.4.jar"  
+    S3_DATA_PATH = f"s3://{S3_SOURCE_DATA_PATH}/"
 
     # Task 1: Submit EMR Serverless job and capture job run ID
     submit_emr_job = BashOperator(
