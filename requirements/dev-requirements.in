@@ -3,4 +3,5 @@ authlib
 Flask
 Flask-AppBuilder
 pytest
+pytest-cov
 moto
