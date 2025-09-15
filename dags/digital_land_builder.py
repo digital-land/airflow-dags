@@ -4,12 +4,23 @@ from airflow.operators.python import PythonOperator
 from airflow.models.param import Param
 from utils import dag_default_args, get_config, push_log_variables, push_vpc_config
 from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
+from airflow.providers.slack.notifications.slack import send_slack_notification
 
 config = get_config()
 ecs_cluster = f"{config['env']}-cluster"
 digital_land_builder_task_name = f"{config['env']}-mwaa-digital-land-builder-task"
 sqlite_injection_task_name = f"{config['env']}-sqlite-ingestion-task"
 sqlite_injection_task_container_name = f"{config['env']}-sqlite-ingestion"
+
+failure_callbacks = []
+if config['env'] == 'production':
+    failure_callbacks.append(
+        send_slack_notification(
+            text="The DAG {{ dag.dag_id }} failed",
+            channel="#planning-data-alerts",
+            username="Airflow"
+        )
+    )
 
 with DAG(
     dag_id="build-digital-land-builder",
@@ -23,6 +34,7 @@ with DAG(
     },
     render_template_as_native_obj=True,
     is_paused_upon_creation=False,
+    on_failure_callback=failure_callbacks,
 ) as dag:
     
     def configure_dag(**kwargs):
