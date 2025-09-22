@@ -103,7 +103,7 @@ with DAG(
     run_org_collection_dag >> run_org_builder_dag
 
     for collection, datasets in collections.items():
-        if collection not in ['organisation','document','title-boundary']:
+        if collection not in ['organisation','document','title-boundary','planning-application']:
 
             collection_dag = TriggerDagRunOperator(
                 task_id=f'trigger-{collection}-collection-dag',
