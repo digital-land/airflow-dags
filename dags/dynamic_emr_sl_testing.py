@@ -25,7 +25,7 @@ default_args = {
 }
 
 # DAG factory function
-def create_dag(dag_id, dataset_name, schedule=None):
+def create_dag(dag_id, dataset_name, schedule="40 23 * * *"):
     with DAG(
         dag_id=dag_id,
         default_args=default_args,
@@ -142,10 +142,10 @@ def create_dag(dag_id, dataset_name, schedule=None):
         # Define dependencies
         submit_emr_job >> extract_job_id >> wait_for_completion
     return dag
- 
+
 # Generate DAGs dynamically
 for dataset in datasets:
-    dag_id = f"emr-{dataset}_dag"
+    dag_id = f"emr-{dataset}-collection"
     globals()[dag_id] = create_dag(dag_id, dataset)
 
   
