@@ -25,16 +25,7 @@ default_args = {
 }
 
 # DAG factory function
-def create_dag(dag_id, dataset_name, schedule='@daily'):
-    def extract(**kwargs):
-        print(f"Extracting data for {dataset_name}")
- 
-    def transform(**kwargs):
-        print(f"Transforming data for {dataset_name}")
- 
-    def load(**kwargs):
-        print(f"Loading data for {dataset_name}")
- 
+def create_dag(dag_id, dataset_name, schedule=None):
     with DAG(
         dag_id=dag_id,
         default_args=default_args,
