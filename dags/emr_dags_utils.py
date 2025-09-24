@@ -94,8 +94,8 @@ def wait_for_emr_job_completion(**context):
     
     print(f"Monitoring EMR Serverless job: {job_run_id}")
     
-    # Set timeout (15 minutes = 900 seconds)
-    timeout_seconds = 900
+    # Set timeout (30 minutes = 1800 seconds)
+    timeout_seconds = 1800
     start_time = time.time()
     
     try:
