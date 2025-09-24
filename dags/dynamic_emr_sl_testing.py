@@ -25,12 +25,12 @@ default_args = {
 }
 
 # DAG factory function
-def create_dag(dag_id, dataset_name, schedule="40 23 * * *"):
+def create_dag(dag_id, dataset_name, schedule="50 23 * * *"):
     with DAG(
         dag_id=dag_id,
         default_args=default_args,
         schedule_interval=schedule,
-        start_date=datetime(2023, 1, 1),
+        start_date=datetime(2025, 9, 24),
         catchup=False,
         tags=['dynamic']
     ) as dag:
