@@ -1,6 +1,11 @@
 from datetime import datetime, timedelta
 import csv
 import urllib.request
+from aws_secrets_manager import get_secret_emr_compatible
+import json
+import boto3
+import time
+
 
 def get_datasets():
     dataset_spec_url = 'https://raw.githubusercontent.com/digital-land/specification/main/specification/dataset.csv'
