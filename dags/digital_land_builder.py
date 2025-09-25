@@ -15,7 +15,7 @@ sqlite_injection_task_container_name = f"{config['env']}-sqlite-ingestion"
 
 # reporting-task-definition name
 reporting_task_name = f"{config['env']}-reporting-task"
-reporting_task_container_name = f"{config['env']}-reporting-task"
+reporting_task_container_name = f"{config['env']}-reporting"
 
 
 failure_callbacks = []
