@@ -127,8 +127,9 @@ with DAG(
         awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}',
         awslogs_fetch_interval=timedelta(seconds=1)
     )
+    configure_dag_task >> build_digital_land_builder
 
-    run_reportin_task = EcsRunTaskOperator(
+    run_reporting_task = EcsRunTaskOperator(
         task_id="run-reporting-task",
         dag=dag,
         execution_timeout=timedelta(minutes=1800),
@@ -159,7 +160,7 @@ with DAG(
 
     )
 
-    configure_dag_task >> build_digital_land_builder
+    build_digital_land_builder >> run_reportin_task
 
     # now we want to load the digital land db into postgres using the sqlite innjection task
     postgres_loader_task = EcsRunTaskOperator(
