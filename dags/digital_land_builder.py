@@ -133,7 +133,7 @@ with DAG(
         dag=dag,
         execution_timeout=timedelta(minutes=1800),
         cluster=ecs_cluster,
-        task_definition=reporting_task_definition_name,
+        task_definition=reporting_task_name,
         launch_type="FARGATE",
         overrides={
             "containerOverrides": [
