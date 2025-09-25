@@ -160,7 +160,7 @@ with DAG(
 
     )
 
-    build_digital_land_builder >> run_reportin_task
+    build_digital_land_builder >> run_reporting_task
 
     # now we want to load the digital land db into postgres using the sqlite innjection task
     postgres_loader_task = EcsRunTaskOperator(
