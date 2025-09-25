@@ -139,7 +139,7 @@ with DAG(
         overrides={
             "containerOverrides": [
                 {
-                    "name": f"{sqlite_injection_task_container_name}", 
+                    "name": f"{reporting_task_container_name}", 
                     "environment": [
                         {"name": "ENVIRONMENT", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"env\") | string }}'"},
                         {
