@@ -93,16 +93,45 @@ def wait_for_emr_job_completion(**context):
     application_id = get_secrets("emr_application_id")
     
     print(f"Monitoring EMR Serverless job: {job_run_id}")
+    print(f"Application ID: {application_id}")
     
     # Set timeout (48 minutes = 2880 seconds) to ensure task completes within 53-minute limit with buffer
     timeout_seconds = 2880
     start_time = time.time()
     
+    # Initial job status check to validate we can access the job
     try:
+        initial_response = emr_client.get_job_run(
+            applicationId=application_id,
+            jobRunId=job_run_id
+        )
+        initial_state = initial_response['jobRun']['state']
+        print(f"Initial job state check: {initial_state}")
+        
+        # If job is already in a terminal state, handle immediately
+        if initial_state == 'SUCCESS':
+            print("Job already completed successfully!")
+            return job_run_id
+        elif initial_state in ['FAILED', 'CANCELLED', 'CANCELLING']:
+            state_details = initial_response.get('jobRun', {}).get('stateDetails', '')
+            failure_reason = initial_response.get('jobRun', {}).get('failureReason', '')
+            error_msg = f"EMR job already in terminal state: {initial_state}"
+            if state_details:
+                error_msg += f": {state_details}"
+            if failure_reason:
+                error_msg += f" (Reason: {failure_reason})"
+            raise Exception(error_msg)
+    except Exception as init_error:
+        print(f"Error during initial job status check: {init_error}")
+        raise ValueError(f"Cannot access EMR job {job_run_id}: {init_error}")
+    
+    try:
+        poll_count = 0
         while True:
+            poll_count += 1
             # Check if we've exceeded timeout
             if time.time() - start_time > timeout_seconds:
-                print(f"Job monitoring timed out after {timeout_seconds} seconds")
+                print(f"Job monitoring timed out after {timeout_seconds} seconds (poll count: {poll_count})")
                 print(f"Attempting to cancel EMR Serverless job: {job_run_id}")
                 
                 try:
@@ -131,13 +160,15 @@ def wait_for_emr_job_completion(**context):
                 raise AirflowSkipException(f"Job monitoring timed out after {timeout_seconds} seconds. Job cancellation attempted.")
             
             try:
+                print(f"Poll #{poll_count} - Checking job status...")
                 response = emr_client.get_job_run(
                     applicationId=application_id,
                     jobRunId=job_run_id
                 )
                 
                 job_state = response['jobRun']['state']
-                print(f"Job state: {job_state}")
+                elapsed = time.time() - start_time
+                print(f"Poll #{poll_count} - Job state: {job_state} (elapsed: {elapsed:.2f}s)")
                 
                 if job_state == 'SUCCESS':
                     print("Job completed successfully!")
@@ -163,7 +194,6 @@ def wait_for_emr_job_completion(**context):
                     
                     raise Exception(error_msg)
                 elif job_state in ['PENDING', 'SCHEDULED', 'RUNNING']:
-                    elapsed = time.time() - start_time
                     print(f"Job still {job_state.lower()}, elapsed time: {elapsed:.2f}s, waiting 30 seconds...")
                     
                     # Log job progress if available
@@ -181,8 +211,17 @@ def wait_for_emr_job_completion(**context):
             except Exception as e:
                 if "timed out" in str(e):
                     raise
-                print(f"Error checking job status: {e}, retrying in 30 seconds...")
-                time.sleep(30)
+                print(f"Error checking job status (poll #{poll_count}): {e}")
+                print(f"Error type: {type(e).__name__}")
+                
+                # Add exponential backoff for API errors
+                if "throttling" in str(e).lower() or "rate" in str(e).lower():
+                    backoff_time = min(60, 30 * (poll_count % 3 + 1))  # 30, 60, 90 seconds, then repeat
+                    print(f"API throttling detected, waiting {backoff_time} seconds...")
+                    time.sleep(backoff_time)
+                else:
+                    print("Retrying in 30 seconds...")
+                    time.sleep(30)
                 
     except Exception as outer_error:
         # Ensure we attempt to cancel the job if any unexpected error occurs
