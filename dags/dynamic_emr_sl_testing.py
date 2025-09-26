@@ -140,9 +140,7 @@ def create_dag(dag_id, dataset_name, schedule=None): #"0 17 * * *"
             task_id='wait_for_emr_completion',
             python_callable=wait_for_emr_job_completion,
             retries=0,  # Don't retry if EMR job times out/fails
-            execution_timeout=timedelta(minutes=53),  # 60 - 5 (submit) - 2 (extract) = 53 minutes
-            poke_interval=30,  # Check every 30 seconds
-            timeout=3000  # 50 minutes timeout
+            execution_timeout=timedelta(minutes=53)  # 60 - 5 (submit) - 2 (extract) = 53 minutes
         )
         
         # Define dependencies
