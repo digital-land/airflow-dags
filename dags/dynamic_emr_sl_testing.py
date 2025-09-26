@@ -25,7 +25,7 @@ default_args = {
 }
 
 # DAG factory function
-def create_dag(dag_id, dataset_name, schedule="30 20 * * *"): #"0 17 * * *"
+def create_dag(dag_id, dataset_name, schedule=None): #"0 17 * * *"
     with DAG(
         dag_id=dag_id,
         default_args=default_args,
