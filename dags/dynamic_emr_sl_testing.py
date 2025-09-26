@@ -32,7 +32,8 @@ def create_dag(dag_id, dataset_name, schedule=None): #"0 17 * * *"
         schedule_interval=schedule,
         start_date=datetime(2025, 9, 24),
         catchup=False,
-        tags=['dynamic']
+        tags=['dynamic'],
+        dagrun_timeout=timedelta(minutes=60)  # Entire DAG must complete within 60 minutes
     ) as dag:
         # EMR Serverless configuration from AWS Secrets Manager key value pairs
         ENV = get_secrets("environment") # development, staging, production
@@ -124,19 +125,22 @@ def create_dag(dag_id, dataset_name, schedule=None): #"0 17 * * *"
             
             echo "Job submission completed successfully with ID: $JOB_RUN_ID"
             ''',
-            do_xcom_push=False
+            do_xcom_push=False,
+            execution_timeout=timedelta(minutes=5)  # Job submission should be quick
         )
 
         extract_job_id = PythonOperator(
             task_id='extract_job_id',
-            python_callable=extract_and_validate_job_id
+            python_callable=extract_and_validate_job_id,
+            execution_timeout=timedelta(minutes=2)  # Job ID extraction should be very quick
         )
 
         # Task 2: Wait for EMR job completion
         wait_for_completion = PythonOperator(
             task_id='wait_for_emr_completion',
             python_callable=wait_for_emr_job_completion,
-            retries=0  # Don't retry if EMR job times out/fails
+            retries=0,  # Don't retry if EMR job times out/fails
+            execution_timeout=timedelta(minutes=53)  # 60 - 5 (submit) - 2 (extract) = 53 minutes
         )
         
         # Define dependencies
