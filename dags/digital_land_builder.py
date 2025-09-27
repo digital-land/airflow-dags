@@ -129,38 +129,39 @@ with DAG(
     )
     configure_dag_task >> build_digital_land_builder
 
-    run_reporting_task = EcsRunTaskOperator(
-        task_id="run-reporting-task",
-        dag=dag,
-        execution_timeout=timedelta(minutes=1800),
-        cluster=ecs_cluster,
-        task_definition=reporting_task_name,
-        launch_type="FARGATE",
-        overrides={
-            "containerOverrides": [
-                {
-                    "name": f"{reporting_task_container_name}", 
-                    "environment": [
-                        {"name": "ENVIRONMENT", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"env\") | string }}'"},
-                        {
-                            "name": "S3_OBJECT_ARN",
-                            "value": "'arn:aws:s3:::{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"collection-dataset-bucket-name\") | string }}/digital-land-builder/dataset/digital-land.sqlite3'"
-                        },
-                    ],
-                },
-            ]
-        },
-        network_configuration={
-            "awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'
-        },
-        awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="reporting-task-log-group") }}',
-        awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="reporting-task-log-region") }}',
-        awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="reporting-task-log-stream-prefix") }}',
-        awslogs_fetch_interval=timedelta(seconds=1)
+    if config['env'] ==  'development':
+        run_reporting_task = EcsRunTaskOperator(
+            task_id="run-reporting-task",
+            dag=dag,
+            execution_timeout=timedelta(minutes=1800),
+            cluster=ecs_cluster,
+            task_definition=reporting_task_name,
+            launch_type="FARGATE",
+            overrides={
+                "containerOverrides": [
+                    {
+                        "name": f"{reporting_task_container_name}", 
+                        "environment": [
+                            {"name": "ENVIRONMENT", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"env\") | string }}'"},
+                            {
+                                "name": "S3_OBJECT_ARN",
+                                "value": "'arn:aws:s3:::{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"collection-dataset-bucket-name\") | string }}/digital-land-builder/dataset/digital-land.sqlite3'"
+                            },
+                        ],
+                    },
+                ]
+            },
+            network_configuration={
+                "awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'
+            },
+            awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="reporting-task-log-group") }}',
+            awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="reporting-task-log-region") }}',
+            awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="reporting-task-log-stream-prefix") }}',
+            awslogs_fetch_interval=timedelta(seconds=1)
 
-    )
+        )
 
-    build_digital_land_builder >> run_reporting_task
+        build_digital_land_builder >> run_reporting_task
 
     # now we want to load the digital land db into postgres using the sqlite innjection task
     postgres_loader_task = EcsRunTaskOperator(
