@@ -144,8 +144,8 @@ with DAG(
                         "environment": [
                             {"name": "ENVIRONMENT", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"env\") | string }}'"},
                             {
-                                "name": "S3_OBJECT_ARN",
-                                "value": "'arn:aws:s3:::{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"collection-dataset-bucket-name\") | string }}/digital-land-builder/dataset/digital-land.sqlite3'"
+                                "name": "COLLECTION_DATA_BUCKET",
+                                "value": "{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"collection-dataset-bucket-name\") | string }}"
                             },
                         ],
                     },
