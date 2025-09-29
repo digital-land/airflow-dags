@@ -8,9 +8,15 @@ from airflow.providers.slack.notifications.slack import send_slack_notification
 
 config = get_config()
 ecs_cluster = f"{config['env']}-cluster"
+# digital-land-builder task definition name
 digital_land_builder_task_name = f"{config['env']}-mwaa-digital-land-builder-task"
 sqlite_injection_task_name = f"{config['env']}-sqlite-ingestion-task"
 sqlite_injection_task_container_name = f"{config['env']}-sqlite-ingestion"
+
+# reporting-task-definition name
+reporting_task_name = f"{config['env']}-reporting-task"
+reporting_task_container_name = f"{config['env']}-reporting"
+
 
 failure_callbacks = []
 if config['env'] == 'production':
@@ -80,6 +86,9 @@ with DAG(
         # push  sqlite_ingestion log variables
         push_log_variables(ti, task_definition_name=sqlite_injection_task_name,container_name=sqlite_injection_task_container_name,prefix='sqlite-ingestion-task')
 
+        # push  sqlite_ingestion log variables
+        push_log_variables(ti, task_definition_name=reporting_task_name,container_name=reporting_task_container_name,prefix='reporting-task')
+
         # push aws vpc config
         push_vpc_config(ti, kwargs['conf'])
 
@@ -118,8 +127,41 @@ with DAG(
         awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}',
         awslogs_fetch_interval=timedelta(seconds=1)
     )
-
     configure_dag_task >> build_digital_land_builder
+
+    if config['env'] ==  'development':
+        run_reporting_task = EcsRunTaskOperator(
+            task_id="run-reporting-task",
+            dag=dag,
+            execution_timeout=timedelta(minutes=1800),
+            cluster=ecs_cluster,
+            task_definition=reporting_task_name,
+            launch_type="FARGATE",
+            overrides={
+                "containerOverrides": [
+                    {
+                        "name": f"{reporting_task_container_name}", 
+                        "environment": [
+                            {"name": "ENVIRONMENT", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"env\") | string }}'"},
+                            {
+                                "name": "COLLECTION_DATA_BUCKET",
+                                "value": "{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"collection-dataset-bucket-name\") | string }}"
+                            },
+                        ],
+                    },
+                ]
+            },
+            network_configuration={
+                "awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'
+            },
+            awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="reporting-task-log-group") }}',
+            awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="reporting-task-log-region") }}',
+            awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="reporting-task-log-stream-prefix") }}',
+            awslogs_fetch_interval=timedelta(seconds=1)
+
+        )
+
+        build_digital_land_builder >> run_reporting_task
 
     # now we want to load the digital land db into postgres using the sqlite innjection task
     postgres_loader_task = EcsRunTaskOperator(
