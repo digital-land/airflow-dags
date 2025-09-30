@@ -129,7 +129,7 @@ with DAG(
     )
     configure_dag_task >> build_digital_land_builder
 
-    if config['env'] ==  'development':
+    if config['env'] ==  'production':
         run_reporting_task = EcsRunTaskOperator(
             task_id="run-reporting-task",
             dag=dag,
