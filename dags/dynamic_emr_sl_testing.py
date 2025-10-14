@@ -40,8 +40,8 @@ def create_dag(dag_id, dataset_name, schedule=None): #"0 17 * * *"
         EMR_APPLICATION_ID = get_secrets("emr_application_id")
         EXECUTION_ROLE_ARN = get_secrets("emr_execution_role")
 
-        S3_BUCKET = f"{ENV}-pyspark-jobs-codepackage"
-        S3_LOG_BUCKET = f"{ENV}-pyspark-jobs-logs"
+        S3_BUCKET = f"{ENV}-emr-serverless-pyspark-jobs-codepackage"
+        S3_LOG_BUCKET = f"{ENV}-emr-serverless-pyspark-jobs-logs"
         
         LOAD_TYPE = get_secrets("load_type") #sample, full and delta
         
