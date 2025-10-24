@@ -32,7 +32,7 @@ def get_datasets():
 
 # Retrieve secrets from AWS Secrets Manager
 def get_secrets(secret_name):    
-    aws_secrets_json = get_secret_emr_compatible("development-emr-serverless-pyspark/deployment_variables")
+    aws_secrets_json = get_secret_emr_compatible("development-pd-batch/deployment-variables-secret")
 
     # Parse the JSON string
     secrets = json.loads(aws_secrets_json)   
