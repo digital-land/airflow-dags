@@ -36,7 +36,8 @@ def create_dag(dag_id, dataset_name, schedule=None): #"0 17 * * *"
         dagrun_timeout=timedelta(minutes=60)  # Entire DAG must complete within 60 minutes
     ) as dag:
         # EMR Serverless configuration from AWS Secrets Manager key value pairs
-        ENV = get_secrets("environment") # development, staging, production
+        # TODO: need to refractor this method to make dynamic for different environments
+        ENV = get_secrets("environment", "development") # development, staging, production
         EMR_APPLICATION_ID = get_secrets("emr_application_id",ENV)
         EXECUTION_ROLE_ARN = get_secrets("emr_execution_role",ENV)
 
