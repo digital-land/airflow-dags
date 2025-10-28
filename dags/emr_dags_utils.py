@@ -31,8 +31,8 @@ def get_datasets():
     return filtered_datasets
 
 # Retrieve secrets from AWS Secrets Manager
-def get_secrets(secret_name):    
-    aws_secrets_json = get_secret_emr_compatible("development-pd-batch/deployment-variables-secret")
+def get_secrets(secret_name, env):    
+    aws_secrets_json = get_secret_emr_compatible(f"/{env}-pd-batch/deployment-variables-secret")
 
     # Parse the JSON string
     secrets = json.loads(aws_secrets_json)   
