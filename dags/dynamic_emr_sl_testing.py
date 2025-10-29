@@ -80,7 +80,10 @@ def create_dag(dag_id, dataset_name, schedule=None): #"0 17 * * *"
                 "sparkSubmit": {{
                 "entryPoint": "{S3_ENTRY_POINT}",
                 "entryPointArguments": ["--load_type", "{LOAD_TYPE}", "--data_set", "{DATA_SET}", "--path", "{S3_DATA_PATH}", "--env", "{ENV}"],
-                "sparkSubmitParameters": "--py-files {S3_WHEEL_FILE},{S3_DEPENDENCIES_PATH} --jars {S3_POSTGRESQL_JAR}, {S3_SEDONA_JAR}, {S3_SEDONA_GEOTOOLS_JAR} --conf spark.serializer=org.apache.spark.serializer.KryoSerializer --conf spark.kryo.registrator=org.apache.sedona.core.serde.SedonaKryoRegistrator"
+                "sparkSubmitParameters": "--py-files {S3_WHEEL_FILE},{S3_DEPENDENCIES_PATH} \
+                --jars {S3_POSTGRESQL_JAR},{S3_SEDONA_JAR},{S3_SEDONA_GEOTOOLS_JAR} \
+                --conf spark.serializer=org.apache.spark.serializer.KryoSerializer \
+                --conf spark.kryo.registrator=org.apache.sedona.core.serde.SedonaKryoRegistrator"
                 }}
             }}' \\
             --configuration-overrides '{{
