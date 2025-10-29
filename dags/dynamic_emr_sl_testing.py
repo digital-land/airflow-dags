@@ -84,7 +84,7 @@ def create_dag(dag_id, dataset_name, schedule=None): #"0 17 * * *"
                 --jars {S3_POSTGRESQL_JAR},{S3_SEDONA_JAR},{S3_SEDONA_GEOTOOLS_JAR} \
                 --conf spark.serializer=org.apache.spark.serializer.KryoSerializer \
                 --conf spark.kryo.registrator=org.apache.sedona.core.serde.SedonaKryoRegistrator \
-                --conf spark.kryo.registrator=org.apache.sedona.core.serde.SedonaSqlExtensions"
+                --conf spark.sql.extensions=org.apache.sedona.sql.SedonaSqlExtensions"
                 }}
             }}' \\
             --configuration-overrides '{{
