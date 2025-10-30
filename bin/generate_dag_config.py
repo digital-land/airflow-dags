@@ -25,7 +25,6 @@ scheduled_collection_config = Environments(
         collections=[
             'ancient-woodland',
             'organisation',
-            'conservation-area',
         ],
         schedule='0 0 * * *'
     ),
