@@ -55,8 +55,8 @@ def create_dag(dag_id, dataset_name, schedule=None): #"0 17 * * *"
         S3_LOG_URI = f"s3://{S3_LOG_BUCKET}/"
         S3_DEPENDENCIES_PATH = f"s3://{S3_BUCKET}/pkg/dependencies/dependencies.zip"
         S3_POSTGRESQL_JAR = f"s3://{S3_BUCKET}/pkg/jars/postgresql-42.7.4.jar"
-        S3_SEDONA_JAR = f"s3://{S3_BUCKET}/pkg/jars/sedona-spark-shaded-3.5_2.12-1.8.0.jar"
-        S3_SEDONA_GEOTOOLS_JAR = f"s3://{S3_BUCKET}/pkg/jars/geotools-wrapper-1.8.0-33.1.jar"  
+        #S3_SEDONA_JAR = f"s3://{S3_BUCKET}/pkg/jars/sedona-spark-shaded-3.5_2.12-1.8.0.jar"
+        #S3_SEDONA_GEOTOOLS_JAR = f"s3://{S3_BUCKET}/pkg/jars/geotools-wrapper-1.8.0-33.1.jar"  
         S3_DATA_PATH = f"s3://{S3_SOURCE_DATA_PATH}/"
         
         # Task 1: Submit EMR Serverless job and capture job run ID
@@ -81,7 +81,7 @@ def create_dag(dag_id, dataset_name, schedule=None): #"0 17 * * *"
                 "entryPoint": "{S3_ENTRY_POINT}",
                 "entryPointArguments": ["--load_type", "{LOAD_TYPE}", "--data_set", "{DATA_SET}", "--path", "{S3_DATA_PATH}", "--env", "{ENV}"],
                 "sparkSubmitParameters": "--py-files {S3_WHEEL_FILE},{S3_DEPENDENCIES_PATH} \
-                --jars {S3_POSTGRESQL_JAR},{S3_SEDONA_JAR},{S3_SEDONA_GEOTOOLS_JAR} \
+                --jars {S3_POSTGRESQL_JAR} \
                 --conf spark.serializer=org.apache.spark.serializer.KryoSerializer \
                 --conf spark.kryo.registrator=org.apache.sedona.core.serde.SedonaKryoRegistrator \
                 --conf spark.sql.extensions=org.apache.sedona.sql.SedonaSqlExtensions"
