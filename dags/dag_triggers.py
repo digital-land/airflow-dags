@@ -17,6 +17,16 @@ config = get_config()
 dag_schedule = config.get("schedule", None)  # Use "None" as a fallback if "schedule" key is missing
 dag_max_active_tasks = config.get("max_active_tasks")
 
+# we want to use weightings to pioritise Dags in the schedule below this constant can be altered to change the weighting applied
+DEFAULTT_WEIGHTING = 10
+CUSTOM_COLLECTION_DAG_WEIGHTING = {
+    "tree-preservation-order":90, 
+    "transport-access-node":90,
+    "flood-risk-zone":90,
+    "listed-building":100,
+    "conservation-area":90
+}
+
 
 def collection_selected(collection_name, configuration):
     return (configuration['collection_selection'] == CollectionSelection.all
@@ -33,7 +43,7 @@ with DAG(
         schedule=dag_schedule,
         start_date=datetime(2024, 1, 1),
         catchup=False,
-        max_active_tasks=10,
+        max_active_tasks=12,
         is_paused_upon_creation=False
 ):
     organisation_collection_selected = collection_selected('organisation', config)
@@ -55,12 +65,14 @@ with DAG(
 
     for collection, datasets in collections.items():
         if collection not in ['organisation','document','title-boundary','planning-application']:
+
             if collection_selected(collection, config):
                 collection_dag = TriggerDagRunOperator(
                     task_id=f'trigger-{collection}-collection-dag',
                     trigger_dag_id=f'{collection}-collection',
                     wait_for_completion=True,
-                    trigger_rule=TriggerRule.ALL_DONE
+                    trigger_rule=TriggerRule.ALL_DONE,
+                    priority_weight=CUSTOM_COLLECTION_DAG_WEIGHTING.get(collection, DEFAULTT_WEIGHTING)
                 )
                 collection_tasks.append(collection_dag)
                 if organisation_collection_selected:
