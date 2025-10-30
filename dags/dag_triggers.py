@@ -18,7 +18,7 @@ dag_schedule = config.get("schedule", None)  # Use "None" as a fallback if "sche
 dag_max_active_tasks = config.get("max_active_tasks")
 
 # we want to use weightings to pioritise Dags in the schedule below this constant can be altered to change the weighting applied
-DEFAULTT_WEIGHTING = 10
+DEFAULT_WEIGHTING = 10
 CUSTOM_COLLECTION_DAG_WEIGHTING = {
     "tree-preservation-order":90, 
     "transport-access-node":90,
@@ -72,7 +72,7 @@ with DAG(
                     trigger_dag_id=f'{collection}-collection',
                     wait_for_completion=True,
                     trigger_rule=TriggerRule.ALL_DONE,
-                    priority_weight=CUSTOM_COLLECTION_DAG_WEIGHTING.get(collection, DEFAULTT_WEIGHTING)
+                    priority_weight=CUSTOM_COLLECTION_DAG_WEIGHTING.get(collection, DEFAULT_WEIGHTING)
                 )
                 collection_tasks.append(collection_dag)
                 if organisation_collection_selected:

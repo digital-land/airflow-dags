@@ -15,6 +15,7 @@ scheduled_collection_config = Environments(
         selection=CollectionSelection.explicit,
         collections=[
             'ancient-woodland',
+            'conservation-area',
             'organisation'
         ],
         schedule='0 0 * * *',  # time is UTC
