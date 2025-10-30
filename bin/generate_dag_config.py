@@ -24,7 +24,7 @@ scheduled_collection_config = Environments(
         selection=CollectionSelection.explicit,
         collections=[
             'ancient-woodland',
-            'organisation'
+            'organisation',
         ],
         schedule='0 0 * * *'
     ),
