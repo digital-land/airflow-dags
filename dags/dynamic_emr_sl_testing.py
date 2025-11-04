@@ -22,12 +22,26 @@ def get_emr_application_id_by_name(application_name, region='eu-west-2'):
     available_apps = [f"{app['name']} ({app['state']})" for app in response.get('applications', [])]
     raise ValueError(f"EMR application '{application_name}' not found. Available: {available_apps}")
 
+def get_emr_execution_role_arn(application_id, region='eu-west-2'):
+    """Get EMR Serverless execution role ARN from application."""
+    client = boto3.client('emr-serverless', region_name=region)
+    response = client.get_application(applicationId=application_id)
+    return response['application']['autoStartConfiguration']['enabled']
+
 def get_application_id(**context):
     """Task to get EMR application ID and push to XCom."""
-    env = context['params']['env']
+    env = get_secrets("environment", "development")
     app_name = f"{env}-pd-batch-emrsl-application"
     app_id = get_emr_application_id_by_name(app_name)
     return app_id
+
+def get_execution_role(**context):
+    """Task to get EMR execution role ARN and push to XCom."""
+    env = get_secrets("environment", "development")
+    iam_client = boto3.client('iam', region_name='eu-west-2')
+    role_name = f"{env}-pd-batch-emrsl-execution-role"
+    response = iam_client.get_role(RoleName=role_name)
+    return response['Role']['Arn']
  
 # List of datasets
 datasets = get_datasets()
@@ -52,13 +66,11 @@ def create_dag(dag_id, dataset_name, schedule=None): #"0 17 * * *"
         start_date=datetime(2025, 9, 24),
         catchup=False,
         tags=['dynamic'],
-        dagrun_timeout=timedelta(minutes=60),  # Entire DAG must complete within 60 minutes
-        params={'env': get_secrets("environment", "development")}
+        dagrun_timeout=timedelta(minutes=60)  # Entire DAG must complete within 60 minutes
     ) as dag:
         # EMR Serverless configuration from AWS Secrets Manager key value pairs
         # TODO: need to refractor this method to make dynamic for different environments
         ENV = get_secrets("environment", "development") # development, staging, production
-        EXECUTION_ROLE_ARN = get_secrets("emr_execution_role",ENV)
 
         S3_BUCKET = f"{ENV}-pd-batch-jobs-codepackage-bucket"
         S3_LOG_BUCKET = f"{ENV}-pd-batch-jobs-logs-bucket"
@@ -85,6 +97,13 @@ def create_dag(dag_id, dataset_name, schedule=None): #"0 17 * * *"
             execution_timeout=timedelta(minutes=2)
         )
         
+        # Task 0b: Get EMR Execution Role ARN
+        get_exec_role = PythonOperator(
+            task_id='get_emr_execution_role',
+            python_callable=get_execution_role,
+            execution_timeout=timedelta(minutes=2)
+        )
+        
         # Task 1: Submit EMR Serverless job and capture job run ID
         submit_emr_job = BashOperator(
             task_id='submit_emr_job',
@@ -92,9 +111,11 @@ def create_dag(dag_id, dataset_name, schedule=None): #"0 17 * * *"
             set -e  # Exit on any error
             
             EMR_APPLICATION_ID="{{{{ task_instance.xcom_pull(task_ids='get_emr_application_id') }}}}"
+            EXECUTION_ROLE_ARN="{{{{ task_instance.xcom_pull(task_ids='get_emr_execution_role') }}}}"
             
             echo "Starting EMR Serverless job submission..."
             echo "Application ID: $EMR_APPLICATION_ID"
+            echo "Execution Role ARN: $EXECUTION_ROLE_ARN"
             echo "Dataset: {DATA_SET}"
             echo "Load Type: {LOAD_TYPE}"
             echo "Environment: {ENV}"
@@ -103,7 +124,7 @@ def create_dag(dag_id, dataset_name, schedule=None): #"0 17 * * *"
             JOB_OUTPUT=$(aws emr-serverless start-job-run \\
             --name "{DATA_SET}-job" \\
             --application-id $EMR_APPLICATION_ID \\
-            --execution-role-arn {EXECUTION_ROLE_ARN} \\
+            --execution-role-arn $EXECUTION_ROLE_ARN \\
             --job-driver '{{
                 "sparkSubmit": {{
                 "entryPoint": "{S3_ENTRY_POINT}",
@@ -179,7 +200,7 @@ def create_dag(dag_id, dataset_name, schedule=None): #"0 17 * * *"
         )
         
         # Define dependencies
-        get_app_id >> submit_emr_job >> extract_job_id >> wait_for_completion
+        [get_app_id, get_exec_role] >> submit_emr_job >> extract_job_id >> wait_for_completion
     return dag
 
 # Generate DAGs dynamically
