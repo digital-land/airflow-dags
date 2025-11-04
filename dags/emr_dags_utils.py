@@ -89,8 +89,11 @@ def wait_for_emr_job_completion(**context):
     print(f"Using job_run_id: {job_run_id}")
     
     emr_client = boto3.client('emr-serverless', region_name='eu-west-2')
-    # Use the application_id from the secrets (consistent with DAG setup)
-    application_id = get_secrets("emr_application_id")
+    # Get application_id from XCom (set by get_emr_application_id task)
+    application_id = context['task_instance'].xcom_pull(task_ids='get_emr_application_id')
+    
+    if not application_id:
+        raise ValueError("No application_id found from XCom")
     
     print(f"Monitoring EMR Serverless job: {job_run_id}")
     print(f"Application ID: {application_id}")
