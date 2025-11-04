@@ -16,10 +16,18 @@ def get_emr_application_id_by_name(application_name, region='eu-west-2'):
     response = client.list_applications(maxResults=50)
     
     for app in response.get('applications', []):
-        if app['name'] == application_name and app['state'] in ['CREATED', 'STARTED']:
+        if app['name'] == application_name:
             return app['id']
     
-    raise ValueError(f"No active EMR application found with name: {application_name}")
+    available_apps = [f"{app['name']} ({app['state']})" for app in response.get('applications', [])]
+    raise ValueError(f"EMR application '{application_name}' not found. Available: {available_apps}")
+
+def get_application_id(**context):
+    """Task to get EMR application ID and push to XCom."""
+    env = context['params']['env']
+    app_name = f"{env}-pd-batch-emrsl-application"
+    app_id = get_emr_application_id_by_name(app_name)
+    return app_id
  
 # List of datasets
 datasets = get_datasets()
@@ -44,12 +52,12 @@ def create_dag(dag_id, dataset_name, schedule=None): #"0 17 * * *"
         start_date=datetime(2025, 9, 24),
         catchup=False,
         tags=['dynamic'],
-        dagrun_timeout=timedelta(minutes=60)  # Entire DAG must complete within 60 minutes
+        dagrun_timeout=timedelta(minutes=60),  # Entire DAG must complete within 60 minutes
+        params={'env': get_secrets("environment", "development")}
     ) as dag:
         # EMR Serverless configuration from AWS Secrets Manager key value pairs
         # TODO: need to refractor this method to make dynamic for different environments
         ENV = get_secrets("environment", "development") # development, staging, production
-        EMR_APPLICATION_ID = get_emr_application_id_by_name(f"{ENV}-pd-batch-emrsl-application")
         EXECUTION_ROLE_ARN = get_secrets("emr_execution_role",ENV)
 
         S3_BUCKET = f"{ENV}-pd-batch-jobs-codepackage-bucket"
@@ -70,14 +78,23 @@ def create_dag(dag_id, dataset_name, schedule=None): #"0 17 * * *"
         #S3_SEDONA_GEOTOOLS_JAR = f"s3://{S3_BUCKET}/pkg/jars/geotools-wrapper-1.8.0-33.1.jar"  
         S3_DATA_PATH = f"s3://{S3_SOURCE_DATA_PATH}/"
         
+        # Task 0: Get EMR Application ID
+        get_app_id = PythonOperator(
+            task_id='get_emr_application_id',
+            python_callable=get_application_id,
+            execution_timeout=timedelta(minutes=2)
+        )
+        
         # Task 1: Submit EMR Serverless job and capture job run ID
         submit_emr_job = BashOperator(
             task_id='submit_emr_job',
             bash_command=f'''
             set -e  # Exit on any error
             
+            EMR_APPLICATION_ID="{{{{ task_instance.xcom_pull(task_ids='get_emr_application_id') }}}}"
+            
             echo "Starting EMR Serverless job submission..."
-            echo "Application ID: {EMR_APPLICATION_ID}"
+            echo "Application ID: $EMR_APPLICATION_ID"
             echo "Dataset: {DATA_SET}"
             echo "Load Type: {LOAD_TYPE}"
             echo "Environment: {ENV}"
@@ -85,7 +102,7 @@ def create_dag(dag_id, dataset_name, schedule=None): #"0 17 * * *"
             # Submit EMR job and capture output
             JOB_OUTPUT=$(aws emr-serverless start-job-run \\
             --name "{DATA_SET}-job" \\
-            --application-id {EMR_APPLICATION_ID} \\
+            --application-id $EMR_APPLICATION_ID \\
             --execution-role-arn {EXECUTION_ROLE_ARN} \\
             --job-driver '{{
                 "sparkSubmit": {{
@@ -162,7 +179,7 @@ def create_dag(dag_id, dataset_name, schedule=None): #"0 17 * * *"
         )
         
         # Define dependencies
-        submit_emr_job >> extract_job_id >> wait_for_completion
+        get_app_id >> submit_emr_job >> extract_job_id >> wait_for_completion
     return dag
 
 # Generate DAGs dynamically
