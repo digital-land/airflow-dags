@@ -182,10 +182,13 @@ def create_dag(dag_id, dataset_name, schedule=None): #"0 17 * * *"
         get_app_id >> submit_emr_job >> extract_job_id >> wait_for_completion
     return dag
 
-# Generate DAGs dynamically
+# Generate DAGs dynamically for filtered datasets only
+ALLOWED_DATASETS = ['central-activities-zone', 'title-boundary', 'transport-access-node']
+
 for dataset in datasets:
-    dag_id = f"emr-{dataset}-collection"
-    globals()[dag_id] = create_dag(dag_id, dataset)
+    if dataset in ALLOWED_DATASETS:
+        dag_id = f"emr-{dataset}-collection"
+        globals()[dag_id] = create_dag(dag_id, dataset)
 
   
 
