@@ -13,7 +13,7 @@ import logging
 def get_emr_application_id_by_name(application_name, region='eu-west-2'):
     """Get EMR Serverless application ID by application name."""
     client = boto3.client('emr-serverless', region_name=region)
-    response = client.list_applications(maxResults=100)
+    response = client.list_applications(maxResults=50)
     
     for app in response.get('applications', []):
         if app['name'] == application_name and app['state'] in ['CREATED', 'STARTED']:
