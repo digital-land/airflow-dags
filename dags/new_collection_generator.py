@@ -160,7 +160,7 @@ if config['env'] in ['development']:
             for dataset in collection_datasets:
 
                 assemble_placeholder_task = EmptyOperator(
-                    task_id='placeholder_task_name'
+                    task_id='assemble_placeholder_task'
                 )
 
                 collection_ecs_task >> assemble_placeholder_task
