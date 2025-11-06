@@ -128,118 +128,94 @@ def wait_for_emr_job_completion(**context):
         print(f"Error during initial job status check: {init_error}")
         raise ValueError(f"Cannot access EMR job {job_run_id}: {init_error}")
     
-    try:
-        poll_count = 0
-        while True:
-            poll_count += 1
-            # Check if we've exceeded timeout
-            if time.time() - start_time > timeout_seconds:
-                print(f"Job monitoring timed out after {timeout_seconds} seconds (poll count: {poll_count})")
-                print(f"Attempting to cancel EMR Serverless job: {job_run_id}")
-                
-                try:
-                    # Cancel the EMR Serverless job to prevent further costs
-                    cancel_response = emr_client.cancel_job_run(
-                        applicationId=application_id,
-                        jobRunId=job_run_id
-                    )
-                    print(f"Job cancellation initiated: {cancel_response}")
-                    
-                    # Wait a bit for cancellation to take effect
-                    time.sleep(10)
-                    
-                    # Check final state
-                    final_response = emr_client.get_job_run(
-                        applicationId=application_id,
-                        jobRunId=job_run_id
-                    )
-                    final_state = final_response['jobRun']['state']
-                    print(f"Final job state after cancellation: {final_state}")
-                    
-                except Exception as cancel_error:
-                    print(f"Error cancelling job: {cancel_error}")
-                
-                from airflow.exceptions import AirflowSkipException
-                raise AirflowSkipException(f"Job monitoring timed out after {timeout_seconds} seconds. Job cancellation attempted.")
+    poll_count = 0
+    while True:
+        poll_count += 1
+        # Check if we've exceeded timeout
+        if time.time() - start_time > timeout_seconds:
+            print(f"Job monitoring timed out after {timeout_seconds} seconds (poll count: {poll_count})")
+            print(f"Attempting to cancel EMR Serverless job: {job_run_id}")
             
             try:
-                print(f"Poll #{poll_count} - Checking job status...")
-                response = emr_client.get_job_run(
+                cancel_response = emr_client.cancel_job_run(
                     applicationId=application_id,
                     jobRunId=job_run_id
                 )
+                print(f"Job cancellation initiated: {cancel_response}")
+                time.sleep(10)
                 
-                job_state = response['jobRun']['state']
-                elapsed = time.time() - start_time
-                print(f"Poll #{poll_count} - Job state: {job_state} (elapsed: {elapsed:.2f}s)")
-                
-                if job_state == 'SUCCESS':
-                    print("Job completed successfully!")
-                    # Get final job details
-                    final_details = response.get('jobRun', {})
-                    print(f"Job completed in {time.time() - start_time:.2f} seconds")
-                    if 'billedResourceUtilization' in final_details:
-                        print(f"Resource utilization: {final_details['billedResourceUtilization']}")
-                    return job_run_id
-                elif job_state in ['FAILED', 'CANCELLED', 'CANCELLING']:
-                    state_details = response.get('jobRun', {}).get('stateDetails', '')
-                    failure_reason = response.get('jobRun', {}).get('failureReason', '')
-                    
-                    error_msg = f"EMR job {job_state}"
-                    if state_details:
-                        error_msg += f": {state_details}"
-                    if failure_reason:
-                        error_msg += f" (Reason: {failure_reason})"
-                    
-                    # Log additional debugging info
-                    job_run_details = response.get('jobRun', {})
-                    print(f"Job run details: {json.dumps(job_run_details, indent=2, default=str)}")
-                    
-                    raise Exception(error_msg)
-                elif job_state in ['PENDING', 'SCHEDULED', 'RUNNING']:
-                    print(f"Job still {job_state.lower()}, elapsed time: {elapsed:.2f}s, waiting 30 seconds...")
-                    
-                    # Log job progress if available
-                    job_run_details = response.get('jobRun', {})
-                    if 'jobProgress' in job_run_details:
-                        print(f"Job progress: {job_run_details['jobProgress']}")
-                    
-                    time.sleep(30)
-                else:
-                    print(f"Unknown job state: {job_state}, continuing to wait...")
-                    # Log the full response for debugging
-                    print(f"Full EMR response: {json.dumps(response, indent=2, default=str)}")
-                    time.sleep(30)
-                    
-            except Exception as e:
-                if "timed out" in str(e):
-                    raise
-                print(f"Error checking job status (poll #{poll_count}): {e}")
-                print(f"Error type: {type(e).__name__}")
-                
-                # Add exponential backoff for API errors
-                if "throttling" in str(e).lower() or "rate" in str(e).lower():
-                    backoff_time = min(60, 30 * (poll_count % 3 + 1))  # 30, 60, 90 seconds, then repeat
-                    print(f"API throttling detected, waiting {backoff_time} seconds...")
-                    time.sleep(backoff_time)
-                else:
-                    print("Retrying in 30 seconds...")
-                    time.sleep(30)
-                
-    except Exception as outer_error:
-        # Ensure we attempt to cancel the job if any unexpected error occurs
-        if "timed out" not in str(outer_error):
-            print(f"Unexpected error occurred: {outer_error}")
-            print(f"Attempting to cancel EMR Serverless job: {job_run_id}")
-            try:
-                emr_client.cancel_job_run(
+                final_response = emr_client.get_job_run(
                     applicationId=application_id,
                     jobRunId=job_run_id
                 )
-                print("Job cancellation initiated due to unexpected error")
+                final_state = final_response['jobRun']['state']
+                print(f"Final job state after cancellation: {final_state}")
             except Exception as cancel_error:
-                print(f"Error cancelling job due to unexpected error: {cancel_error}")
-        raise
+                print(f"Error cancelling job: {cancel_error}")
+            
+            from airflow.exceptions import AirflowSkipException
+            raise AirflowSkipException(f"Job monitoring timed out after {timeout_seconds} seconds. Job cancellation attempted.")
+        
+        try:
+            print(f"Poll #{poll_count} - Checking job status...")
+            response = emr_client.get_job_run(
+                applicationId=application_id,
+                jobRunId=job_run_id
+            )
+            
+            job_state = response['jobRun']['state']
+            elapsed = time.time() - start_time
+            print(f"Poll #{poll_count} - Job state: {job_state} (elapsed: {elapsed:.2f}s)")
+            
+            if job_state == 'SUCCESS':
+                print("Job completed successfully!")
+                final_details = response.get('jobRun', {})
+                print(f"Job completed in {time.time() - start_time:.2f} seconds")
+                if 'billedResourceUtilization' in final_details:
+                    print(f"Resource utilization: {final_details['billedResourceUtilization']}")
+                return job_run_id
+            elif job_state in ['FAILED', 'CANCELLED', 'CANCELLING']:
+                state_details = response.get('jobRun', {}).get('stateDetails', '')
+                failure_reason = response.get('jobRun', {}).get('failureReason', '')
+                
+                error_msg = f"EMR job {job_state}"
+                if state_details:
+                    error_msg += f": {state_details}"
+                if failure_reason:
+                    error_msg += f" (Reason: {failure_reason})"
+                
+                job_run_details = response.get('jobRun', {})
+                print(f"Job run details: {json.dumps(job_run_details, indent=2, default=str)}")
+                
+                raise Exception(error_msg)
+            elif job_state in ['PENDING', 'SCHEDULED', 'RUNNING']:
+                print(f"Job still {job_state.lower()}, elapsed time: {elapsed:.2f}s, waiting 30 seconds...")
+                
+                job_run_details = response.get('jobRun', {})
+                if 'jobProgress' in job_run_details:
+                    print(f"Job progress: {job_run_details['jobProgress']}")
+                
+                time.sleep(30)
+            else:
+                print(f"Unknown job state: {job_state}, continuing to wait...")
+                print(f"Full EMR response: {json.dumps(response, indent=2, default=str)}")
+                time.sleep(30)
+                
+        except Exception as e:
+            # Re-raise if it's a job failure exception
+            if "EMR job" in str(e):
+                raise
+            
+            print(f"Error checking job status (poll #{poll_count}): {e}")
+            print(f"Error type: {type(e).__name__}")
+            
+            if "throttling" in str(e).lower() or "rate" in str(e).lower():
+                backoff_time = min(60, 30 * (poll_count % 3 + 1))
+                print(f"API throttling detected, waiting {backoff_time} seconds...")
+                time.sleep(backoff_time)
+            else:
+                print("Retrying in 30 seconds...")
+                time.sleep(30)
 
     
 
