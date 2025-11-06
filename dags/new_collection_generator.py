@@ -112,7 +112,7 @@ if config['env'] in ['development']:
             )
 
             collection_ecs_task = EcsRunTaskOperator(
-                task_id=f"{collection}-collect-and-transformed",
+                task_id=f"{collection}-collect-and-transform",
                 dag=dag,
                 execution_timeout=timedelta(minutes=1800),
                 cluster=ecs_cluster,
@@ -216,4 +216,4 @@ if config['env'] in ['development']:
                         awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="tiles-builder-task-log-stream-prefix") }}',
                         awslogs_fetch_interval=timedelta(seconds=1)
                     )
-                    collection_ecs_task >> tiles_builder_task
+                    bake_placeholder_task >> tiles_builder_task
