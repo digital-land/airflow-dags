@@ -5,6 +5,7 @@ from airflow.models import Variable
 from emr_dags_utils import get_datasets, get_secrets, extract_and_validate_job_id, wait_for_emr_job_completion
 from datetime import datetime, timedelta
 from aws_secrets_manager import get_secret_emr_compatible
+from utils import get_config
 import boto3
 import time
 import json
@@ -55,8 +56,10 @@ def create_dag(dag_id, dataset_name, schedule=None): #"0 17 * * *"
         dagrun_timeout=timedelta(minutes=60)  # Entire DAG must complete within 60 minutes
     ) as dag:
         # EMR Serverless configuration from AWS Secrets Manager key value pairs
-        # TODO: need to refractor this method to make dynamic for different environments
-        ENV = get_secrets("environment", "development") # development, staging, production
+        # Get config from config.json and to determine active environment
+        config = get_config()
+        ENV = config.get("env")
+        # ENV = get_secrets("environment", "development") # development, staging, production
         EXECUTION_ROLE_ARN = get_secrets("emr_execution_role", ENV)
 
         S3_BUCKET = f"{ENV}-pd-batch-jobs-codepackage-bucket"
