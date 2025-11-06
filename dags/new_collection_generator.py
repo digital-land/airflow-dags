@@ -124,7 +124,7 @@ if config['env'] in ['development']:
                             "name": collection_task_name,
                             'cpu': '{{ task_instance.xcom_pull(task_ids="configure-dag", key="cpu") | int }}',
                             'memory': '{{ task_instance.xcom_pull(task_ids="configure-dag", key="memory") | int }}',
-                            "command": ["collect-and-transform.sh"],
+                            "command": ["./bin/collect-and-transform.sh"],
                             "environment": [
                                 {"name": "ENVIRONMENT", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"env\") | string }}'"},
                                 {"name": "COLLECTION_NAME", "value": collection},
