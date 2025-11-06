@@ -23,9 +23,8 @@ def get_emr_application_id_by_name(application_name, region='eu-west-2'):
     available_apps = [f"{app['name']} ({app['state']})" for app in response.get('applications', [])]
     raise ValueError(f"EMR application '{application_name}' not found. Available: {available_apps}")
 
-def get_application_id(**context):
+def get_application_id(env, **context):
     """Task to get EMR application ID and push to XCom."""
-    env = get_secrets("environment", "development")
     app_name = f"{env}-pd-batch-emrsl-application"
     app_id = get_emr_application_id_by_name(app_name)
     return app_id
@@ -84,6 +83,7 @@ def create_dag(dag_id, dataset_name, schedule=None): #"0 17 * * *"
         get_app_id = PythonOperator(
             task_id='get_emr_application_id',
             python_callable=get_application_id,
+            op_kwargs={'env': ENV},
             execution_timeout=timedelta(minutes=2)
         )
         
