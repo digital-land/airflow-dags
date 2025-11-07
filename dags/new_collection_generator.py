@@ -12,6 +12,7 @@ from airflow.decorators import dag
 from airflow.providers.amazon.aws.operators.ecs import (
     EcsRunTaskOperator,
 )
+from airflow.utils.task_group import TaskGroup
 
 from airflow.operators.python import PythonOperator
 from airflow.operators.empty import EmptyOperator
@@ -162,85 +163,92 @@ if config['env'] in ['development']:
             # start with  postgres tasks
             for dataset in collection_datasets:
 
-                def get_emr_application_id(**context):
-                    """Get EMR application ID and push to XCom."""
-                    env = context['ti'].xcom_pull(task_ids='configure-dag', key='env')
-                    app_name = f"{env}-pd-batch-emrsl-application"
-                    client = boto3.client('emr-serverless', region_name='eu-west-2')
-                    response = client.list_applications(maxResults=50)
-                    for app in response.get('applications', []):
-                        if app['name'] == app_name:
-                            return app['id']
-                    raise ValueError(f"EMR application '{app_name}' not found")
+                with TaskGroup(group_id=f'{dataset}-assemble') as assemble_placeholder_task:
+                    def get_emr_application_id(**context):
+                        """Get EMR application ID and push to XCom."""
+                        env = context['ti'].xcom_pull(task_ids='configure-dag', key='env')
+                        app_name = f"{env}-pd-batch-emrsl-application"
+                        client = boto3.client('emr-serverless', region_name='eu-west-2')
+                        response = client.list_applications(maxResults=50)
+                        for app in response.get('applications', []):
+                            if app['name'] == app_name:
+                                return app['id']
+                        raise ValueError(f"EMR application '{app_name}' not found")
 
-                get_app_id = PythonOperator(
-                    task_id=f'{dataset}-get-emr-app-id',
-                    python_callable=get_emr_application_id,
-                    execution_timeout=timedelta(minutes=2)
-                )
+                    get_app_id = PythonOperator(
+                        task_id='get-emr-app-id',
+                        python_callable=get_emr_application_id,
+                        execution_timeout=timedelta(minutes=2)
+                    )
 
-                ENV = config['env']
-                EXECUTION_ROLE_ARN = get_secrets("emr_execution_role", ENV)
-                S3_BUCKET = f"{ENV}-pd-batch-jobs-codepackage-bucket"
-                S3_LOG_BUCKET = f"{ENV}-pd-batch-jobs-logs-bucket"
-                LOAD_TYPE = get_secrets("load_type", ENV)
-                S3_SOURCE_DATA_PATH = f"{ENV}-collection-data"
-                S3_ENTRY_POINT = f"s3://{S3_BUCKET}/pkg/entry_script/run_main.py"
-                S3_WHEEL_FILE = f"s3://{S3_BUCKET}/pkg/whl_pkg/pyspark_jobs-0.1.0-py3-none-any.whl"
-                S3_LOG_URI = f"s3://{S3_LOG_BUCKET}/"
-                S3_DEPENDENCIES_PATH = f"s3://{S3_BUCKET}/pkg/dependencies/dependencies.zip"
-                S3_POSTGRESQL_JAR = f"s3://{S3_BUCKET}/pkg/jars/postgresql-42.7.4.jar"
-                S3_DATA_PATH = f"s3://{S3_SOURCE_DATA_PATH}/"
+                    ENV = config['env']
+                    EXECUTION_ROLE_ARN = get_secrets("emr_execution_role", ENV)
+                    S3_BUCKET = f"{ENV}-pd-batch-jobs-codepackage-bucket"
+                    S3_LOG_BUCKET = f"{ENV}-pd-batch-jobs-logs-bucket"
+                    LOAD_TYPE = get_secrets("load_type", ENV)
+                    S3_SOURCE_DATA_PATH = f"{ENV}-collection-data"
+                    S3_ENTRY_POINT = f"s3://{S3_BUCKET}/pkg/entry_script/run_main.py"
+                    S3_WHEEL_FILE = f"s3://{S3_BUCKET}/pkg/whl_pkg/pyspark_jobs-0.1.0-py3-none-any.whl"
+                    S3_LOG_URI = f"s3://{S3_LOG_BUCKET}/"
+                    S3_DEPENDENCIES_PATH = f"s3://{S3_BUCKET}/pkg/dependencies/dependencies.zip"
+                    S3_POSTGRESQL_JAR = f"s3://{S3_BUCKET}/pkg/jars/postgresql-42.7.4.jar"
+                    S3_DATA_PATH = f"s3://{S3_SOURCE_DATA_PATH}/"
 
-                assemble_placeholder_task = BashOperator(
-                    task_id=f'{dataset}-assemble-emr-job',
-                    bash_command=f'''
-                    set -e
-                    EMR_APPLICATION_ID="{{{{ task_instance.xcom_pull(task_ids='{dataset}-get-emr-app-id') }}}}"
-                    echo "Starting EMR job for {dataset}"
-                    JOB_OUTPUT=$(aws emr-serverless start-job-run \\
-                    --name "{dataset}-job" \\
-                    --application-id $EMR_APPLICATION_ID \\
-                    --execution-role-arn {EXECUTION_ROLE_ARN} \\
-                    --job-driver '{{
-                        "sparkSubmit": {{
-                        "entryPoint": "{S3_ENTRY_POINT}",
-                        "entryPointArguments": ["--load_type", "{LOAD_TYPE}", "--data_set", "{dataset}", "--path", "{S3_DATA_PATH}", "--env", "{ENV}"],
-                        "sparkSubmitParameters": "--py-files {S3_WHEEL_FILE},{S3_DEPENDENCIES_PATH} --jars {S3_POSTGRESQL_JAR} --conf spark.serializer=org.apache.spark.serializer.KryoSerializer --conf spark.kryo.registrator=org.apache.sedona.core.serde.SedonaKryoRegistrator --conf spark.sql.extensions=org.apache.sedona.sql.SedonaSqlExtensions"
-                        }}
-                    }}' \\
-                    --configuration-overrides '{{
-                        "monitoringConfiguration": {{
-                        "s3MonitoringConfiguration": {{"logUri": "{S3_LOG_URI}"}}
-                        }}
-                    }}' \\
-                    --region eu-west-2 --output json)
-                    JOB_RUN_ID=$(echo "$JOB_OUTPUT" | jq -r '.jobRunId')
-                    echo "$JOB_RUN_ID" > /tmp/{dataset}_job_run_id.txt
-                    echo "Job submitted: $JOB_RUN_ID"
-                    ''',
-                    do_xcom_push=False,
-                    execution_timeout=timedelta(minutes=5)
-                )
+                    assemble_emr_job = BashOperator(
+                        task_id='assemble-emr-job',
+                        bash_command=f'''
+                        set -e
+                        EMR_APPLICATION_ID="{{{{ task_instance.xcom_pull(task_ids='{dataset}-assemble.get-emr-app-id') }}}}"
+                        echo "Starting EMR job for {dataset}"
+                        JOB_OUTPUT=$(aws emr-serverless start-job-run \\
+                        --name "{dataset}-job" \\
+                        --application-id $EMR_APPLICATION_ID \\
+                        --execution-role-arn {EXECUTION_ROLE_ARN} \\
+                        --job-driver '{{
+                            "sparkSubmit": {{
+                            "entryPoint": "{S3_ENTRY_POINT}",
+                            "entryPointArguments": ["--load_type", "{LOAD_TYPE}", "--data_set", "{dataset}", "--path", "{S3_DATA_PATH}", "--env", "{ENV}"],
+                            "sparkSubmitParameters": "--py-files {S3_WHEEL_FILE},{S3_DEPENDENCIES_PATH} --jars {S3_POSTGRESQL_JAR} --conf spark.serializer=org.apache.spark.serializer.KryoSerializer --conf spark.kryo.registrator=org.apache.sedona.core.serde.SedonaKryoRegistrator --conf spark.sql.extensions=org.apache.sedona.sql.SedonaSqlExtensions"
+                            }}
+                        }}' \\
+                        --configuration-overrides '{{
+                            "monitoringConfiguration": {{
+                            "s3MonitoringConfiguration": {{"logUri": "{S3_LOG_URI}"}}
+                            }}
+                        }}' \\
+                        --region eu-west-2 --output json)
+                        JOB_RUN_ID=$(echo "$JOB_OUTPUT" | jq -r '.jobRunId')
+                        echo "$JOB_RUN_ID" > /tmp/{dataset}_job_run_id.txt
+                        echo "Job submitted: $JOB_RUN_ID"
+                        ''',
+                        do_xcom_push=False,
+                        execution_timeout=timedelta(minutes=5)
+                    )
 
-                def extract_job_id_wrapper(**context):
-                    context['dataset'] = dataset
-                    return extract_and_validate_job_id(**context)
+                    def extract_job_id_wrapper(**context):
+                        context['dataset'] = dataset
+                        return extract_and_validate_job_id(**context)
 
-                extract_job_id = PythonOperator(
-                    task_id=f'{dataset}-extract-job-id',
-                    python_callable=extract_job_id_wrapper,
-                    execution_timeout=timedelta(minutes=2)
-                )
+                    extract_job_id = PythonOperator(
+                        task_id='extract-job-id',
+                        python_callable=extract_job_id_wrapper,
+                        execution_timeout=timedelta(minutes=2)
+                    )
 
-                wait_for_completion = PythonOperator(
-                    task_id=f'{dataset}-wait-emr-completion',
-                    python_callable=wait_for_emr_job_completion,
-                    retries=0,
-                    execution_timeout=timedelta(minutes=53)
-                )
+                    def wait_for_completion_wrapper(**context):
+                        context['dataset'] = dataset
+                        context['extract_task_id'] = f'{dataset}-assemble.extract-job-id'
+                        context['get_app_task_id'] = f'{dataset}-assemble.get-emr-app-id'
+                        return wait_for_emr_job_completion(**context)
 
-                collection_ecs_task >> get_app_id >> assemble_placeholder_task >> extract_job_id >> wait_for_completion
+                    wait_for_completion = PythonOperator(
+                        task_id='wait-emr-completion',
+                        python_callable=wait_for_completion_wrapper,
+                        retries=0,
+                        execution_timeout=timedelta(minutes=53)
+                    )
+
+                    get_app_id >> assemble_emr_job >> extract_job_id >> wait_for_completion
 
                 #load_placeholder_task = EmptyOperator(
                 #    task_id='load_placeholder_task'
@@ -253,6 +261,8 @@ if config['env'] in ['development']:
                 #)
 
                 #wait_for_completion >> bake_placeholder_task
+                
+                collection_ecs_task >> assemble_placeholder_task
 
 
                 if datasets_dict[dataset].get('typology') == 'geography':
@@ -293,4 +303,4 @@ if config['env'] in ['development']:
                         awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="tiles-builder-task-log-stream-prefix") }}',
                         awslogs_fetch_interval=timedelta(seconds=1)
                     )
-                    wait_for_completion >> tiles_builder_task
+                    assemble_placeholder_task >> tiles_builder_task

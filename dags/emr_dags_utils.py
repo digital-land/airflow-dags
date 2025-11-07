@@ -74,10 +74,9 @@ def extract_and_validate_job_id(**context):
     
 def wait_for_emr_job_completion(**context):
     """Wait for EMR Serverless job to complete"""
-    task_id = context['task_instance'].task_id
-    dataset = task_id.split('-')[0] if '-' in task_id else ''
-    extract_task_id = f'{dataset}-extract-job-id' if dataset else 'extract_job_id'
-    get_app_task_id = f'{dataset}-get-emr-app-id' if dataset else 'get_emr_application_id'
+    dataset = context.get('dataset', '')
+    extract_task_id = context.get('extract_task_id', f'{dataset}-extract-job-id' if dataset else 'extract_job_id')
+    get_app_task_id = context.get('get_app_task_id', f'{dataset}-get-emr-app-id' if dataset else 'get_emr_application_id')
     
     # Try to get job_run_id from XCom with better error handling
     job_run_id = context['task_instance'].xcom_pull(task_ids=extract_task_id, key='job_run_id')
