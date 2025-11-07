@@ -293,4 +293,4 @@ if config['env'] in ['development']:
                         awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="tiles-builder-task-log-stream-prefix") }}',
                         awslogs_fetch_interval=timedelta(seconds=1)
                     )
-                    bake_placeholder_task >> tiles_builder_task
+                    wait_for_completion >> tiles_builder_task
