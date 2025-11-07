@@ -44,8 +44,11 @@ def get_secrets(secret_name, env):
 # Python task to extract job run ID and push to XCom
 def extract_and_validate_job_id(**context):
     """Extract job run ID from temp file and validate it"""
+    dataset = context.get('dataset', '')
+    temp_file = f'/tmp/{dataset}_job_run_id.txt' if dataset else '/tmp/job_run_id.txt'
+    
     try:
-        with open('/tmp/job_run_id.txt', 'r') as f:
+        with open(temp_file, 'r') as f:
             job_run_id = f.read().strip()
         
         if not job_run_id:
@@ -65,23 +68,29 @@ def extract_and_validate_job_id(**context):
         return job_run_id
         
     except FileNotFoundError:
-        raise ValueError("Job ID temp file not found - EMR job submission may have failed")
+        raise ValueError(f"Job ID temp file not found: {temp_file} - EMR job submission may have failed")
     except Exception as e:
         raise ValueError(f"Failed to extract job_run_id: {str(e)}")
     
 def wait_for_emr_job_completion(**context):
     """Wait for EMR Serverless job to complete"""
+    task_id = context['task_instance'].task_id
+    dataset = task_id.split('-')[0] if '-' in task_id else ''
+    extract_task_id = f'{dataset}-extract-job-id' if dataset else 'extract_job_id'
+    get_app_task_id = f'{dataset}-get-emr-app-id' if dataset else 'get_emr_application_id'
+    
     # Try to get job_run_id from XCom with better error handling
-    job_run_id = context['task_instance'].xcom_pull(task_ids='extract_job_id', key='job_run_id')
+    job_run_id = context['task_instance'].xcom_pull(task_ids=extract_task_id, key='job_run_id')
     
     if not job_run_id:
         # Fallback: try to read from the temp file directly
+        temp_file = f'/tmp/{dataset}_job_run_id.txt' if dataset else '/tmp/job_run_id.txt'
         try:
-            with open('/tmp/job_run_id.txt', 'r') as f:
+            with open(temp_file, 'r') as f:
                 job_run_id = f.read().strip()
                 print(f"Retrieved job_run_id from temp file: {job_run_id}")
         except FileNotFoundError:
-            raise ValueError("No job_run_id found from XCom or temp file")
+            raise ValueError(f"No job_run_id found from XCom or temp file: {temp_file}")
     
     if not job_run_id or job_run_id == 'None':
         raise ValueError(f"Invalid job_run_id retrieved: {job_run_id}")
@@ -90,7 +99,7 @@ def wait_for_emr_job_completion(**context):
     
     emr_client = boto3.client('emr-serverless', region_name='eu-west-2')
     # Get application_id from XCom (set by get_emr_application_id task)
-    application_id = context['task_instance'].xcom_pull(task_ids='get_emr_application_id')
+    application_id = context['task_instance'].xcom_pull(task_ids=get_app_task_id)
     
     if not application_id:
         raise ValueError("No application_id found from XCom")
