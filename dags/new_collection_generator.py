@@ -41,7 +41,7 @@ collections = get_collections_dict(datasets_dict.values())
 # wrap all in an if statement to avoid execution in higher environments
 if config['env'] in ['development']:
 
-    filtered_collections = {k: v for k, v in collections.items() if k in ['central-activities-zone']}
+    filtered_collections = {k: v for k, v in collections.items() if k in ['central-activities-zone','transport-access-node','title-boundary']}
 
     for collection, collection_datasets in filtered_collections.items():
         dag_id = f"new-{collection}-collection"
