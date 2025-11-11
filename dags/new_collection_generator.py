@@ -198,7 +198,7 @@ if config['env'] in ['development']:
                         task_id='assemble-emr-job',
                         bash_command=f'''
                         set -e
-                        EMR_APPLICATION_ID="{{{{ task_instance.xcom_pull(task_ids='{dataset}-assemble.get-emr-app-id') }}}}"
+                        EMR_APPLICATION_ID="{{{{ task_instance.xcom_pull(task_ids='{dataset}-assemble-load-bake.get-emr-app-id') }}}}"
                         echo "Starting EMR job for {dataset}"
                         JOB_OUTPUT=$(aws emr-serverless start-job-run \\
                         --name "{dataset}-job" \\
@@ -237,8 +237,8 @@ if config['env'] in ['development']:
 
                     def wait_for_completion_wrapper(**context):
                         context['dataset'] = dataset
-                        context['extract_task_id'] = f'{dataset}-assemble.extract-job-id'
-                        context['get_app_task_id'] = f'{dataset}-assemble.get-emr-app-id'
+                        context['extract_task_id'] = f'{dataset}-assemble-load-bake.extract-job-id'
+                        context['get_app_task_id'] = f'{dataset}-assemble-load-bake.get-emr-app-id'
                         return wait_for_emr_job_completion(**context)
 
                     wait_for_completion = PythonOperator(
