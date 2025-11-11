@@ -163,7 +163,7 @@ if config['env'] in ['development']:
             # start with  postgres tasks
             for dataset in collection_datasets:
 
-                with TaskGroup(group_id=f'{dataset}-assemble') as assemble_placeholder_task:
+                with TaskGroup(group_id=f'{dataset}-assemble-load-bake') as assemble_placeholder_task:
                     def get_emr_application_id(**context):
                         """Get EMR application ID and push to XCom."""
                         env = context['ti'].xcom_pull(task_ids='configure-dag', key='env')
