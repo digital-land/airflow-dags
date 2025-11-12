@@ -200,6 +200,7 @@ if config['env'] in ['development']:
                         task_id='assemble-emr-job',
                         bash_command=f'''
                         set -e
+                        rm -f /tmp/{dataset}_job_run_id.txt
                         EMR_APPLICATION_ID="{{{{ task_instance.xcom_pull(task_ids='{dataset}-assemble-load-bake.get-emr-app-id') }}}}"
                         echo "Starting EMR job for {dataset}"
                         JOB_OUTPUT=$(aws emr-serverless start-job-run \\
