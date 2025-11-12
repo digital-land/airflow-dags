@@ -95,14 +95,17 @@ def wait_for_emr_job_completion(**context):
         raise ValueError(f"Invalid job_run_id retrieved: {job_run_id}")
     
     print(f"Using job_run_id: {job_run_id}")
-    
-    emr_client = boto3.client('emr-serverless', region_name='eu-west-2')
     # Get application_id from XCom (set by get_emr_application_id task)
-    application_id = context['task_instance'].xcom_pull(task_ids=get_app_task_id)
+    application_id = context['task_instance'].xcom_pull(task_ids=get_app_task_id, key='application_id')
+    
+    # Fallback to return_value if application_id key not found
+    if not application_id:
+        application_id = context['task_instance'].xcom_pull(task_ids=get_app_task_id)
     
     if not application_id:
-        raise ValueError("No application_id found from XCom")
+        raise ValueError(f"No application_id found from XCom for task: {get_app_task_id}")
     
+    emr_client = boto3.client('emr-serverless', region_name='eu-west-2')
     print(f"Monitoring EMR Serverless job: {job_run_id}")
     print(f"Application ID: {application_id}")
     

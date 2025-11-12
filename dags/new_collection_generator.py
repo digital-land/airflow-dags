@@ -172,7 +172,9 @@ if config['env'] in ['development']:
                         response = client.list_applications(maxResults=50)
                         for app in response.get('applications', []):
                             if app['name'] == app_name:
-                                return app['id']
+                                app_id = app['id']
+                                context['ti'].xcom_push(key='application_id', value=app_id)
+                                return app_id
                         raise ValueError(f"EMR application '{app_name}' not found")
 
                     get_app_id = PythonOperator(
