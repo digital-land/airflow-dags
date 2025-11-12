@@ -227,8 +227,8 @@ if config['env'] in ['development']:
                         execution_timeout=timedelta(minutes=5)
                     )
 
-                    def extract_job_id_wrapper(**context):
-                        context['dataset'] = dataset
+                    def extract_job_id_wrapper(ds=dataset, **context):
+                        context['dataset'] = ds
                         return extract_and_validate_job_id(**context)
 
                     extract_job_id = PythonOperator(
@@ -237,9 +237,9 @@ if config['env'] in ['development']:
                         execution_timeout=timedelta(minutes=2)
                     )
 
-                    def wait_for_completion_wrapper(**context):
-                        context['extract_task_id'] = f'{dataset}-assemble-load-bake.extract-job-id'
-                        context['get_app_task_id'] = f'{dataset}-assemble-load-bake.get-emr-app-id'
+                    def wait_for_completion_wrapper(ds=dataset, **context):
+                        context['extract_task_id'] = f'{ds}-assemble-load-bake.extract-job-id'
+                        context['get_app_task_id'] = f'{ds}-assemble-load-bake.get-emr-app-id'
                         return wait_for_emr_job_completion(**context)
 
                     wait_for_completion = PythonOperator(
