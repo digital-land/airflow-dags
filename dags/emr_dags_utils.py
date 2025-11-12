@@ -47,6 +47,10 @@ def extract_and_validate_job_id(**context):
     dataset = context.get('dataset', '')
     temp_file = f'/tmp/{dataset}_job_run_id.txt' if dataset else '/tmp/job_run_id.txt'
     
+    # Clear any existing XCom data for this key to ensure fresh data
+    ti = context['task_instance']
+    ti.xcom_push(key='job_run_id', value=None)
+    
     try:
         with open(temp_file, 'r') as f:
             job_run_id = f.read().strip()
@@ -64,7 +68,7 @@ def extract_and_validate_job_id(**context):
         print(f"Successfully extracted job_run_id: {job_run_id}")
         
         # Push to XCom
-        context['task_instance'].xcom_push(key='job_run_id', value=job_run_id)
+        ti.xcom_push(key='job_run_id', value=job_run_id)
         return job_run_id
         
     except FileNotFoundError:
@@ -104,6 +108,11 @@ def wait_for_emr_job_completion(**context):
     # Get application_id from XCom (set by get_emr_application_id task)
     application_id = context['task_instance'].xcom_pull(task_ids=get_app_task_id, key='application_id')
     
+    # Verify the extract task ran in this execution
+    extract_task_start = ti.xcom_pull(task_ids=extract_task_id, key='execution_date')
+    if extract_task_start:
+        print(f"Extract task execution date: {extract_task_start}")
+    
     # Fallback to return_value if application_id key not found
     if not application_id:
         application_id = context['task_instance'].xcom_pull(task_ids=get_app_task_id)
@@ -126,11 +135,14 @@ def wait_for_emr_job_completion(**context):
             jobRunId=job_run_id
         )
         initial_state = initial_response['jobRun']['state']
+        job_created_at = initial_response['jobRun'].get('createdAt')
         print(f"Initial job state check: {initial_state}")
+        print(f"EMR job created at: {job_created_at}")
         
         # If job is already in a terminal state, handle immediately
         if initial_state == 'SUCCESS':
             print("Job already completed successfully!")
+            print(f"WARNING: Job was already complete when monitoring started. Verify this is expected.")
             return job_run_id
         elif initial_state in ['FAILED', 'CANCELLED', 'CANCELLING']:
             state_details = initial_response.get('jobRun', {}).get('stateDetails', '')
