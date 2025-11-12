@@ -238,7 +238,6 @@ if config['env'] in ['development']:
                     )
 
                     def wait_for_completion_wrapper(**context):
-                        context['dataset'] = dataset
                         context['extract_task_id'] = f'{dataset}-assemble-load-bake.extract-job-id'
                         context['get_app_task_id'] = f'{dataset}-assemble-load-bake.get-emr-app-id'
                         return wait_for_emr_job_completion(**context)
