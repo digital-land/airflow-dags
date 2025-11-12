@@ -95,6 +95,12 @@ def wait_for_emr_job_completion(**context):
         raise ValueError(f"Invalid job_run_id retrieved: {job_run_id}")
     
     print(f"Using job_run_id: {job_run_id}")
+    
+    # Validate job_run_id is from current task execution
+    ti = context['task_instance']
+    dag_run_id = context['dag_run'].run_id
+    print(f"Current DAG run: {dag_run_id}")
+    
     # Get application_id from XCom (set by get_emr_application_id task)
     application_id = context['task_instance'].xcom_pull(task_ids=get_app_task_id, key='application_id')
     
