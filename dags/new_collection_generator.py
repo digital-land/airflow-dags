@@ -210,7 +210,7 @@ if config['env'] in ['development']:
                             "sparkSubmit": {{
                             "entryPoint": "{S3_ENTRY_POINT}",
                             "entryPointArguments": ["--load_type", "{LOAD_TYPE}", "--data_set", "{dataset}", "--path", "{S3_DATA_PATH}", "--env", "{ENV}"],
-                            "sparkSubmitParameters": "--py-files {S3_WHEEL_FILE},{S3_DEPENDENCIES_PATH} --conf spark.serializer=org.apache.spark.serializer.KryoSerializer --conf spark.kryo.registrator=org.apache.sedona.core.serde.SedonaKryoRegistrator --conf spark.sql.extensions=org.apache.sedona.sql.SedonaSqlExtensions"
+                            "sparkSubmitParameters": "--jars /usr/lib/spark/jars/postgresql-42.7.4.jar --py-files {S3_WHEEL_FILE},{S3_DEPENDENCIES_PATH} --conf spark.serializer=org.apache.spark.serializer.KryoSerializer --conf spark.kryo.registrator=org.apache.sedona.core.serde.SedonaKryoRegistrator --conf spark.sql.extensions=org.apache.sedona.sql.SedonaSqlExtensions"
                             }}
                         }}' \\
                         --configuration-overrides '{{
