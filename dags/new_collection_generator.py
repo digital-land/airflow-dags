@@ -163,7 +163,7 @@ if config['env'] in ['development']:
             # start with  postgres tasks
             for dataset in collection_datasets:
 
-                with TaskGroup(group_id=f'{dataset}-assemble-load-bake') as assemble_placeholder_task:
+                with TaskGroup(group_id=f'{dataset}-assemble-load-bake') as assemble_task_group:
                     def get_emr_application_id(**context):
                         """Get EMR application ID and push to XCom."""
                         env = context['ti'].xcom_pull(task_ids='configure-dag', key='env')
@@ -250,20 +250,8 @@ if config['env'] in ['development']:
                     )
 
                     get_app_id >> assemble_emr_job >> extract_job_id >> wait_for_completion
-
-                #load_placeholder_task = EmptyOperator(
-                #    task_id='load_placeholder_task'
-                #)
-
-                #wait_for_completion >> load_placeholder_task
-
-                #bake_placeholder_task = EmptyOperator(
-                #    task_id='bake_placeholder_task'
-                #)
-
-                #wait_for_completion >> bake_placeholder_task
-                
-                collection_ecs_task >> assemble_placeholder_task
+              
+                collection_ecs_task >> assemble_task_group
 
 
                 if datasets_dict[dataset].get('typology') == 'geography':
@@ -304,4 +292,4 @@ if config['env'] in ['development']:
                         awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="tiles-builder-task-log-stream-prefix") }}',
                         awslogs_fetch_interval=timedelta(seconds=1)
                     )
-                    assemble_placeholder_task >> tiles_builder_task
+                    assemble_task_group >> tiles_builder_task
