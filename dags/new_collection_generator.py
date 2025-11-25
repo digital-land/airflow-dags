@@ -39,7 +39,7 @@ datasets_dict = load_specification_datasets()
 collections = get_collections_dict(datasets_dict.values())
 
 # wrap all in an if statement to avoid execution in higher environments
-if config['env'] in ['development', 'staging']:
+if config['env'] in ['development', 'staging', 'production']:
 
     filtered_collections = {k: v for k, v in collections.items() if k in ['central-activities-zone','transport-access-node','title-boundary']}
 
