@@ -67,12 +67,16 @@ with DAG(
         if collection not in ['organisation','document','title-boundary','planning-application']:
 
             if collection_selected(collection, config):
+                # Set custom CPU for listed-building collection
+                conf = {'cpu': 16384,"transformed-jobs":16} if collection == 'listed-building' else {}
+
                 collection_dag = TriggerDagRunOperator(
                     task_id=f'trigger-{collection}-collection-dag',
                     trigger_dag_id=f'{collection}-collection',
                     wait_for_completion=True,
                     trigger_rule=TriggerRule.ALL_DONE,
-                    priority_weight=CUSTOM_COLLECTION_DAG_WEIGHTING.get(collection, DEFAULT_WEIGHTING)
+                    priority_weight=CUSTOM_COLLECTION_DAG_WEIGHTING.get(collection, DEFAULT_WEIGHTING),
+                    conf=conf
                 )
                 collection_tasks.append(collection_dag)
                 if organisation_collection_selected:
@@ -117,10 +121,14 @@ with DAG(
     for collection, datasets in collections.items():
         if collection not in ['organisation','document','title-boundary','planning-application']:
 
+            # Set custom CPU for listed-building collection
+            conf = {'cpu': 16384,"transformed-jobs":16} if collection == 'listed-building' else {}
+
             collection_dag = TriggerDagRunOperator(
                 task_id=f'trigger-{collection}-collection-dag',
                 trigger_dag_id=f'{collection}-collection',
-                wait_for_completion=True
+                wait_for_completion=True,
+                conf=conf
             )
             collection_tasks.append(collection_dag)
 
