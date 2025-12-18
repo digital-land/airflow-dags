@@ -1,8 +1,8 @@
 from datetime import timedelta
+import time
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.models.param import Param
-from airflow.sensors.time_delta import TimeDeltaSensor
 from utils import dag_default_args, get_config, push_log_variables, push_vpc_config
 from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
 from airflow.providers.slack.notifications.slack import send_slack_notification
@@ -131,10 +131,14 @@ with DAG(
     configure_dag_task >> build_digital_land_builder
 
     if config['env'] ==  'production':
-        # Add 10 minute delay before reporting task
-        wait_before_reporting = TimeDeltaSensor(
+
+        def delay_execution(**kwargs):
+            time.sleep(600)  # (10 minutes)
+
+        # Add delay before reporting task to ensure datasette consistency
+        wait_before_reporting = PythonOperator(
             task_id="wait-before-reporting",
-            delta=timedelta(minutes=10),
+            python_callable=delay_execution,
             dag=dag,
         )
 
