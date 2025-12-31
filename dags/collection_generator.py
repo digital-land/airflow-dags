@@ -113,7 +113,7 @@ for collection, collection_datasets in collections.items():
         )
 
         collect_ecs_task = EcsRunTaskOperator(
-            task_id=f"{collection}-collect",
+            task_id=f"{collection}-collect", 
             dag=dag,
             execution_timeout=timedelta(minutes=1800),
             cluster=ecs_cluster,
@@ -135,7 +135,7 @@ for collection, collection_datasets in collections.items():
                             },
                             {
                                 "name": "HOISTED_COLLECTION_DATASET_BUCKET_NAME",
-                                "value": "'{{ task_ instance.xcom_pull(task_ids=\"configure-dag\", key=\"collection-dataset-bucket-name\") | string }}'"
+                                "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"collection-dataset-bucket-name\") | string }}'"
                             },
                             # {"name": "TRANSFORMED_JOBS", "value": str('{{ task_instance.xcom_pull(task_ids="configure-dag", key="transformed-jobs") | string }}')},
                             {"name": "TRANSFORMED_JOBS", "value":"'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"transformed-jobs\") | string }}'"},

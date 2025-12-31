@@ -4,6 +4,10 @@ ifeq ($(ENVIRONMENT),)
 ENVIRONMENT='development'
 endif
 
+init::
+	pip install --upgrade pip
+	pip install -r requirements/dev-requirements.txt
+
 local-mwaa-image::
 	rm -rf var
 	mkdir -p var
