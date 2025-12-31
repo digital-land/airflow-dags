@@ -4,3 +4,10 @@ Flask
 Flask-AppBuilder
 pytest
 moto
+# Linting and formatting tools
+black
+flake8
+isort
+pre-commit
+# Additional pytest plugins
+pytest-cov

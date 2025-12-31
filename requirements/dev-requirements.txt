@@ -125,6 +125,8 @@ beautifulsoup4==4.12.3
     # via
     #   -r requirements/requirements.txt
     #   redshift-connector
+black==25.12.0
+    # via -r requirements/dev-requirements.in
 blinker==1.8.2
     # via
     #   -r requirements/requirements.txt
@@ -163,6 +165,8 @@ cffi==1.17.0
     # via
     #   -r requirements/requirements.txt
     #   cryptography
+cfgv==3.5.0
+    # via pre-commit
 charset-normalizer==3.3.2
     # via
     #   -r requirements/requirements.txt
@@ -170,6 +174,7 @@ charset-normalizer==3.3.2
 click==8.1.7
     # via
     #   -r requirements/requirements.txt
+    #   black
     #   clickclick
     #   flask
     #   flask-appbuilder
@@ -193,6 +198,8 @@ connexion[flask]==2.14.2
     # via
     #   -r requirements/requirements.txt
     #   apache-airflow
+coverage[toml]==7.13.1
+    # via pytest-cov
 cron-descriptor==1.4.3
     # via
     #   -r requirements/requirements.txt
@@ -220,6 +227,8 @@ dill==0.3.8
     # via
     #   -r requirements/requirements.txt
     #   apache-airflow
+distlib==0.4.0
+    # via virtualenv
 dnspython==2.6.1
     # via
     #   -r requirements/requirements.txt
@@ -237,6 +246,10 @@ exceptiongroup==1.2.2
     #   -r requirements/requirements.txt
     #   anyio
     #   pytest
+filelock==3.20.1
+    # via virtualenv
+flake8==7.3.0
+    # via -r requirements/dev-requirements.in
 flask==2.2.5
     # via
     #   -r requirements/dev-requirements.in
@@ -337,6 +350,8 @@ httpx==0.27.0
     # via
     #   -r requirements/requirements.txt
     #   apache-airflow
+identify==2.6.15
+    # via pre-commit
 idna==3.7
     # via
     #   -r requirements/requirements.txt
@@ -361,6 +376,8 @@ inflection==0.5.1
     #   connexion
 iniconfig==2.0.0
     # via pytest
+isort==7.0.0
+    # via -r requirements/dev-requirements.in
 itsdangerous==2.2.0
     # via
     #   -r requirements/requirements.txt
@@ -450,6 +467,8 @@ marshmallow-sqlalchemy==0.28.2
     # via
     #   -r requirements/requirements.txt
     #   flask-appbuilder
+mccabe==0.7.0
+    # via flake8
 mdit-py-plugins==0.4.1
     # via
     #   -r requirements/requirements.txt
@@ -473,6 +492,10 @@ multidict==6.0.5
     #   -r requirements/requirements.txt
     #   aiohttp
     #   yarl
+mypy-extensions==1.1.0
+    # via black
+nodeenv==1.10.0
+    # via pre-commit
 opentelemetry-api==1.26.0
     # via
     #   -r requirements/requirements.txt
@@ -522,6 +545,7 @@ packaging==24.1
     #   -r requirements/requirements.txt
     #   apache-airflow
     #   apispec
+    #   black
     #   connexion
     #   gunicorn
     #   limits
@@ -534,19 +558,27 @@ pathspec==0.12.1
     # via
     #   -r requirements/requirements.txt
     #   apache-airflow
+    #   black
 pendulum==3.0.0
     # via
     #   -r requirements/requirements.txt
     #   apache-airflow
+platformdirs==4.5.1
+    # via
+    #   black
+    #   virtualenv
 pluggy==1.5.0
     # via
     #   -r requirements/requirements.txt
     #   apache-airflow
     #   pytest
+    #   pytest-cov
 ply==3.11
     # via
     #   -r requirements/requirements.txt
     #   jsonpath-ng
+pre-commit==4.5.1
+    # via -r requirements/dev-requirements.in
 prison==0.2.1
     # via
     #   -r requirements/requirements.txt
@@ -564,6 +596,8 @@ pyathena==3.9.0
     # via
     #   -r requirements/requirements.txt
     #   apache-airflow-providers-amazon
+pycodestyle==2.14.0
+    # via flake8
 pycparser==2.22
     # via
     #   -r requirements/requirements.txt
@@ -574,6 +608,8 @@ pydantic-core==2.23.4
     # via
     #   -r requirements/requirements.txt
     #   pydantic
+pyflakes==3.4.0
+    # via flake8
 pygments==2.18.0
     # via
     #   -r requirements/requirements.txt
@@ -586,6 +622,10 @@ pyjwt==2.9.0
     #   flask-appbuilder
     #   flask-jwt-extended
 pytest==8.3.2
+    # via
+    #   -r requirements/dev-requirements.in
+    #   pytest-cov
+pytest-cov==7.0.0
     # via -r requirements/dev-requirements.in
 python-daemon==3.0.1
     # via
@@ -611,6 +651,8 @@ python-slugify==8.0.4
     #   -r requirements/requirements.txt
     #   apache-airflow
     #   python-nvd3
+pytokens==0.3.0
+    # via black
 pytz==2024.1
     # via
     #   -r requirements/requirements.txt
@@ -623,6 +665,7 @@ pyyaml==6.0.2
     #   apispec
     #   clickclick
     #   connexion
+    #   pre-commit
     #   responses
 redshift-connector==2.1.3
     # via
@@ -750,13 +793,17 @@ time-machine==2.15.0
     #   -r requirements/requirements.txt
     #   pendulum
 tomli==2.0.1
-    # via pytest
+    # via
+    #   black
+    #   coverage
+    #   pytest
 typing-extensions==4.12.2
     # via
     #   -r requirements/requirements.txt
     #   alembic
     #   anyio
     #   asgiref
+    #   black
     #   flask-limiter
     #   limits
     #   opentelemetry-sdk
@@ -786,6 +833,8 @@ urllib3==2.2.2
     #   responses
 utils==1.0.2
     # via -r requirements/requirements.txt
+virtualenv==20.33.1
+    # via pre-commit
 watchtower==3.3.1
     # via
     #   -r requirements/requirements.txt
