@@ -112,8 +112,8 @@ for collection, collection_datasets in collections.items():
             dag=dag,
         )
 
-        collection_ecs_task = EcsRunTaskOperator(
-            task_id=f"{collection}-collection",
+        collect_ecs_task = EcsRunTaskOperator(
+            task_id=f"{collection}-collect",
             dag=dag,
             execution_timeout=timedelta(minutes=1800),
             cluster=ecs_cluster,
@@ -125,6 +125,52 @@ for collection, collection_datasets in collections.items():
                         "name": collection_task_name,
                         'cpu': '{{ task_instance.xcom_pull(task_ids="configure-dag", key="cpu") | int }}', 
                         'memory': '{{ task_instance.xcom_pull(task_ids="configure-dag", key="memory") | int }}', 
+                        "command": ["./bin/collect.sh"],
+                        "environment": [
+                            {"name": "ENVIRONMENT", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"env\") | string }}'"},
+                            {"name": "COLLECTION_NAME", "value": collection},
+                            {
+                                "name": "COLLECTION_DATASET_BUCKET_NAME",
+                                "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"collection-dataset-bucket-name\") | string }}'"
+                            },
+                            {
+                                "name": "HOISTED_COLLECTION_DATASET_BUCKET_NAME",
+                                "value": "'{{ task_ instance.xcom_pull(task_ids=\"configure-dag\", key=\"collection-dataset-bucket-name\") | string }}'"
+                            },
+                            # {"name": "TRANSFORMED_JOBS", "value": str('{{ task_instance.xcom_pull(task_ids="configure-dag", key="transformed-jobs") | string }}')},
+                            {"name": "TRANSFORMED_JOBS", "value":"'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"transformed-jobs\") | string }}'"},
+                            {"name": "DATASET_JOBS", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"dataset-jobs\") | string }}'"},
+                            {"name": "INCREMENTAL_LOADING_OVERRIDE", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"incremental-loading-override\") | string }}'"},
+                            {"name": "REGENERATE_LOG_OVERRIDE", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"regenerate-log-override\") | string }}'"}
+                        ],
+                    },
+                ]
+            },
+            network_configuration={
+                "awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'
+            },
+            awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
+            awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-region") }}',
+            awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}',
+            awslogs_fetch_interval=timedelta(seconds=1)
+        )
+
+        configure_dag_task >> collect_ecs_task
+
+        transform_ecs_task = EcsRunTaskOperator(
+            task_id=f"{collection}-transform",
+            dag=dag,
+            execution_timeout=timedelta(minutes=1800),
+            cluster=ecs_cluster,
+            task_definition=collection_task_name,
+            launch_type="FARGATE",
+            overrides={
+                "containerOverrides": [
+                    {
+                        "name": collection_task_name,
+                        'cpu': '{{ task_instance.xcom_pull(task_ids="configure-dag", key="cpu") | int }}', 
+                        'memory': '{{ task_instance.xcom_pull(task_ids="configure-dag", key="memory") | int }}', 
+                        "command": ["./bin/transform.sh"],
                         "environment": [
                             {"name": "ENVIRONMENT", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"env\") | string }}'"},
                             {"name": "COLLECTION_NAME", "value": collection},
@@ -154,8 +200,52 @@ for collection, collection_datasets in collections.items():
             awslogs_fetch_interval=timedelta(seconds=1)
         )
 
-        configure_dag_task >> collection_ecs_task
+        collect_ecs_task >> transform_ecs_task
 
+        assemble_ecs_task = EcsRunTaskOperator(
+            task_id=f"{collection}-assemble-and-bake",
+            dag=dag,
+            execution_timeout=timedelta(minutes=1800),
+            cluster=ecs_cluster,
+            task_definition=collection_task_name,
+            launch_type="FARGATE",
+            overrides={
+                "containerOverrides": [
+                    {
+                        "name": collection_task_name,
+                        'cpu': '{{ task_instance.xcom_pull(task_ids="configure-dag", key="cpu") | int }}', 
+                        'memory': '{{ task_instance.xcom_pull(task_ids="configure-dag", key="memory") | int }}', 
+                        "command": ["./bin/assemble.sh"],
+                        "environment": [
+                            {"name": "ENVIRONMENT", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"env\") | string }}'"},
+                            {"name": "COLLECTION_NAME", "value": collection},
+                            {
+                                "name": "COLLECTION_DATASET_BUCKET_NAME",
+                                "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"collection-dataset-bucket-name\") | string }}'"
+                            },
+                            {
+                                "name": "HOISTED_COLLECTION_DATASET_BUCKET_NAME",
+                                "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"collection-dataset-bucket-name\") | string }}'"
+                            },
+                            # {"name": "TRANSFORMED_JOBS", "value": str('{{ task_instance.xcom_pull(task_ids="configure-dag", key="transformed-jobs") | string }}')},
+                            {"name": "TRANSFORMED_JOBS", "value":"'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"transformed-jobs\") | string }}'"},
+                            {"name": "DATASET_JOBS", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"dataset-jobs\") | string }}'"},
+                            {"name": "INCREMENTAL_LOADING_OVERRIDE", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"incremental-loading-override\") | string }}'"},
+                            {"name": "REGENERATE_LOG_OVERRIDE", "value": "'{{ task_instance.xcom_pull(task_ids=\"configure-dag\", key=\"regenerate-log-override\") | string }}'"}
+                        ],
+                    },
+                ]
+            },
+            network_configuration={
+                "awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'
+            },
+            awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
+            awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-region") }}',
+            awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}',
+            awslogs_fetch_interval=timedelta(seconds=1)
+        )
+
+        transform_ecs_task >> assemble_ecs_task
         # now add loaders for datasets
         # start with  postgres tasks
         for dataset in collection_datasets:
@@ -188,7 +278,7 @@ for collection, collection_datasets in collections.items():
                 awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="sqlite-ingestion-task-log-stream-prefix") }}',
                 awslogs_fetch_interval=timedelta(seconds=1)
             )
-            collection_ecs_task >> postgres_loader_task
+            assemble_ecs_task >> postgres_loader_task
 
             if datasets_dict[dataset].get('typology') == 'geography':
             # need to add a tiles loader task here
@@ -229,6 +319,6 @@ for collection, collection_datasets in collections.items():
                     awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="tiles-builder-task-log-stream-prefix") }}',
                     awslogs_fetch_interval=timedelta(seconds=1)
                 )
-                collection_ecs_task >> tiles_builder_task
+                assemble_ecs_task >> tiles_builder_task
 
 
