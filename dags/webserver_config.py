@@ -1,6 +1,7 @@
-from flask_appbuilder.security.manager import AUTH_OAUTH
 import os
+
 import security_manager
+from flask_appbuilder.security.manager import AUTH_OAUTH
 
 AUTH_TYPE = AUTH_OAUTH
 AUTH_ROLES_SYNC_AT_LOGIN = True

@@ -1,9 +1,9 @@
-import os
 import json
-import pytest
-import boto3
+import os
 from pathlib import Path
 
+import boto3
+import pytest
 from moto import mock_aws
 
 
@@ -24,25 +24,16 @@ def create_test_config():
     config_path = Path("dags/config.json")
 
     # Create test configuration (matches development environment)
-    test_config = {
-        "env": "development",
-        "schedule": "0 0 * * *",
-        "max_active_tasks": 50,
-        "collection_selection": "explicit",
-        "collections": [
-            "ancient-woodland",
-            "organisation"
-        ]
-    }
+    test_config = {"env": "development", "schedule": "0 0 * * *", "max_active_tasks": 50, "collection_selection": "explicit", "collections": ["ancient-woodland", "organisation"]}
 
     # Check if config already exists (backup if it does)
     backup_path = None
     if config_path.exists():
-        backup_path = config_path.with_suffix('.json.backup')
+        backup_path = config_path.with_suffix(".json.backup")
         config_path.rename(backup_path)
 
     # Write test config
-    with open(config_path, 'w') as f:
+    with open(config_path, "w") as f:
         json.dump(test_config, f, indent=4)
 
     yield config_path
@@ -62,6 +53,7 @@ def mock_aws_credentials():
     os.environ["AWS_SECRET_ACCESS_KEY"] = "mock_secret_key"
     os.environ["AWS_SECURITY_TOKEN"] = "mock_security_token"
     os.environ["AWS_SESSION_TOKEN"] = "mock_session_token"
+
 
 @pytest.fixture
 def ecs_client(mock_aws_credentials):
