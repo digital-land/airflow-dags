@@ -208,10 +208,16 @@ def get_transform_batch_configs(ti, collection, collection_task_name):
     Returns:
         List of ECS override dictionaries for each batch
     """
+    # Pull all required values from XCom
     batch_size = ti.xcom_pull(task_ids="configure-dag", key="transform-batch-size")
     collection_dataset_bucket_name = ti.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name")
     cpu = ti.xcom_pull(task_ids="configure-dag", key="cpu")
     memory = ti.xcom_pull(task_ids="configure-dag", key="memory")
+    env = ti.xcom_pull(task_ids="configure-dag", key="env")
+    transformed_jobs = ti.xcom_pull(task_ids="configure-dag", key="transformed-jobs")
+    dataset_jobs = ti.xcom_pull(task_ids="configure-dag", key="dataset-jobs")
+    incremental_loading_override = ti.xcom_pull(task_ids="configure-dag", key="incremental-loading-override")
+    regenerate_log_override = ti.xcom_pull(task_ids="configure-dag", key="regenerate-log-override")
 
     # Get the resource count from the state file
     s3 = boto3.client("s3")
@@ -251,23 +257,14 @@ def get_transform_batch_configs(ti, collection, collection_task_name):
                     "memory": memory,
                     "command": ["./bin/transform.sh"],
                     "environment": [
-                        {"name": "ENVIRONMENT", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="env") | string }}\''},
+                        {"name": "ENVIRONMENT", "value": str(env)},
                         {"name": "COLLECTION_NAME", "value": collection},
-                        {
-                            "name": "COLLECTION_DATASET_BUCKET_NAME",
-                            "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}\'',
-                        },
-                        {
-                            "name": "HOISTED_COLLECTION_DATASET_BUCKET_NAME",
-                            "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}\'',
-                        },
-                        {"name": "TRANSFORMED_JOBS", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="transformed-jobs") | string }}\''},
-                        {"name": "DATASET_JOBS", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="dataset-jobs") | string }}\''},
-                        {
-                            "name": "INCREMENTAL_LOADING_OVERRIDE",
-                            "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="incremental-loading-override") | string }}\'',
-                        },
-                        {"name": "REGENERATE_LOG_OVERRIDE", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="regenerate-log-override") | string }}\''},
+                        {"name": "COLLECTION_DATASET_BUCKET_NAME", "value": str(collection_dataset_bucket_name)},
+                        {"name": "HOISTED_COLLECTION_DATASET_BUCKET_NAME", "value": str(collection_dataset_bucket_name)},
+                        {"name": "TRANSFORMED_JOBS", "value": str(transformed_jobs)},
+                        {"name": "DATASET_JOBS", "value": str(dataset_jobs)},
+                        {"name": "INCREMENTAL_LOADING_OVERRIDE", "value": str(incremental_loading_override)},
+                        {"name": "REGENERATE_LOG_OVERRIDE", "value": str(regenerate_log_override)},
                         {"name": "TRANSFORM_LIMIT", "value": str(limit)},
                         {"name": "TRANSFORM_OFFSET", "value": str(offset)},
                     ],
