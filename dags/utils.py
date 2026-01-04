@@ -265,8 +265,8 @@ def get_transform_batch_configs(ti, collection, collection_task_name):
                         {"name": "DATASET_JOBS", "value": str(dataset_jobs)},
                         {"name": "INCREMENTAL_LOADING_OVERRIDE", "value": str(incremental_loading_override)},
                         {"name": "REGENERATE_LOG_OVERRIDE", "value": str(regenerate_log_override)},
-                        {"name": "TRANSFORM_LIMIT", "value": str(limit)},
-                        {"name": "TRANSFORM_OFFSET", "value": str(offset)},
+                        {"name": "TRANSFORMATION_LIMIT", "value": str(limit)},
+                        {"name": "TRANSFORMATION_OFFSET", "value": str(offset)},
                     ],
                 },
             ]
