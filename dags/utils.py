@@ -1,5 +1,6 @@
 import csv
 import json
+import math
 import os
 import tempfile
 import urllib
@@ -191,3 +192,89 @@ def sort_collections_dict(collections_dict):
 
     sorted_collections = dict(sorted(collections_dict.items(), key=sort_key))
     return sorted_collections
+
+
+def get_transform_batch_configs(ti, collection, collection_task_name):
+    """
+    Calculate the number of batches needed for transform based on
+    the total number of resources and the batch size.
+    Returns a list of ECS overrides for dynamic task mapping.
+
+    Args:
+        ti: Airflow TaskInstance for pulling XCom values
+        collection: Name of the collection being processed
+        collection_task_name: ECS task definition name
+
+    Returns:
+        List of ECS override dictionaries for each batch
+    """
+    batch_size = ti.xcom_pull(task_ids="configure-dag", key="transform-batch-size")
+    collection_dataset_bucket_name = ti.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name")
+    cpu = ti.xcom_pull(task_ids="configure-dag", key="cpu")
+    memory = ti.xcom_pull(task_ids="configure-dag", key="memory")
+
+    # Get the resource count from the state file
+    s3 = boto3.client("s3")
+    try:
+        # Read the state.json file to get the transform_count
+        state_key = f"{collection}-collection/state.json"
+        response = s3.get_object(Bucket=collection_dataset_bucket_name, Key=state_key)
+        state_content = response["Body"].read().decode("utf-8")
+        state_data = json.loads(state_content)
+
+        # Get transform_count from the JSON
+        total_resources = state_data.get("transform_count", 0)
+        print(f"Total resources to transform for {collection}: {total_resources}")
+        print(f"Batch size: {batch_size}")
+
+        # Calculate number of batches
+        num_batches = math.ceil(total_resources / batch_size) if total_resources > 0 else 1
+        print(f"Number of batches: {num_batches}")
+
+    except Exception as e:
+        print(f"Error reading state file: {e}")
+        print("Defaulting to single batch (no limit/offset)")
+        num_batches = 1
+        total_resources = 0
+
+    # Build overrides for each batch
+    overrides_list = []
+    for i in range(num_batches):
+        offset = i * batch_size
+        limit = batch_size
+
+        override = {
+            "containerOverrides": [
+                {
+                    "name": collection_task_name,
+                    "cpu": cpu,
+                    "memory": memory,
+                    "command": ["./bin/transform.sh"],
+                    "environment": [
+                        {"name": "ENVIRONMENT", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="env") | string }}\''},
+                        {"name": "COLLECTION_NAME", "value": collection},
+                        {
+                            "name": "COLLECTION_DATASET_BUCKET_NAME",
+                            "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}\'',
+                        },
+                        {
+                            "name": "HOISTED_COLLECTION_DATASET_BUCKET_NAME",
+                            "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}\'',
+                        },
+                        {"name": "TRANSFORMED_JOBS", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="transformed-jobs") | string }}\''},
+                        {"name": "DATASET_JOBS", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="dataset-jobs") | string }}\''},
+                        {
+                            "name": "INCREMENTAL_LOADING_OVERRIDE",
+                            "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="incremental-loading-override") | string }}\'',
+                        },
+                        {"name": "REGENERATE_LOG_OVERRIDE", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="regenerate-log-override") | string }}\''},
+                        {"name": "TRANSFORM_LIMIT", "value": str(limit)},
+                        {"name": "TRANSFORM_OFFSET", "value": str(offset)},
+                    ],
+                },
+            ]
+        }
+        overrides_list.append(override)
+
+    print(f"Created {len(overrides_list)} batch configurations")
+    return overrides_list
