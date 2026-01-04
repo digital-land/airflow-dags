@@ -49,6 +49,11 @@ def test_get_transform_batch_configs_creates_correct_batches(mock_aws_credential
         ("configure-dag", "collection-dataset-bucket-name"): bucket_name,
         ("configure-dag", "cpu"): 8192,
         ("configure-dag", "memory"): 32768,
+        ("configure-dag", "env"): "development",
+        ("configure-dag", "transformed-jobs"): "8",
+        ("configure-dag", "dataset-jobs"): "8",
+        ("configure-dag", "incremental-loading-override"): False,
+        ("configure-dag", "regenerate-log-override"): False,
     }[(task_ids, key)]
 
     # Execute the function
@@ -74,6 +79,15 @@ def test_get_transform_batch_configs_creates_correct_batches(mock_aws_credential
         assert override["containerOverrides"][0]["cpu"] == 8192
         assert override["containerOverrides"][0]["memory"] == 32768
 
+    # Verify environment variables are set correctly (not templated)
+    assert result[0]["containerOverrides"][0]["environment"][0]["value"] == "development"  # ENVIRONMENT
+    assert result[0]["containerOverrides"][0]["environment"][1]["value"] == "test"  # COLLECTION_NAME
+    assert result[0]["containerOverrides"][0]["environment"][2]["value"] == bucket_name  # COLLECTION_DATASET_BUCKET_NAME
+    assert result[0]["containerOverrides"][0]["environment"][4]["value"] == "8"  # TRANSFORMED_JOBS
+    assert result[0]["containerOverrides"][0]["environment"][5]["value"] == "8"  # DATASET_JOBS
+    assert result[0]["containerOverrides"][0]["environment"][6]["value"] == "False"  # INCREMENTAL_LOADING_OVERRIDE
+    assert result[0]["containerOverrides"][0]["environment"][7]["value"] == "False"  # REGENERATE_LOG_OVERRIDE
+
 
 @mock_aws
 def test_get_transform_batch_configs_handles_zero_resources(mock_aws_credentials):
@@ -94,6 +108,11 @@ def test_get_transform_batch_configs_handles_zero_resources(mock_aws_credentials
         ("configure-dag", "collection-dataset-bucket-name"): bucket_name,
         ("configure-dag", "cpu"): 8192,
         ("configure-dag", "memory"): 32768,
+        ("configure-dag", "env"): "development",
+        ("configure-dag", "transformed-jobs"): "8",
+        ("configure-dag", "dataset-jobs"): "8",
+        ("configure-dag", "incremental-loading-override"): False,
+        ("configure-dag", "regenerate-log-override"): False,
     }[(task_ids, key)]
 
     # Execute the function
@@ -119,6 +138,11 @@ def test_get_transform_batch_configs_handles_missing_file(mock_aws_credentials):
         ("configure-dag", "collection-dataset-bucket-name"): bucket_name,
         ("configure-dag", "cpu"): 8192,
         ("configure-dag", "memory"): 32768,
+        ("configure-dag", "env"): "development",
+        ("configure-dag", "transformed-jobs"): "8",
+        ("configure-dag", "dataset-jobs"): "8",
+        ("configure-dag", "incremental-loading-override"): False,
+        ("configure-dag", "regenerate-log-override"): False,
     }[(task_ids, key)]
 
     # Execute the function
@@ -147,6 +171,11 @@ def test_get_transform_batch_configs_with_exact_multiple(mock_aws_credentials):
         ("configure-dag", "collection-dataset-bucket-name"): bucket_name,
         ("configure-dag", "cpu"): 8192,
         ("configure-dag", "memory"): 32768,
+        ("configure-dag", "env"): "development",
+        ("configure-dag", "transformed-jobs"): "8",
+        ("configure-dag", "dataset-jobs"): "8",
+        ("configure-dag", "incremental-loading-override"): False,
+        ("configure-dag", "regenerate-log-override"): False,
     }[(task_ids, key)]
 
     # Execute the function
