@@ -41,7 +41,7 @@ for collection, collection_datasets in collections.items():
             "memory": Param(default=32768, type="integer"),
             "transformed-jobs": Param(default=8, type="integer"),
             "dataset-jobs": Param(default=8, type="integer"),
-            "transform-batch-size": Param(default=50, type="integer"),
+            "transform-batch-size": Param(default=100, type="integer"),
             "incremental-loading-override": Param(default=False, type="boolean"),
             "regenerate-log-override": Param(default=False, type="boolean"),
         },
