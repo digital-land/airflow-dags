@@ -4,6 +4,11 @@ ifeq ($(ENVIRONMENT),)
 ENVIRONMENT='development'
 endif
 
+init::
+	pip install --upgrade pip
+	pip install -r requirements/dev-requirements.txt
+	pre-commit install
+
 local-mwaa-image::
 	rm -rf var
 	mkdir -p var
@@ -29,6 +34,15 @@ test-integration::
 
 test-acceptance::
 	python -m pytest tests/acceptance
+
+lint::
+	black --check --line-length 180 dags/ tests/ bin/
+	flake8 dags/ tests/ bin/
+	isort --check-only --profile black --line-length 180 dags/ tests/ bin/
+
+format::
+	black --line-length 180 dags/ tests/ bin/
+	isort --profile black --line-length 180 dags/ tests/ bin/
 
 compile ::
 	python -m piptools compile --output-file=requirements/requirements.txt requirements/requirements.in
