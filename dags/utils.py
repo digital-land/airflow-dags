@@ -194,16 +194,17 @@ def sort_collections_dict(collections_dict):
     return sorted_collections
 
 
-def get_transform_batch_configs(ti, collection, collection_task_name):
+def get_transform_batch_configs(ti, collection, collection_task_name, dataset):
     """
     Calculate the number of batches needed for transform based on
-    the total number of resources and the batch size.
+    the total number of resources and the batch size for a specific dataset.
     Returns a list of ECS overrides for dynamic task mapping.
 
     Args:
         ti: Airflow TaskInstance for pulling XCom values
         collection: Name of the collection being processed
         collection_task_name: ECS task definition name
+        dataset: Name of the dataset being processed
 
     Returns:
         List of ECS override dictionaries for each batch
@@ -222,15 +223,16 @@ def get_transform_batch_configs(ti, collection, collection_task_name):
     # Get the resource count from the state file
     s3 = boto3.client("s3")
     try:
-        # Read the state.json file to get the transform_count
+        # Read the state.json file to get the transform_count_by_dataset
         state_key = f"{collection}-collection/state.json"
         response = s3.get_object(Bucket=collection_dataset_bucket_name, Key=state_key)
         state_content = response["Body"].read().decode("utf-8")
         state_data = json.loads(state_content)
 
-        # Get transform_count from the JSON
-        total_resources = state_data.get("transform_count", 0)
-        print(f"Total resources to transform for {collection}: {total_resources}")
+        # Get transform_count_by_dataset mapping and extract count for this dataset
+        transform_count_by_dataset = state_data.get("transform_count_by_dataset", {})
+        total_resources = transform_count_by_dataset.get(dataset, 0)
+        print(f"Total resources to transform for {collection}/{dataset}: {total_resources}")
         print(f"Batch size: {batch_size}")
 
         # Calculate number of batches
@@ -259,19 +261,20 @@ def get_transform_batch_configs(ti, collection, collection_task_name):
                     "environment": [
                         {"name": "ENVIRONMENT", "value": str(env)},
                         {"name": "COLLECTION_NAME", "value": collection},
+                        {"name": "DATASET", "value": dataset},
                         {"name": "COLLECTION_DATASET_BUCKET_NAME", "value": str(collection_dataset_bucket_name)},
                         {"name": "HOISTED_COLLECTION_DATASET_BUCKET_NAME", "value": str(collection_dataset_bucket_name)},
                         {"name": "TRANSFORMED_JOBS", "value": str(transformed_jobs)},
                         {"name": "DATASET_JOBS", "value": str(dataset_jobs)},
                         {"name": "INCREMENTAL_LOADING_OVERRIDE", "value": str(incremental_loading_override)},
                         {"name": "REGENERATE_LOG_OVERRIDE", "value": str(regenerate_log_override)},
-                        {"name": "TRANSFORMATION_LIMIT", "value": str(limit)},
-                        {"name": "TRANSFORMATION_OFFSET", "value": str(offset)},
+                        {"name": "TRANSFORM_LIMIT", "value": str(limit)},
+                        {"name": "TRANSFORM_OFFSET", "value": str(offset)},
                     ],
                 },
             ]
         }
         overrides_list.append(override)
 
-    print(f"Created {len(overrides_list)} batch configurations")
+    print(f"Created {len(overrides_list)} batch configurations for {dataset}")
     return overrides_list

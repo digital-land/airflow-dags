@@ -32,14 +32,14 @@ def test_get_task_log_config_gets_config_from_aws(ecs_client):
 
 @mock_aws
 def test_get_transform_batch_configs_creates_correct_batches(mock_aws_credentials):
-    """Test that get_transform_batch_configs creates the correct number of batches based on transform_count."""
+    """Test that get_transform_batch_configs creates the correct number of batches based on transform_count_by_dataset."""
     # Setup S3 with test data
     s3_client = boto3.client("s3", region_name="us-east-1")
     bucket_name = "test-collection-bucket"
     s3_client.create_bucket(Bucket=bucket_name)
 
-    # Create a state.json file with transform_count
-    state_data = {"transform_count": 125}  # This should create 3 batches with batch_size=50
+    # Create a state.json file with transform_count_by_dataset
+    state_data = {"transform_count_by_dataset": {"test-dataset": 125, "other-dataset": 50}}  # This should create 3 batches with batch_size=50
     s3_client.put_object(Bucket=bucket_name, Key="test-collection/state.json", Body=json.dumps(state_data))
 
     # Mock the TaskInstance and XCom pulls
@@ -56,8 +56,8 @@ def test_get_transform_batch_configs_creates_correct_batches(mock_aws_credential
         ("configure-dag", "regenerate-log-override"): False,
     }[(task_ids, key)]
 
-    # Execute the function
-    result = get_transform_batch_configs(mock_ti, "test", "test-task")
+    # Execute the function with dataset parameter
+    result = get_transform_batch_configs(mock_ti, "test", "test-task", "test-dataset")
 
     # Assertions
     assert len(result) == 3, f"Expected 3 batches but got {len(result)}"
@@ -82,11 +82,12 @@ def test_get_transform_batch_configs_creates_correct_batches(mock_aws_credential
     # Verify environment variables are set correctly (not templated)
     assert result[0]["containerOverrides"][0]["environment"][0]["value"] == "development"  # ENVIRONMENT
     assert result[0]["containerOverrides"][0]["environment"][1]["value"] == "test"  # COLLECTION_NAME
-    assert result[0]["containerOverrides"][0]["environment"][2]["value"] == bucket_name  # COLLECTION_DATASET_BUCKET_NAME
-    assert result[0]["containerOverrides"][0]["environment"][4]["value"] == "8"  # TRANSFORMED_JOBS
-    assert result[0]["containerOverrides"][0]["environment"][5]["value"] == "8"  # DATASET_JOBS
-    assert result[0]["containerOverrides"][0]["environment"][6]["value"] == "False"  # INCREMENTAL_LOADING_OVERRIDE
-    assert result[0]["containerOverrides"][0]["environment"][7]["value"] == "False"  # REGENERATE_LOG_OVERRIDE
+    assert result[0]["containerOverrides"][0]["environment"][2]["value"] == "test-dataset"  # DATASET_NAME
+    assert result[0]["containerOverrides"][0]["environment"][3]["value"] == bucket_name  # COLLECTION_DATASET_BUCKET_NAME
+    assert result[0]["containerOverrides"][0]["environment"][5]["value"] == "8"  # TRANSFORMED_JOBS
+    assert result[0]["containerOverrides"][0]["environment"][6]["value"] == "8"  # DATASET_JOBS
+    assert result[0]["containerOverrides"][0]["environment"][7]["value"] == "False"  # INCREMENTAL_LOADING_OVERRIDE
+    assert result[0]["containerOverrides"][0]["environment"][8]["value"] == "False"  # REGENERATE_LOG_OVERRIDE
 
 
 @mock_aws
@@ -97,8 +98,8 @@ def test_get_transform_batch_configs_handles_zero_resources(mock_aws_credentials
     bucket_name = "test-collection-bucket"
     s3_client.create_bucket(Bucket=bucket_name)
 
-    # Create a state.json file with transform_count of 0
-    state_data = {"transform_count": 0}
+    # Create a state.json file with transform_count_by_dataset with 0 count
+    state_data = {"transform_count_by_dataset": {"test-dataset": 0}}
     s3_client.put_object(Bucket=bucket_name, Key="test-collection/state.json", Body=json.dumps(state_data))
 
     # Mock the TaskInstance
@@ -115,8 +116,8 @@ def test_get_transform_batch_configs_handles_zero_resources(mock_aws_credentials
         ("configure-dag", "regenerate-log-override"): False,
     }[(task_ids, key)]
 
-    # Execute the function
-    result = get_transform_batch_configs(mock_ti, "test", "test-task")
+    # Execute the function with dataset parameter
+    result = get_transform_batch_configs(mock_ti, "test", "test-task", "test-dataset")
 
     # Should default to 1 batch when transform_count is 0
     assert len(result) == 1, f"Expected 1 batch for zero resources but got {len(result)}"
@@ -145,8 +146,8 @@ def test_get_transform_batch_configs_handles_missing_file(mock_aws_credentials):
         ("configure-dag", "regenerate-log-override"): False,
     }[(task_ids, key)]
 
-    # Execute the function
-    result = get_transform_batch_configs(mock_ti, "test", "test-task")
+    # Execute the function with dataset parameter
+    result = get_transform_batch_configs(mock_ti, "test", "test-task", "test-dataset")
 
     # Should default to 1 batch when file is missing
     assert len(result) == 1, f"Expected 1 batch when file is missing but got {len(result)}"
@@ -161,7 +162,7 @@ def test_get_transform_batch_configs_with_exact_multiple(mock_aws_credentials):
     s3_client.create_bucket(Bucket=bucket_name)
 
     # 100 resources with batch size 50 should create exactly 2 batches
-    state_data = {"transform_count": 100}
+    state_data = {"transform_count_by_dataset": {"test-dataset": 100}}
     s3_client.put_object(Bucket=bucket_name, Key="test-collection/state.json", Body=json.dumps(state_data))
 
     # Mock the TaskInstance
@@ -178,8 +179,8 @@ def test_get_transform_batch_configs_with_exact_multiple(mock_aws_credentials):
         ("configure-dag", "regenerate-log-override"): False,
     }[(task_ids, key)]
 
-    # Execute the function
-    result = get_transform_batch_configs(mock_ti, "test", "test-task")
+    # Execute the function with dataset parameter
+    result = get_transform_batch_configs(mock_ti, "test", "test-task", "test-dataset")
 
     # Should create exactly 2 batches
     assert len(result) == 2, f"Expected 2 batches but got {len(result)}"
