@@ -148,36 +148,36 @@ for collection, collection_datasets in collections.items():
 
         configure_dag_task >> collect_ecs_task
 
-        get_batch_configs = PythonOperator(
-            task_id=f"{collection}-get-transform-batch-configs",
-            python_callable=get_transform_batch_configs,
-            op_kwargs={"collection": collection, "collection_task_name": collection_task_name},
-            dag=dag,
-        )
-
-        # Use expand to create mapped tasks
-        transform_ecs_tasks = EcsRunTaskOperator.partial(
-            task_id=f"{collection}-transform",
-            dag=dag,
-            execution_timeout=timedelta(minutes=1800),
-            cluster=ecs_cluster,
-            task_definition=collection_task_name,
-            launch_type="FARGATE",
-            network_configuration={"awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'},
-            awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
-            awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-region") }}',
-            awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}',
-            awslogs_fetch_interval=timedelta(seconds=1),
-        ).expand(overrides=get_batch_configs.output)
-
-        collect_ecs_task >> get_batch_configs >> transform_ecs_tasks
-
         # now add loaders for datasets
         # start with  postgres tasks
         for dataset in collection_datasets:
 
+            get_batch_configs = PythonOperator(
+                task_id=f"{dataset}-get-transform-batch-configs",
+                python_callable=get_transform_batch_configs,
+                op_kwargs={"collection": collection, "collection_task_name": collection_task_name, "dataset": dataset},
+                dag=dag,
+            )
+
+            # Use expand to create mapped tasks
+            transform_ecs_tasks = EcsRunTaskOperator.partial(
+                task_id=f"{dataset}-transform",
+                dag=dag,
+                execution_timeout=timedelta(minutes=1800),
+                cluster=ecs_cluster,
+                task_definition=collection_task_name,
+                launch_type="FARGATE",
+                network_configuration={"awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'},
+                awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
+                awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-region") }}',
+                awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}',
+                awslogs_fetch_interval=timedelta(seconds=1),
+            ).expand(overrides=get_batch_configs.output)
+
+            collect_ecs_task >> get_batch_configs >> transform_ecs_tasks
+
             assemble_ecs_task = EcsRunTaskOperator(
-                task_id=f"{collection}-{dataset}-assemble-and-bake",
+                task_id=f"{dataset}-assemble-and-bake",
                 dag=dag,
                 execution_timeout=timedelta(minutes=1800),
                 cluster=ecs_cluster,
