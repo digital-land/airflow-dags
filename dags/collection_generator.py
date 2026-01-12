@@ -163,7 +163,7 @@ for collection, collection_datasets in collections.items():
             transform_ecs_tasks = EcsRunTaskOperator.partial(
                 task_id=f"{dataset}-transform",
                 dag=dag,
-                execution_timeout=timedelta(minutes=1800),
+                execution_timeout=timedelta(minutes=180),
                 cluster=ecs_cluster,
                 task_definition=collection_task_name,
                 launch_type="FARGATE",
