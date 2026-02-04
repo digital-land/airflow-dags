@@ -201,6 +201,8 @@ if config["env"] in ["development", "staging", "production"]:
                         name=f"{dataset}-job",
                         wait_for_completion=True,
                         aws_conn_id="aws_default",
+                        waiter_max_attempts=180,
+                        waiter_delay=60,
                         execution_timeout=timedelta(hours=3),
                     )
 
