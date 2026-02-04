@@ -7,13 +7,13 @@ from datetime import timedelta
 import boto3
 from airflow import DAG
 from airflow.models.param import Param
-from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
 from airflow.providers.amazon.aws.operators.ecs import (
     EcsRunTaskOperator,
 )
+from airflow.providers.amazon.aws.operators.emr import EmrServerlessStartJobOperator
 from airflow.utils.task_group import TaskGroup
-from emr_dags_utils import extract_and_validate_job_id, get_secrets, wait_for_emr_job_completion
+from emr_dags_utils import get_secrets
 from utils import dag_default_args, get_collections_dict, get_config, load_specification_datasets, push_log_variables, push_vpc_config
 
 # read config from file and environment
@@ -151,8 +151,7 @@ if config["env"] in ["development", "staging", "production"]:
 
             configure_dag_task >> collection_ecs_task
 
-            # now add loaders for datasets
-            # start with  postgres tasks
+            # run spark assembly of files
             for dataset in collection_datasets:
 
                 with TaskGroup(group_id=f"{dataset}-assemble-load-bake") as assemble_task_group:
@@ -184,57 +183,30 @@ if config["env"] in ["development", "staging", "production"]:
                     S3_DEPENDENCIES_PATH = f"s3://{S3_BUCKET}/pkg/dependencies/dependencies.zip"
                     S3_DATA_PATH = f"s3://{S3_SOURCE_DATA_PATH}/"
 
-                    assemble_emr_job = BashOperator(
+                    assemble_emr_job = EmrServerlessStartJobOperator(
                         task_id="assemble-emr-job",
-                        bash_command=f"""
-                        set -e
-                        rm -f /tmp/{dataset}_job_run_id.txt
-                        EMR_APPLICATION_ID="{{{{ task_instance.xcom_pull(task_ids='{dataset}-assemble-load-bake.get-emr-app-id') }}}}"
-                        echo "Starting EMR job for {dataset}"
-                        JOB_OUTPUT=$(aws emr-serverless start-job-run \\
-                        --name "{dataset}-job" \\
-                        --application-id $EMR_APPLICATION_ID \\
-                        --execution-role-arn {EXECUTION_ROLE_ARN} \\
-                        --job-driver '{{
-                            "sparkSubmit": {{
-                            "entryPoint": "{S3_ENTRY_POINT}",
-                            "entryPointArguments": ["--load_type", "{LOAD_TYPE}", "--data_set", "{dataset}", "--path", "{S3_DATA_PATH}", "--env", "{ENV}"],
-                            "sparkSubmitParameters": "--jars /usr/lib/spark/jars/postgresql-42.7.4.jar --py-files {S3_WHEEL_FILE},{S3_DEPENDENCIES_PATH} \
---conf spark.serializer=org.apache.spark.serializer.KryoSerializer \
---conf spark.kryo.registrator=org.apache.sedona.core.serde.SedonaKryoRegistrator \
---conf spark.sql.extensions=org.apache.sedona.sql.SedonaSqlExtensions"
-                            }}
-                        }}' \\
-                        --configuration-overrides '{{
-                            "monitoringConfiguration": {{
-                            "s3MonitoringConfiguration": {{"logUri": "{S3_LOG_URI}"}}
-                            }}
-                        }}' \\
-                        --region eu-west-2 --output json)
-                        JOB_RUN_ID=$(echo "$JOB_OUTPUT" | jq -r '.jobRunId')
-                        echo "$JOB_RUN_ID" > /tmp/{dataset}_job_run_id.txt
-                        echo "Job submitted: $JOB_RUN_ID"
-                        """,
-                        do_xcom_push=False,
-                        execution_timeout=timedelta(minutes=5),
+                        application_id=f'{{{{ task_instance.xcom_pull(task_ids="{dataset}-assemble-load-bake.get-emr-app-id", key="application_id") }}}}',
+                        execution_role_arn=EXECUTION_ROLE_ARN,
+                        job_driver={
+                            "sparkSubmit": {
+                                "entryPoint": S3_ENTRY_POINT,
+                                "entryPointArguments": ["--load_type", LOAD_TYPE, "--data_set", dataset, "--path", S3_DATA_PATH, "--env", ENV],
+                                "sparkSubmitParameters": f"--jars /usr/lib/spark/jars/postgresql-42.7.4.jar --py-files {S3_WHEEL_FILE},{S3_DEPENDENCIES_PATH} "
+                                "--conf spark.serializer=org.apache.spark.serializer.KryoSerializer "
+                                "--conf spark.kryo.registrator=org.apache.sedona.core.serde.SedonaKryoRegistrator "
+                                "--conf spark.sql.extensions=org.apache.sedona.sql.SedonaSqlExtensions",
+                            }
+                        },
+                        configuration_overrides={"monitoringConfiguration": {"s3MonitoringConfiguration": {"logUri": S3_LOG_URI}}},
+                        name=f"{dataset}-job",
+                        wait_for_completion=True,
+                        aws_conn_id="aws_default",
+                        waiter_max_attempts=180,
+                        waiter_delay=60,
+                        execution_timeout=timedelta(hours=3),
                     )
 
-                    def extract_job_id_wrapper(dataset_name=dataset, **context):
-                        context["dataset"] = dataset_name
-                        return extract_and_validate_job_id(**context)
-
-                    extract_job_id = PythonOperator(task_id="extract-job-id", python_callable=extract_job_id_wrapper, execution_timeout=timedelta(minutes=2))
-
-                    def wait_for_completion_wrapper(dataset_name=dataset, **context):
-                        context["extract_task_id"] = f"{dataset_name}-assemble-load-bake.extract-job-id"
-                        context["get_app_task_id"] = f"{dataset_name}-assemble-load-bake.get-emr-app-id"
-                        return wait_for_emr_job_completion(**context)
-
-                    wait_for_completion = PythonOperator(
-                        task_id="wait-emr-completion", python_callable=wait_for_completion_wrapper, retries=0, execution_timeout=timedelta(minutes=53)
-                    )
-
-                    get_app_id >> assemble_emr_job >> extract_job_id >> wait_for_completion
+                    get_app_id >> assemble_emr_job
 
                 collection_ecs_task >> assemble_task_group
 
