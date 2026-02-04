@@ -201,7 +201,6 @@ if config["env"] in ["development", "staging", "production"]:
                         name=f"{dataset}-job",
                         wait_for_completion=True,
                         aws_conn_id="aws_default",
-                        region_name="eu-west-2",
                         execution_timeout=timedelta(hours=3),
                     )
 
