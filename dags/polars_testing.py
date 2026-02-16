@@ -6,7 +6,15 @@ from airflow.operators.python import PythonOperator
 from airflow.providers.amazon.aws.operators.ecs import (
     EcsRunTaskOperator,
 )
-from utils import dag_default_args, get_collections_dict, get_config, get_transform_batch_configs, load_specification_datasets, push_log_variables, push_vpc_config
+from utils import (
+    dag_default_args,
+    get_collections_dict,
+    get_config,
+    get_transform_batch_configs,
+    load_specification_datasets,
+    push_log_variables,
+    push_vpc_config,
+)
 
 # read config from file and environment
 config = get_config()
@@ -25,7 +33,11 @@ with DAG(
     schedule=None,
     catchup=False,
     params={
-        "collection": Param(default="ancient-woodland-collection", type="string", description="Collection to test"),
+        "collection": Param(
+            default="ancient-woodland-collection",
+            type="string",
+            description="Collection to test",
+        ),
         "cpu": Param(default=8192, type="integer"),
         "memory": Param(default=32768, type="integer"),
         "transformed-jobs": Param(default=8, type="integer"),
@@ -56,7 +68,9 @@ with DAG(
         transformed_jobs = str(kwargs["params"].get("transformed-jobs"))
         dataset_jobs = str(kwargs["params"].get("dataset-jobs"))
         transform_batch_size = int(kwargs["params"].get("transform-batch-size"))
-        incremental_loading_override = bool(kwargs["params"].get("incremental-loading-override"))
+        incremental_loading_override = bool(
+            kwargs["params"].get("incremental-loading-override")
+        )
         regenerate_log_override = bool(kwargs["params"].get("regenerate-log-override"))
 
         # Push values to XCom
@@ -65,16 +79,27 @@ with DAG(
         ti.xcom_push(key="transformed-jobs", value=transformed_jobs)
         ti.xcom_push(key="dataset-jobs", value=dataset_jobs)
         ti.xcom_push(key="transform-batch-size", value=transform_batch_size)
-        ti.xcom_push(key="incremental-loading-override", value=incremental_loading_override)
+        ti.xcom_push(
+            key="incremental-loading-override", value=incremental_loading_override
+        )
         ti.xcom_push(key="regenerate-log-override", value=regenerate_log_override)
 
         # add collection_data bucket
-        collection_dataset_bucket_name = kwargs["conf"].get(section="custom", key="collection_dataset_bucket_name")
-        ti.xcom_push(key="collection-dataset-bucket-name", value=collection_dataset_bucket_name)
+        collection_dataset_bucket_name = kwargs["conf"].get(
+            section="custom", key="collection_dataset_bucket_name"
+        )
+        ti.xcom_push(
+            key="collection-dataset-bucket-name", value=collection_dataset_bucket_name
+        )
 
         # push collection-task log variables
-        push_log_variables(ti, task_definition_name=collection_task_name, container_name=collection_task_name, prefix="collection-task")
-        
+        push_log_variables(
+            ti,
+            task_definition_name=collection_task_name,
+            container_name=collection_task_name,
+            prefix="collection-task",
+        )
+
         # push aws vpc config
         push_vpc_config(ti, kwargs["conf"])
 
@@ -91,7 +116,7 @@ with DAG(
         op_kwargs={
             "collection": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection") }}',
             "collection_task_name": collection_task_name,
-            "dataset": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection") }}'
+            "dataset": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection") }}',
         },
         dag=dag,
     )
@@ -104,7 +129,9 @@ with DAG(
         cluster=ecs_cluster,
         task_definition=collection_task_name,
         launch_type="FARGATE",
-        network_configuration={"awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'},
+        network_configuration={
+            "awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'
+        },
         awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
         awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-region") }}',
         awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}',
