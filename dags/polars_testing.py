@@ -25,7 +25,7 @@ with DAG(
     schedule=None,
     catchup=False,
     params={
-        "collection": Param(default="ancient-woodland", type="string", description="Collection name to test"),
+        "collection": Param(default="ancient-woodland-collection", type="string", description="Collection to test"),
         "cpu": Param(default=8192, type="integer"),
         "memory": Param(default=32768, type="integer"),
         "transformed-jobs": Param(default=8, type="integer"),
@@ -47,7 +47,7 @@ with DAG(
         # add DAG parameters
         params = kwargs["params"]
 
-        # Get collection from params
+        # Get collection from params (used for both collection and dataset)
         collection = str(params.get("collection"))
         ti.xcom_push(key="collection", value=collection)
 
@@ -84,39 +84,31 @@ with DAG(
         dag=dag,
     )
 
-    # Get the datasets for the default collection (ancient-woodland)
-    # The actual collection will be determined at runtime from parameters
-    default_collection = "ancient-woodland"
-    default_datasets = collections.get(default_collection, [])
-    
-    # Create transform tasks for each dataset in ancient-woodland collection
-    # These same tasks will work for any collection specified in parameters
-    for dataset in default_datasets:
-        
-        get_batch_configs = PythonOperator(
-            task_id=f"{dataset}-get-transform-batch-configs",
-            python_callable=get_transform_batch_configs,
-            op_kwargs={
-                "collection": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection") }}',
-                "collection_task_name": collection_task_name,
-                "dataset": dataset
-            },
-            dag=dag,
-        )
+    # Create a single transform task for the specified dataset
+    get_batch_configs = PythonOperator(
+        task_id="get-transform-batch-configs",
+        python_callable=get_transform_batch_configs,
+        op_kwargs={
+            "collection": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection") }}',
+            "collection_task_name": collection_task_name,
+            "dataset": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection") }}'
+        },
+        dag=dag,
+    )
 
-        # Use expand to create mapped tasks for the transform operation
-        transform_ecs_tasks = EcsRunTaskOperator.partial(
-            task_id=f"{dataset}-transform",
-            dag=dag,
-            execution_timeout=timedelta(minutes=180),
-            cluster=ecs_cluster,
-            task_definition=collection_task_name,
-            launch_type="FARGATE",
-            network_configuration={"awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'},
-            awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
-            awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-region") }}',
-            awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}',
-            awslogs_fetch_interval=timedelta(seconds=1),
-        ).expand(overrides=get_batch_configs.output)
+    # Use expand to create mapped tasks for the transform operation
+    transform_ecs_task = EcsRunTaskOperator.partial(
+        task_id="transform",
+        dag=dag,
+        execution_timeout=timedelta(minutes=180),
+        cluster=ecs_cluster,
+        task_definition=collection_task_name,
+        launch_type="FARGATE",
+        network_configuration={"awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'},
+        awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
+        awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-region") }}',
+        awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}',
+        awslogs_fetch_interval=timedelta(seconds=1),
+    ).expand(overrides=get_batch_configs.output)
 
-        configure_dag_task >> get_batch_configs >> transform_ecs_tasks
+    configure_dag_task >> get_batch_configs >> transform_ecs_task
