@@ -172,10 +172,10 @@ if config["env"] in ["development", "staging", "production"]:
                     get_app_id = PythonOperator(task_id="get-emr-app-id", python_callable=get_emr_application_id, execution_timeout=timedelta(minutes=2))
 
                     ENV = config["env"]
+                    # get execution role arn from airflow executer
                     EXECUTION_ROLE_ARN = get_secrets("emr_execution_role", ENV)
                     S3_BUCKET = f"{ENV}-pd-batch-jobs-codepackage-bucket"
                     S3_LOG_BUCKET = f"{ENV}-pd-batch-jobs-logs-bucket"
-                    LOAD_TYPE = get_secrets("load_type", ENV)
                     S3_SOURCE_DATA_PATH = f"{ENV}-collection-data"
                     S3_ENTRY_POINT = f"s3://{S3_BUCKET}/pkg/entry_script/run_main.py"
                     S3_WHEEL_FILE = f"s3://{S3_BUCKET}/pkg/whl_pkg/pyspark_jobs-0.1.0-py3-none-any.whl"
@@ -190,7 +190,18 @@ if config["env"] in ["development", "staging", "production"]:
                         job_driver={
                             "sparkSubmit": {
                                 "entryPoint": S3_ENTRY_POINT,
-                                "entryPointArguments": ["--load_type", LOAD_TYPE, "--data_set", dataset, "--path", S3_DATA_PATH, "--env", ENV],
+                                "entryPointArguments": [
+                                    "--dataset",
+                                    dataset,
+                                    "--collection",
+                                    collection,
+                                    "--env",
+                                    ENV,
+                                    "--collection-data-path",
+                                    S3_DATA_PATH,
+                                    "--parquet-datasets-path",
+                                    f"{ENV}-parquet-datasets",
+                                ],
                                 "sparkSubmitParameters": f"--jars /usr/lib/spark/jars/postgresql-42.7.4.jar --py-files {S3_WHEEL_FILE},{S3_DEPENDENCIES_PATH} "
                                 "--conf spark.serializer=org.apache.spark.serializer.KryoSerializer "
                                 "--conf spark.kryo.registrator=org.apache.sedona.core.serde.SedonaKryoRegistrator "
