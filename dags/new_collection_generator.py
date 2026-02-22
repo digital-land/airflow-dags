@@ -200,7 +200,7 @@ if config["env"] in ["development", "staging", "production"]:
                                     "--collection-data-path",
                                     S3_DATA_PATH,
                                     "--parquet-datasets-path",
-                                    f"{ENV}-parquet-datasets",
+                                    f"s3://{ENV}-parquet-datasets",
                                 ],
                                 "sparkSubmitParameters": f"--jars /usr/lib/spark/jars/postgresql-42.7.4.jar --py-files {S3_WHEEL_FILE},{S3_DEPENDENCIES_PATH} "
                                 "--conf spark.serializer=org.apache.spark.serializer.KryoSerializer "
