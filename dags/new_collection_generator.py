@@ -263,7 +263,7 @@ for collection, collection_datasets in filtered_collections.items():
                     execution_timeout=timedelta(hours=3),
                 )
 
-                get_app_id >> assemble_emr_task
+                transform_ecs_tasks >> get_app_id >> assemble_emr_task
 
             # end of task group
 
@@ -307,6 +307,8 @@ for collection, collection_datasets in filtered_collections.items():
                 awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}',
                 awslogs_fetch_interval=timedelta(seconds=1),
             )
+
+            assemble_emr_task >> package_ecs_task
 
             if datasets_dict[dataset].get("typology") == "geography":
                 # need to add a tiles loader task here
