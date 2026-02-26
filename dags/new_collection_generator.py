@@ -12,11 +12,10 @@ from airflow.providers.amazon.aws.operators.ecs import (
     EcsRunTaskOperator,
 )
 from airflow.providers.amazon.aws.operators.emr import EmrServerlessStartJobOperator
-from airflow.utils.task_group import TaskGroup
 from airflow.providers.slack.notifications.slack import send_slack_notification
+from airflow.utils.task_group import TaskGroup
 from emr_dags_utils import get_secrets
-from utils import dag_default_args, get_collections_dict, get_config, load_specification_datasets, push_log_variables, push_vpc_config, get_transform_batch_configs
-
+from utils import dag_default_args, get_collections_dict, get_config, get_transform_batch_configs, load_specification_datasets, push_log_variables, push_vpc_config
 
 # read config from file and environment
 config = get_config()
