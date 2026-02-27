@@ -291,7 +291,7 @@ for collection, collection_datasets in filtered_collections.items():
                                     "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}\'',
                                 },
                                 {
-                                    "name": "PARQUET_DATASET_BUCKET_NAME",
+                                    "name": "PARQUET_DATASET_BUCKET",
                                     "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="parquet-dataset-bucket-name") | string }}\'',
                                 },
                                 # {"name": "TRANSFORMED_JOBS", "value": str('{{ task_instance.xcom_pull(task_ids="configure-dag", key="transformed-jobs") | string }}')},
@@ -331,7 +331,6 @@ for collection, collection_datasets in filtered_collections.items():
                                         "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}\'',
                                     },
                                     {"name": "WRITE_S3_BUCKET", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="tiles-bucket-name") | string }}\''},
-                                    {"name": "PARQUET_DATASET_BUCKET", "value": "s3://{ENV}-parquet-datasets"},
                                 ],
                             },
                         ]
