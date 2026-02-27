@@ -331,7 +331,7 @@ for collection, collection_datasets in filtered_collections.items():
                                         "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}\'',
                                     },
                                     {"name": "WRITE_S3_BUCKET", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="tiles-bucket-name") | string }}\''},
-                                    {"name": "PARQUET_DATASET_BUCKET_NAME", "value": "s3://{ENV}-parquet-datasets"},
+                                    {"name": "PARQUET_DATASET_BUCKET", "value": "s3://{ENV}-parquet-datasets"},
                                 ],
                             },
                         ]
