@@ -292,7 +292,7 @@ for collection, collection_datasets in filtered_collections.items():
                                 },
                                 {
                                     "name": "PARQUET_DATASETS_BUCKET",
-                                    "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="parquet-dataset-bucket-name") | string }}\'',
+                                    "value": f"s3://{ENV}-parquet-datasets",
                                 },
                                 # {"name": "TRANSFORMED_JOBS", "value": str('{{ task_instance.xcom_pull(task_ids="configure-dag", key="transformed-jobs") | string }}')},
                                 {"name": "TRANSFORMED_JOBS", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="transformed-jobs") | string }}\''},
