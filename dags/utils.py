@@ -236,7 +236,7 @@ def get_transform_batch_configs(ti, collection, collection_task_name, dataset):
         print(f"Batch size: {batch_size}")
 
         # Calculate number of batches
-        num_batches = math.ceil(total_resources / batch_size) if total_resources > 0 else 1
+        num_batches = math.ceil(total_resources / batch_size) if total_resources > 0 else 0
         print(f"Number of batches: {num_batches}")
 
     except Exception as e:
