@@ -4,6 +4,7 @@ import json
 from unittest.mock import MagicMock
 
 import boto3
+import pytest
 from moto import mock_aws
 
 from dags.utils import get_task_log_config, get_transform_batch_configs
@@ -119,13 +120,13 @@ def test_get_transform_batch_configs_handles_zero_resources(mock_aws_credentials
     # Execute the function with dataset parameter
     result = get_transform_batch_configs(mock_ti, "test", "test-task", "test-dataset")
 
-    # Should default to 1 batch when transform_count is 0
-    assert len(result) == 1, f"Expected 1 batch for zero resources but got {len(result)}"
+    # Should return empty list when transform_count is 0, causing Airflow to skip the task
+    assert len(result) == 0, f"Expected 0 batches for zero resources but got {len(result)}"
 
 
 @mock_aws
-def test_get_transform_batch_configs_handles_missing_file(mock_aws_credentials):
-    """Test that get_transform_batch_configs handles missing state file gracefully."""
+def test_get_transform_batch_configs_errors_on_missing_file(mock_aws_credentials):
+    """Test that get_transform_batch_configs raises an error when the state file is missing."""
     # Setup S3 without creating the state file
     s3_client = boto3.client("s3", region_name="us-east-1")
     bucket_name = "test-collection-bucket"
@@ -146,11 +147,9 @@ def test_get_transform_batch_configs_handles_missing_file(mock_aws_credentials):
         ("configure-dag", "regenerate-log-override"): False,
     }[(task_ids, key)]
 
-    # Execute the function with dataset parameter
-    result = get_transform_batch_configs(mock_ti, "test", "test-task", "test-dataset")
-
-    # Should default to 1 batch when file is missing
-    assert len(result) == 1, f"Expected 1 batch when file is missing but got {len(result)}"
+    # Should raise an error when state file is missing
+    with pytest.raises(Exception):
+        get_transform_batch_configs(mock_ti, "test", "test-task", "test-dataset")
 
 
 @mock_aws

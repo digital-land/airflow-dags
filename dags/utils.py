@@ -222,28 +222,22 @@ def get_transform_batch_configs(ti, collection, collection_task_name, dataset):
 
     # Get the resource count from the state file
     s3 = boto3.client("s3")
-    try:
-        # Read the state.json file to get the transform_count_by_dataset
-        state_key = f"{collection}-collection/state.json"
-        response = s3.get_object(Bucket=collection_dataset_bucket_name, Key=state_key)
-        state_content = response["Body"].read().decode("utf-8")
-        state_data = json.loads(state_content)
 
-        # Get transform_count_by_dataset mapping and extract count for this dataset
-        transform_count_by_dataset = state_data.get("transform_count_by_dataset", {})
-        total_resources = transform_count_by_dataset.get(dataset, 0)
-        print(f"Total resources to transform for {collection}/{dataset}: {total_resources}")
-        print(f"Batch size: {batch_size}")
+    # Read the state.json file to get the transform_count_by_dataset
+    state_key = f"{collection}-collection/state.json"
+    response = s3.get_object(Bucket=collection_dataset_bucket_name, Key=state_key)
+    state_content = response["Body"].read().decode("utf-8")
+    state_data = json.loads(state_content)
 
-        # Calculate number of batches
-        num_batches = math.ceil(total_resources / batch_size) if total_resources > 0 else 0
-        print(f"Number of batches: {num_batches}")
+    # Get transform_count_by_dataset mapping and extract count for this dataset
+    transform_count_by_dataset = state_data.get("transform_count_by_dataset", {})
+    total_resources = transform_count_by_dataset.get(dataset, 0)
+    print(f"Total resources to transform for {collection}/{dataset}: {total_resources}")
+    print(f"Batch size: {batch_size}")
 
-    except Exception as e:
-        print(f"Error reading state file: {e}")
-        print("Defaulting to single batch (no limit/offset)")
-        num_batches = 1
-        total_resources = 0
+    # Calculate number of batches
+    num_batches = math.ceil(total_resources / batch_size) if total_resources > 0 else 0
+    print(f"Number of batches: {num_batches}")
 
     # Build overrides for each batch
     overrides_list = []
