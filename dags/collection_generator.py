@@ -138,7 +138,7 @@ for collection, collection_datasets in collections.items():
                                 "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="incremental-loading-override") | string }}\'',
                             },
                             {"name": "REGENERATE_LOG_OVERRIDE", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="regenerate-log-override") | string }}\''},
-                            {"name": "REPROCESS", "value": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="force-reprocessing") }}'},
+                            {"name": "REPROCESS", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="force-reprocessing") }}\''},
                         ],
                     },
                 ]
