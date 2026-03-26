@@ -4,6 +4,7 @@ import json
 from unittest.mock import MagicMock
 
 import boto3
+import pytest
 from moto import mock_aws
 
 from dags.utils import get_task_log_config, get_transform_batch_configs
@@ -54,6 +55,7 @@ def test_get_transform_batch_configs_creates_correct_batches(mock_aws_credential
         ("configure-dag", "dataset-jobs"): "8",
         ("configure-dag", "incremental-loading-override"): False,
         ("configure-dag", "regenerate-log-override"): False,
+        ("configure-dag", "force-reprocessing"): "",
     }[(task_ids, key)]
 
     # Execute the function with dataset parameter
@@ -88,6 +90,7 @@ def test_get_transform_batch_configs_creates_correct_batches(mock_aws_credential
     assert result[0]["containerOverrides"][0]["environment"][6]["value"] == "8"  # DATASET_JOBS
     assert result[0]["containerOverrides"][0]["environment"][7]["value"] == "False"  # INCREMENTAL_LOADING_OVERRIDE
     assert result[0]["containerOverrides"][0]["environment"][8]["value"] == "False"  # REGENERATE_LOG_OVERRIDE
+    assert result[0]["containerOverrides"][0]["environment"][9]["value"] == ""  # REPROCESS
 
 
 @mock_aws
@@ -114,18 +117,19 @@ def test_get_transform_batch_configs_handles_zero_resources(mock_aws_credentials
         ("configure-dag", "dataset-jobs"): "8",
         ("configure-dag", "incremental-loading-override"): False,
         ("configure-dag", "regenerate-log-override"): False,
+        ("configure-dag", "force-reprocessing"): "",
     }[(task_ids, key)]
 
     # Execute the function with dataset parameter
     result = get_transform_batch_configs(mock_ti, "test", "test-task", "test-dataset")
 
-    # Should default to 1 batch when transform_count is 0
-    assert len(result) == 1, f"Expected 1 batch for zero resources but got {len(result)}"
+    # Should return empty list when transform_count is 0, causing Airflow to skip the task
+    assert len(result) == 0, f"Expected 0 batches for zero resources but got {len(result)}"
 
 
 @mock_aws
-def test_get_transform_batch_configs_handles_missing_file(mock_aws_credentials):
-    """Test that get_transform_batch_configs handles missing state file gracefully."""
+def test_get_transform_batch_configs_errors_on_missing_file(mock_aws_credentials):
+    """Test that get_transform_batch_configs raises an error when the state file is missing."""
     # Setup S3 without creating the state file
     s3_client = boto3.client("s3", region_name="us-east-1")
     bucket_name = "test-collection-bucket"
@@ -144,13 +148,12 @@ def test_get_transform_batch_configs_handles_missing_file(mock_aws_credentials):
         ("configure-dag", "dataset-jobs"): "8",
         ("configure-dag", "incremental-loading-override"): False,
         ("configure-dag", "regenerate-log-override"): False,
+        ("configure-dag", "force-reprocessing"): "",
     }[(task_ids, key)]
 
-    # Execute the function with dataset parameter
-    result = get_transform_batch_configs(mock_ti, "test", "test-task", "test-dataset")
-
-    # Should default to 1 batch when file is missing
-    assert len(result) == 1, f"Expected 1 batch when file is missing but got {len(result)}"
+    # Should raise an error when state file is missing
+    with pytest.raises(Exception):
+        get_transform_batch_configs(mock_ti, "test", "test-task", "test-dataset")
 
 
 @mock_aws
@@ -177,6 +180,7 @@ def test_get_transform_batch_configs_with_exact_multiple(mock_aws_credentials):
         ("configure-dag", "dataset-jobs"): "8",
         ("configure-dag", "incremental-loading-override"): False,
         ("configure-dag", "regenerate-log-override"): False,
+        ("configure-dag", "force-reprocessing"): "",
     }[(task_ids, key)]
 
     # Execute the function with dataset parameter
@@ -186,3 +190,34 @@ def test_get_transform_batch_configs_with_exact_multiple(mock_aws_credentials):
     assert len(result) == 2, f"Expected 2 batches but got {len(result)}"
     assert result[0]["containerOverrides"][0]["environment"][-1]["value"] == "0"
     assert result[1]["containerOverrides"][0]["environment"][-1]["value"] == "50"
+
+
+@mock_aws
+def test_get_transform_batch_configs_passes_reprocess_flag(mock_aws_credentials):
+    """Test that REPROCESS env var is set to 'True' when force-reprocessing is enabled."""
+    s3_client = boto3.client("s3", region_name="us-east-1")
+    bucket_name = "test-collection-bucket"
+    s3_client.create_bucket(Bucket=bucket_name)
+
+    state_data = {"transform_count_by_dataset": {"test-dataset": 100}}
+    s3_client.put_object(Bucket=bucket_name, Key="test-collection/state.json", Body=json.dumps(state_data))
+
+    mock_ti = MagicMock()
+    mock_ti.xcom_pull.side_effect = lambda task_ids, key: {
+        ("configure-dag", "transform-batch-size"): 50,
+        ("configure-dag", "collection-dataset-bucket-name"): bucket_name,
+        ("configure-dag", "cpu"): 8192,
+        ("configure-dag", "memory"): 32768,
+        ("configure-dag", "env"): "development",
+        ("configure-dag", "transformed-jobs"): "8",
+        ("configure-dag", "dataset-jobs"): "8",
+        ("configure-dag", "incremental-loading-override"): False,
+        ("configure-dag", "regenerate-log-override"): False,
+        ("configure-dag", "force-reprocessing"): "True",
+    }[(task_ids, key)]
+
+    result = get_transform_batch_configs(mock_ti, "test", "test-task", "test-dataset")
+
+    assert len(result) == 2
+    for override in result:
+        assert override["containerOverrides"][0]["environment"][9]["value"] == "True"  # REPROCESS

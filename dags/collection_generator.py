@@ -44,6 +44,7 @@ for collection, collection_datasets in collections.items():
             "transform-batch-size": Param(default=200, type="integer"),
             "incremental-loading-override": Param(default=False, type="boolean"),
             "regenerate-log-override": Param(default=False, type="boolean"),
+            "force-reprocessing": Param(default=False, type="boolean"),
         },
         render_template_as_native_obj=True,
         is_paused_upon_creation=False,
@@ -68,6 +69,7 @@ for collection, collection_datasets in collections.items():
             transform_batch_size = int(kwargs["params"].get("transform-batch-size"))
             incremental_loading_override = bool(kwargs["params"].get("incremental-loading-override"))
             regenerate_log_override = bool(kwargs["params"].get("regenerate-log-override"))
+            force_reprocessing = bool(kwargs["params"].get("force-reprocessing"))
 
             # Push values to XCom
             ti.xcom_push(key="memory", value=memory)
@@ -77,6 +79,7 @@ for collection, collection_datasets in collections.items():
             ti.xcom_push(key="transform-batch-size", value=transform_batch_size)
             ti.xcom_push(key="incremental-loading-override", value=incremental_loading_override)
             ti.xcom_push(key="regenerate-log-override", value=regenerate_log_override)
+            ti.xcom_push(key="force-reprocessing", value="True" if force_reprocessing else "")
 
             # add collection_data bucket # add collection bucket name
             collection_dataset_bucket_name = kwargs["conf"].get(section="custom", key="collection_dataset_bucket_name")
@@ -135,6 +138,7 @@ for collection, collection_datasets in collections.items():
                                 "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="incremental-loading-override") | string }}\'',
                             },
                             {"name": "REGENERATE_LOG_OVERRIDE", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="regenerate-log-override") | string }}\''},
+                            {"name": "REPROCESS", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="force-reprocessing") }}\''},
                         ],
                     },
                 ]
