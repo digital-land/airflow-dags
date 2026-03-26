@@ -219,6 +219,7 @@ def get_transform_batch_configs(ti, collection, collection_task_name, dataset):
     dataset_jobs = ti.xcom_pull(task_ids="configure-dag", key="dataset-jobs")
     incremental_loading_override = ti.xcom_pull(task_ids="configure-dag", key="incremental-loading-override")
     regenerate_log_override = ti.xcom_pull(task_ids="configure-dag", key="regenerate-log-override")
+    force_reprocessing = ti.xcom_pull(task_ids="configure-dag", key="force-reprocessing")
 
     # Get the resource count from the state file
     s3 = boto3.client("s3")
@@ -262,6 +263,7 @@ def get_transform_batch_configs(ti, collection, collection_task_name, dataset):
                         {"name": "DATASET_JOBS", "value": str(dataset_jobs)},
                         {"name": "INCREMENTAL_LOADING_OVERRIDE", "value": str(incremental_loading_override)},
                         {"name": "REGENERATE_LOG_OVERRIDE", "value": str(regenerate_log_override)},
+                        {"name": "REPROCESS", "value": force_reprocessing},
                         {"name": "TRANSFORMATION_LIMIT", "value": str(limit)},
                         {"name": "TRANSFORMATION_OFFSET", "value": str(offset)},
                     ],
