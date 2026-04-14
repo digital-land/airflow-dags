@@ -32,7 +32,7 @@ datasets_dict = load_specification_datasets()
 collections = get_collections_dict(datasets_dict.values())
 
 
-filtered_collections = {k: v for k, v in collections.items() if k in ["central-activities-zone", "transport-access-node", "title-boundary"]}
+filtered_collections = {k: v for k, v in collections.items() if k in ["central-activities-zone", "transport-access-node", "title-boundary", "flood-risk-zone"]}
 
 # read config from file and environment
 config = get_config()
