@@ -232,6 +232,7 @@ for collection, collection_datasets in filtered_collections.items():
                 S3_LOG_URI = f"s3://{S3_LOG_BUCKET}/"
                 S3_DEPENDENCIES_PATH = f"s3://{S3_BUCKET}/pkg/dependencies/dependencies.zip"
                 S3_DATA_PATH = f"s3://{S3_SOURCE_DATA_PATH}/"
+                S3_ENVIRONMENT_PATH = f"s3://{S3_BUCKET}/pkg/dependencies/environment.tar.gz"
 
                 assemble_emr_task = EmrServerlessStartJobOperator(
                     task_id="assemble-emr-job",
@@ -252,7 +253,11 @@ for collection, collection_datasets in filtered_collections.items():
                                 "--parquet-datasets-path",
                                 f"s3://{ENV}-parquet-datasets",
                             ],
-                            "sparkSubmitParameters": f"--jars /usr/lib/spark/jars/postgresql-42.7.4.jar --py-files {S3_WHEEL_FILE},{S3_DEPENDENCIES_PATH} "
+                            "sparkSubmitParameters": f"--jars /usr/lib/spark/jars/postgresql-42.7.4.jar "
+                            f"--archives {S3_ENVIRONMENT_PATH}#environment "
+                            f"--py-files {S3_WHEEL_FILE} "
+                            "--conf spark.executorEnv.PYSPARK_PYTHON=./environment/bin/python "
+                            "--conf spark.emr-serverless.driverEnv.PYSPARK_PYTHON=./environment/bin/python "
                             "--conf spark.serializer=org.apache.spark.serializer.KryoSerializer "
                             "--conf spark.kryo.registrator=org.apache.sedona.core.serde.SedonaKryoRegistrator "
                             "--conf spark.sql.extensions=org.apache.sedona.sql.SedonaSqlExtensions",
