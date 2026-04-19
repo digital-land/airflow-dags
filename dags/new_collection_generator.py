@@ -258,6 +258,7 @@ for collection, collection_datasets in filtered_collections.items():
                             f"--py-files {S3_WHEEL_FILE} "
                             "--conf spark.executorEnv.PYSPARK_PYTHON=./environment/bin/python "
                             "--conf spark.emr-serverless.driverEnv.PYSPARK_PYTHON=./environment/bin/python "
+                            "--conf spark.emr-serverless.driverEnv.PYSPARK_DRIVER_PYTHON=./environment/bin/python "
                             "--conf spark.serializer=org.apache.spark.serializer.KryoSerializer "
                             "--conf spark.kryo.registrator=org.apache.sedona.core.serde.SedonaKryoRegistrator "
                             "--conf spark.sql.extensions=org.apache.sedona.sql.SedonaSqlExtensions",
