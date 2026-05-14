@@ -32,7 +32,7 @@ datasets_dict = load_specification_datasets()
 collections = get_collections_dict(datasets_dict.values())
 
 
-filtered_collections = {k: v for k, v in collections.items() if k in ["central-activities-zone", "transport-access-node", "title-boundary"]}
+filtered_collections = {k: v for k, v in collections.items() if k in ["central-activities-zone", "transport-access-node", "title-boundary", "flood-risk-zone"]}
 
 # read config from file and environment
 config = get_config()
@@ -69,6 +69,7 @@ for collection, collection_datasets in filtered_collections.items():
             "transform-batch-size": Param(default=200, type="integer"),
             "incremental-loading-override": Param(default=False, type="boolean"),
             "regenerate-log-override": Param(default=False, type="boolean"),
+            "force-reprocessing": Param(default=False, type="boolean"),
         },
         render_template_as_native_obj=True,
         is_paused_upon_creation=False,
@@ -93,6 +94,7 @@ for collection, collection_datasets in filtered_collections.items():
             transform_batch_size = int(kwargs["params"].get("transform-batch-size"))
             incremental_loading_override = bool(kwargs["params"].get("incremental-loading-override"))
             regenerate_log_override = bool(kwargs["params"].get("regenerate-log-override"))
+            force_reprocessing = bool(kwargs["params"].get("force-reprocessing"))
 
             # Push values to XCom
             ti.xcom_push(key="memory", value=memory)
@@ -102,6 +104,7 @@ for collection, collection_datasets in filtered_collections.items():
             ti.xcom_push(key="transform-batch-size", value=transform_batch_size)
             ti.xcom_push(key="incremental-loading-override", value=incremental_loading_override)
             ti.xcom_push(key="regenerate-log-override", value=regenerate_log_override)
+            ti.xcom_push(key="force-reprocessing", value="True" if force_reprocessing else "")
 
             # add collection_data bucket # add collection bucket name
             collection_dataset_bucket_name = kwargs["conf"].get(section="custom", key="collection_dataset_bucket_name")
@@ -160,6 +163,7 @@ for collection, collection_datasets in filtered_collections.items():
                                 "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="incremental-loading-override") | string }}\'',
                             },
                             {"name": "REGENERATE_LOG_OVERRIDE", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="regenerate-log-override") | string }}\''},
+                            {"name": "REPROCESS", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="force-reprocessing") }}\''},
                         ],
                     },
                 ]
@@ -228,6 +232,7 @@ for collection, collection_datasets in filtered_collections.items():
                 S3_LOG_URI = f"s3://{S3_LOG_BUCKET}/"
                 S3_DEPENDENCIES_PATH = f"s3://{S3_BUCKET}/pkg/dependencies/dependencies.zip"
                 S3_DATA_PATH = f"s3://{S3_SOURCE_DATA_PATH}/"
+                S3_ENVIRONMENT_PATH = f"s3://{S3_BUCKET}/pkg/dependencies/environment.tar.gz"
 
                 assemble_emr_task = EmrServerlessStartJobOperator(
                     task_id="assemble-emr-job",
@@ -248,7 +253,8 @@ for collection, collection_datasets in filtered_collections.items():
                                 "--parquet-datasets-path",
                                 f"s3://{ENV}-parquet-datasets",
                             ],
-                            "sparkSubmitParameters": f"--jars /usr/lib/spark/jars/postgresql-42.7.4.jar --py-files {S3_WHEEL_FILE},{S3_DEPENDENCIES_PATH} "
+                            "sparkSubmitParameters": f"--jars /usr/lib/spark/jars/postgresql-42.7.4.jar "
+                            f"--py-files {S3_WHEEL_FILE} "
                             "--conf spark.serializer=org.apache.spark.serializer.KryoSerializer "
                             "--conf spark.kryo.registrator=org.apache.sedona.core.serde.SedonaKryoRegistrator "
                             "--conf spark.sql.extensions=org.apache.sedona.sql.SedonaSqlExtensions",
