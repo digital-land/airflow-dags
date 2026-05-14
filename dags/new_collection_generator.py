@@ -293,7 +293,7 @@ for collection, collection_datasets in filtered_collections.items():
                                 {"name": "COLLECTION_NAME", "value": collection},
                                 {"name": "DATASET_NAME", "value": dataset},
                                 {
-                                    "name": "COLLECTION_DATA_BUCKET",
+                                    "name": "COLLECTION_DATASET_BUCKET_NAME",
                                     "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}\'',
                                 },
                                 {
