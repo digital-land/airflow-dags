@@ -2,7 +2,7 @@ var
 .venv
 __pycache__
 .idea
-
+.history
 # ignore config file
 dags/config.json
 
