@@ -46,7 +46,9 @@ with DAG(
 ) as dag:
 
     def invalidate_cloudfront_cache(**kwargs):
-        cloudfront_distribution_ids = kwargs["conf"].get(section="custom", key="digital_land_cloudfront_distribution_ids", fallback="E1234567890ABC")
+        cloudfront_distribution_ids = kwargs["conf"].get(
+            section="custom", key="digital_land_cloudfront_distribution_ids", fallback="E2P8H1GGR648EL,E1U2W8HWDSJAF0,EAAOQG90QORRL,E1TUCOJNB0U4M9"
+        )
         distribution_ids = [distribution_id.strip() for distribution_id in cloudfront_distribution_ids.split(",") if distribution_id.strip()]
 
         if not distribution_ids:
