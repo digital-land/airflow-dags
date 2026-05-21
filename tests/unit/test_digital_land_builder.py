@@ -5,6 +5,7 @@ import pytest
 from airflow.exceptions import AirflowSkipException
 from botocore.exceptions import ClientError
 
+from dags import digital_land_builder
 from dags.digital_land_builder import dag
 
 
@@ -12,23 +13,15 @@ def get_task_callable(task_id):
     return dag.get_task(task_id).python_callable
 
 
-def get_conf(distribution_ids):
-    conf = Mock()
-    conf.get.side_effect = lambda section, key, fallback=None: {
-        ("custom", "collection_dataset_bucket_name"): "collection-bucket",
-        ("custom", "digital_land_cloudfront_distribution_ids"): distribution_ids,
-    }.get((section, key), fallback)
-    return conf
-
-
 def test_invalidate_cloudfront_cache_creates_invalidation_for_each_distribution(monkeypatch):
     create_invalidation = Mock()
     cloudfront_client = Mock(create_invalidation=create_invalidation)
     boto3_client = Mock(return_value=cloudfront_client)
     monkeypatch.setattr("dags.digital_land_builder.boto3.client", boto3_client)
+    monkeypatch.setitem(digital_land_builder.config, "cloudfront_distribution_ids", ["E1234567890ABC", "E0987654321XYZ"])
 
     invalidate_cloudfront_cache = get_task_callable("invalidate-cloudfront-cache")
-    invalidate_cloudfront_cache(conf=get_conf(" E1234567890ABC, E0987654321XYZ ,, "), dag_run=SimpleNamespace(run_id="test-run"))
+    invalidate_cloudfront_cache(dag_run=SimpleNamespace(run_id="test-run"))
 
     boto3_client.assert_called_once_with("cloudfront")
     assert create_invalidation.call_count == 2
@@ -40,11 +33,13 @@ def test_invalidate_cloudfront_cache_creates_invalidation_for_each_distribution(
     }
 
 
-def test_invalidate_cloudfront_cache_skips_when_no_distribution_ids_configured():
+def test_invalidate_cloudfront_cache_skips_when_no_distribution_ids_configured(monkeypatch):
+    monkeypatch.setitem(digital_land_builder.config, "cloudfront_distribution_ids", [])
+
     invalidate_cloudfront_cache = get_task_callable("invalidate-cloudfront-cache")
 
     with pytest.raises(AirflowSkipException):
-        invalidate_cloudfront_cache(conf=get_conf(""), dag_run=SimpleNamespace(run_id="test-run"))
+        invalidate_cloudfront_cache(dag_run=SimpleNamespace(run_id="test-run"))
 
 
 def test_invalidate_cloudfront_cache_does_not_raise_when_cloudfront_rejects_invalidation(monkeypatch):
@@ -56,8 +51,9 @@ def test_invalidate_cloudfront_cache_does_not_raise_when_cloudfront_rejects_inva
     )
     cloudfront_client = Mock(create_invalidation=create_invalidation)
     monkeypatch.setattr("dags.digital_land_builder.boto3.client", Mock(return_value=cloudfront_client))
+    monkeypatch.setitem(digital_land_builder.config, "cloudfront_distribution_ids", ["E1234567890ABC"])
 
     invalidate_cloudfront_cache = get_task_callable("invalidate-cloudfront-cache")
-    invalidate_cloudfront_cache(conf=get_conf("E1234567890ABC"), dag_run=SimpleNamespace(run_id="test-run"))
+    invalidate_cloudfront_cache(dag_run=SimpleNamespace(run_id="test-run"))
 
     create_invalidation.assert_called_once()

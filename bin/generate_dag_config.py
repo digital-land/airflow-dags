@@ -10,6 +10,12 @@ sys.path.append(f"{os.getcwd()}")
 
 from dags.collection_schema import CollectionSelection, Environments, ScheduledCollectionConfig  # noqa E402
 
+CLOUDFRONT_DISTRIBUTION_IDS_BY_ENV = {
+    "development": ["E2P8H1GGR648EL", "E1U2W8HWDSJAF0", "EAAOQG90QORRL", "E1TUCOJNB0U4M9"],
+    "staging": ["E3P1BPOOK9GUA8", "ES1FRVQC6WLSI", "E1U9WUYXUMZMFK"],
+    "production": ["E7TPJL9S1GPCZ", "E7HEG8UPLPX3B", "E39TWFZ20V8SFB", "EW4DQ0UFNT9TW"],
+}
+
 scheduled_collection_config = Environments(
     development=ScheduledCollectionConfig(
         selection=CollectionSelection.explicit, collections=["ancient-woodland", "organisation"], schedule="0 0 * * *", max_active_tasks=50  # time is UTC
@@ -53,6 +59,7 @@ def make_dag_config(output_path: Path, env: str):
 
     config_dict["collection_selection"] = env_collection_config.selection
     config_dict["collections"] = env_collection_config.collections
+    config_dict["cloudfront_distribution_ids"] = CLOUDFRONT_DISTRIBUTION_IDS_BY_ENV.get(env, [])
 
     # with tempfile.TemporaryDirectory() as tmpdir:
     #     dataset_spec_url = 'https://raw.githubusercontent.com/digital-land/specification/main/specification/dataset.csv'
