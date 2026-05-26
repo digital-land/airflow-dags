@@ -46,7 +46,8 @@ with DAG(
 ) as dag:
 
     def invalidate_cloudfront_cache(**kwargs):
-        distribution_ids = config.get("cloudfront_distribution_ids", [])
+        distribution_ids = kwargs["conf"].get(section="custom", key="cloudfront_distribution_ids", fallback="")
+        distribution_ids = [distribution_id.strip() for distribution_id in distribution_ids.split(",") if distribution_id.strip()]
 
         if not distribution_ids:
             logger.info("No CloudFront distribution IDs found for environment %s. Skipping cache invalidation.", config["env"])
