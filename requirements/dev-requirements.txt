@@ -28,7 +28,7 @@ anyio==4.4.0
     # via
     #   -r requirements/requirements.txt
     #   httpx
-apache-airflow==2.10.1
+apache-airflow==2.9.2
     # via
     #   -r requirements/requirements.txt
     #   apache-airflow-providers-amazon
@@ -186,7 +186,7 @@ colorama==0.4.6
     # via
     #   -r requirements/requirements.txt
     #   flask-appbuilder
-colorlog==6.8.2
+colorlog==4.8.0
     # via
     #   -r requirements/requirements.txt
     #   apache-airflow
