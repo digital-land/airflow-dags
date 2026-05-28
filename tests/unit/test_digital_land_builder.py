@@ -12,9 +12,9 @@ def get_task_callable(task_id):
     return dag.get_task(task_id).python_callable
 
 
-def make_conf(cloudfront_distribution_ids):
+def make_conf(digital_land_cloudfront_distribution_ids):
     conf = Mock()
-    conf.get = Mock(return_value=cloudfront_distribution_ids)
+    conf.get = Mock(return_value=digital_land_cloudfront_distribution_ids)
     return conf
 
 
