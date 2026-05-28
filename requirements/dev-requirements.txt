@@ -28,7 +28,7 @@ anyio==4.4.0
     # via
     #   -r requirements/requirements.txt
     #   httpx
-apache-airflow==2.9.2
+apache-airflow==2.10.1
     # via
     #   -r requirements/requirements.txt
     #   apache-airflow-providers-amazon
