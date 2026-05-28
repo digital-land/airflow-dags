@@ -186,7 +186,7 @@ colorama==0.4.6
     # via
     #   -r requirements/requirements.txt
     #   flask-appbuilder
-colorlog==4.8.0
+colorlog==6.8.2
     # via
     #   -r requirements/requirements.txt
     #   apache-airflow
