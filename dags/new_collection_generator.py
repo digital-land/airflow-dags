@@ -226,7 +226,7 @@ for collection, collection_datasets in filtered_collections.items():
                 S3_ENTRY_POINT = f"s3://{S3_BUCKET}/pkg/entry_script/run_main.py"
                 S3_WHEEL_FILE = f"s3://{S3_BUCKET}/pkg/whl_pkg/pyspark_jobs-0.1.0-py3-none-any.whl"
                 S3_LOG_URI = f"s3://{S3_LOG_BUCKET}/"
-                S3_DEPENDENCIES_PATH = f"s3://{S3_BUCKET}/pkg/dependencies/dependencies.zip"
+                S3_DEPENDENCIES_PATH = f"s3://{S3_BUCKET}/pkg/dependencies/environment.tar.gz"
                 S3_DATA_PATH = f"s3://{S3_SOURCE_DATA_PATH}/"
 
                 assemble_emr_task = EmrServerlessStartJobOperator(
@@ -248,10 +248,16 @@ for collection, collection_datasets in filtered_collections.items():
                                 "--parquet-datasets-path",
                                 f"s3://{ENV}-parquet-datasets",
                             ],
-                            "sparkSubmitParameters": f"--jars /usr/lib/spark/jars/postgresql-42.7.4.jar --py-files {S3_WHEEL_FILE},{S3_DEPENDENCIES_PATH} "
-                            "--conf spark.serializer=org.apache.spark.serializer.KryoSerializer "
-                            "--conf spark.kryo.registrator=org.apache.sedona.core.serde.SedonaKryoRegistrator "
-                            "--conf spark.sql.extensions=org.apache.sedona.sql.SedonaSqlExtensions",
+                            "sparkSubmitParameters": (
+                                f"--jars /usr/lib/spark/jars/postgresql-42.7.4.jar "
+                                f"--py-files {S3_WHEEL_FILE} "
+                                f"--archives {S3_DEPENDENCIES_PATH}#environment "
+                                "--conf spark.pyspark.python=./environment/bin/python "
+                                "--conf spark.pyspark.driver.python=./environment/bin/python "
+                                "--conf spark.serializer=org.apache.spark.serializer.KryoSerializer "
+                                "--conf spark.kryo.registrator=org.apache.sedona.core.serde.SedonaKryoRegistrator "
+                                "--conf spark.sql.extensions=org.apache.sedona.sql.SedonaSqlExtensions"
+                            ),
                         }
                     },
                     configuration_overrides={"monitoringConfiguration": {"s3MonitoringConfiguration": {"logUri": S3_LOG_URI}}},
