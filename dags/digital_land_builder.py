@@ -1,14 +1,20 @@
+import logging
 import time
+import uuid
 from datetime import timedelta
 
+import boto3
 from airflow import DAG
+from airflow.exceptions import AirflowSkipException
 from airflow.models.param import Param
 from airflow.operators.python import PythonOperator
 from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
 from airflow.providers.slack.notifications.slack import send_slack_notification
+from botocore.exceptions import BotoCoreError, ClientError
 from utils import dag_default_args, get_config, push_log_variables, push_vpc_config
 
 config = get_config()
+logger = logging.getLogger(__name__)
 ecs_cluster = f"{config['env']}-cluster"
 # digital-land-builder task definition name
 digital_land_builder_task_name = f"{config['env']}-mwaa-digital-land-builder-task"
@@ -38,6 +44,32 @@ with DAG(
     is_paused_upon_creation=False,
     on_failure_callback=failure_callbacks,
 ) as dag:
+
+    def invalidate_cloudfront_cache(**kwargs):
+        distribution_ids = kwargs["conf"].get(section="custom", key="digital_land_cloudfront_distribution_ids", fallback="")
+        distribution_ids = [distribution_id.strip() for distribution_id in distribution_ids.split(",") if distribution_id.strip()]
+
+        if not distribution_ids:
+            logger.info("No CloudFront distribution IDs found for environment %s. Skipping cache invalidation.", config["env"])
+            raise AirflowSkipException("No digital_land_cloudfront_distribution_ids configured")
+
+        paths = ["/*"]
+        cloudfront = boto3.client("cloudfront")
+        logger.info("Invalidating CloudFront cache for distributions %s with paths %s", distribution_ids, paths)
+        for distribution_id in distribution_ids:
+            try:
+                cloudfront.create_invalidation(
+                    DistributionId=distribution_id,
+                    InvalidationBatch={
+                        "Paths": {
+                            "Quantity": len(paths),
+                            "Items": paths,
+                        },
+                        "CallerReference": f"{kwargs['dag_run'].run_id}-{distribution_id}-{uuid.uuid4()}",
+                    },
+                )
+            except (BotoCoreError, ClientError):
+                logger.exception("CloudFront cache invalidation failed for distribution %s", distribution_id)
 
     def configure_dag(**kwargs):
         """
@@ -121,6 +153,14 @@ with DAG(
         awslogs_fetch_interval=timedelta(seconds=1),
     )
     configure_dag_task >> build_digital_land_builder
+
+    invalidate_cloudfront_cache_task = PythonOperator(
+        task_id="invalidate-cloudfront-cache",
+        python_callable=invalidate_cloudfront_cache,
+        dag=dag,
+    )
+
+    build_digital_land_builder >> invalidate_cloudfront_cache_task
 
     if config["env"] == "production":
 
