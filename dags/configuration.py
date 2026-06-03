@@ -10,7 +10,7 @@ from datetime import timedelta
 
 import boto3
 from airflow import DAG
-from airflow.operators.python import Param, PythonOperator
+from airflow.operators.python import PythonOperator
 from airflow.providers.amazon.aws.operators.emr import EmrServerlessStartJobOperator
 from emr_dags_utils import get_secrets
 from utils import dag_default_args, get_config
@@ -20,13 +20,9 @@ config = get_config()
 with DAG(
     dag_id="configuration",
     default_args=dag_default_args,
-    description="Run digital-land-builder and upload files to S3",
+    description="run processes related to our configuration files",
     schedule=None,
     catchup=False,
-    params={
-        "cpu": Param(default=8192, type="integer"),
-        "memory": Param(default=32768, type="integer"),
-    },
     render_template_as_native_obj=True,
     is_paused_upon_creation=False,
 ) as dag:
