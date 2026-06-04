@@ -10,6 +10,7 @@ from datetime import timedelta
 
 import boto3
 from airflow import DAG
+from airflow.models.param import Param
 from airflow.operators.python import PythonOperator
 from airflow.providers.amazon.aws.operators.emr import EmrServerlessStartJobOperator
 from emr_dags_utils import get_secrets
@@ -23,6 +24,9 @@ with DAG(
     description="run processes related to our configuration files",
     schedule=None,
     catchup=False,
+    params={
+        "debug": Param(default=False, type="boolean", description="Enable debug logging for the Spark job"),
+    },
     render_template_as_native_obj=True,
     is_paused_upon_creation=False,
 ) as dag:
@@ -61,14 +65,11 @@ with DAG(
         job_driver={
             "sparkSubmit": {
                 "entryPoint": S3_TASKS_ENTRY_POINT,
-                "entryPointArguments": [
-                    "--env",
-                    ENV,
-                    "--collection-data-path",
-                    S3_DATA_PATH,
-                    "--parquet-datasets-path",
-                    f"s3://{ENV}-parquet-datasets",
-                ],
+                "entryPointArguments": (
+                    f"{{{{ ['--env', '{ENV}', '--collection-data-path', '{S3_DATA_PATH}', "
+                    f"'--parquet-datasets-path', 's3://{ENV}-parquet-datasets'] "
+                    f"+ (['--debug'] if params.debug else []) }}}}"
+                ),
                 "sparkSubmitParameters": f"--py-files {S3_WHEEL_FILE} " "--conf spark.serializer=org.apache.spark.serializer.KryoSerializer",
             }
         },
