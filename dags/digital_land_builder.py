@@ -41,6 +41,7 @@ with DAG(
     params={
         "cpu": Param(default=8192, type="integer"),
         "memory": Param(default=32768, type="integer"),
+        "debug": Param(default=False, type="boolean"),
     },
     render_template_as_native_obj=True,
     is_paused_upon_creation=False,
@@ -104,6 +105,20 @@ with DAG(
         ti.xcom_push(key="dataset-jobs", value=dataset_jobs)
         ti.xcom_push(key="incremental-loading-override", value=incremental_loading_override)
         ti.xcom_push(key="regenerate-log-override", value=regenerate_log_override)
+
+        # build entry point arguments for assemble-tasks EMR job
+        debug = bool(params.get("debug", False))
+        tasks_args = [
+            "--env",
+            config["env"],
+            "--collection-data-path",
+            S3_DATA_PATH,
+            "--parquet-datasets-path",
+            f"s3://{config['env']}-parquet-datasets",
+        ]
+        if debug:
+            tasks_args.append("--debug")
+        ti.xcom_push(key="tasks-entry-point-args", value=tasks_args)
 
         # add collection_data bucket # add collection bucket name
         collection_dataset_bucket_name = kwargs["conf"].get(section="custom", key="collection_dataset_bucket_name")
@@ -269,14 +284,7 @@ with DAG(
         job_driver={
             "sparkSubmit": {
                 "entryPoint": S3_TASKS_ENTRY_POINT,
-                "entryPointArguments": [
-                    "--env",
-                    ENV,
-                    "--collection-data-path",
-                    S3_DATA_PATH,
-                    "--parquet-datasets-path",
-                    f"s3://{ENV}-parquet-datasets",
-                ],
+                "entryPointArguments": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="tasks-entry-point-args") }}',
                 "sparkSubmitParameters": f"--py-files {S3_WHEEL_FILE} " "--conf spark.serializer=org.apache.spark.serializer.KryoSerializer",
             }
         },
