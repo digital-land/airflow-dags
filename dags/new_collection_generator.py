@@ -15,7 +15,16 @@ from airflow.providers.amazon.aws.operators.emr import EmrServerlessStartJobOper
 from airflow.providers.slack.notifications.slack import send_slack_notification
 from airflow.utils.task_group import TaskGroup
 from emr_dags_utils import get_secrets
-from utils import dag_default_args, get_collections_dict, get_config, get_transform_batch_configs, load_specification_datasets, push_log_variables, push_vpc_config
+from utils import (
+    dag_default_args,
+    filter_collections_for_env,
+    get_collections_dict,
+    get_config,
+    get_transform_batch_configs,
+    load_specification_datasets,
+    push_log_variables,
+    push_vpc_config,
+)
 
 # read config from file and environment
 config = get_config()
@@ -33,6 +42,7 @@ collections = get_collections_dict(datasets_dict.values())
 
 
 filtered_collections = {k: v for k, v in collections.items() if k in ["central-activities-zone", "transport-access-node", "title-boundary"]}
+filtered_collections = filter_collections_for_env(filtered_collections, datasets_dict, config["env"])
 
 # read config from file and environment
 config = get_config()
