@@ -7,7 +7,16 @@ from airflow.providers.amazon.aws.operators.ecs import (
     EcsRunTaskOperator,
 )
 from airflow.providers.slack.notifications.slack import send_slack_notification
-from utils import dag_default_args, get_collections_dict, get_config, get_transform_batch_configs, load_specification_datasets, push_log_variables, push_vpc_config
+from utils import (
+    dag_default_args,
+    filter_collections_for_env,
+    get_collections_dict,
+    get_config,
+    get_transform_batch_configs,
+    load_specification_datasets,
+    push_log_variables,
+    push_vpc_config,
+)
 
 # read config from file and environment
 config = get_config()
@@ -22,6 +31,7 @@ tiles_builder_container_name = f"{config['env']}-tile-builder"
 
 datasets_dict = load_specification_datasets()
 collections = get_collections_dict(datasets_dict.values())
+collections = filter_collections_for_env(collections, datasets_dict, config["env"])
 
 failure_callbacks = []
 if config["env"] == "production":

@@ -62,6 +62,41 @@ def get_collections_dict(datasets):
     return collections_dict
 
 
+def is_dataset_available(dataset, env):
+    """
+    Given a dataset row (with an 'availability' value of '', 'development',
+    'staging' or 'production') and an environment name, return True if the
+    dataset should be available in that environment.
+    """
+    availability = dataset.get("availability", "")
+
+    if availability == "production":
+        return True
+
+    if availability == "staging":
+        return env in ("development", "staging")
+
+    if availability == "development":
+        return env == "development"
+
+    return False
+
+
+def filter_collections_for_env(collections_dict, datasets_dict, env):
+    """
+    Given a dict of collection -> [dataset names] and a dict of dataset name -> dataset row,
+    return a new dict containing only:
+      - collections where at least one dataset is available in env
+      - and for those collections, only the datasets that are themselves available in env
+    """
+    filtered = {}
+    for collection, dataset_names in collections_dict.items():
+        available_datasets = [name for name in dataset_names if is_dataset_available(datasets_dict[name], env)]
+        if available_datasets:
+            filtered[collection] = available_datasets
+    return filtered
+
+
 def get_task_log_config(ecs_client, task_definition_family):
     """
     returns the log configuration of a task definition stored in aws

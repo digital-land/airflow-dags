@@ -1,4 +1,6 @@
-from dags.utils import sort_collections_dict
+import pytest
+
+from dags.utils import filter_collections_for_env, is_dataset_available, sort_collections_dict
 
 
 def test_sort_collections_dict_moves_priority_keys_to_front():
@@ -6,3 +8,48 @@ def test_sort_collections_dict_moves_priority_keys_to_front():
     sorted_dict = sort_collections_dict(collections_dict)
     key_list = list(sorted_dict.keys())
     assert key_list[0] == "flood-risk-zone"
+
+
+@pytest.mark.parametrize(
+    "availability,env,expected",
+    [
+        ("production", "development", True),
+        ("production", "staging", True),
+        ("production", "production", True),
+        ("staging", "development", True),
+        ("staging", "staging", True),
+        ("staging", "production", False),
+        ("development", "development", True),
+        ("development", "staging", False),
+        ("development", "production", False),
+        ("", "development", False),
+        ("", "staging", False),
+        ("", "production", False),
+    ],
+)
+def test_is_dataset_available(availability, env, expected):
+    dataset = {"availability": availability}
+    assert is_dataset_available(dataset, env) == expected
+
+
+def test_is_dataset_available_treats_missing_availability_as_unavailable():
+    assert is_dataset_available({}, "development") is False
+
+
+def test_filter_collections_for_env_drops_collections_with_no_available_datasets():
+    collections_dict = {"future-collection": ["future-dataset"]}
+    datasets_dict = {"future-dataset": {"availability": "development"}}
+
+    assert filter_collections_for_env(collections_dict, datasets_dict, "staging") == {}
+
+
+def test_filter_collections_for_env_keeps_collection_when_any_dataset_available():
+    collections_dict = {"organisation": ["local-authority", "new-dataset"]}
+    datasets_dict = {
+        "local-authority": {"availability": "production"},
+        "new-dataset": {"availability": "development"},
+    }
+
+    # collection DAG still exists in staging because local-authority is available there,
+    # but only local-authority's task group is included
+    assert filter_collections_for_env(collections_dict, datasets_dict, "staging") == {"organisation": ["local-authority"]}

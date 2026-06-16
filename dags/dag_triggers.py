@@ -10,7 +10,7 @@ from airflow import DAG
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.utils.trigger_rule import TriggerRule
 from collection_schema import CollectionSelection
-from utils import get_collections_dict, get_config, load_specification_datasets, sort_collections_dict
+from utils import filter_collections_for_env, get_collections_dict, get_config, load_specification_datasets, sort_collections_dict
 
 config = get_config()
 dag_schedule = config.get("schedule", None)  # Use "None" as a fallback if "schedule" key is missing
@@ -28,7 +28,10 @@ def collection_selected(collection_name, configuration):
 
 
 datasets_dict = load_specification_datasets()
-collections = sort_collections_dict(get_collections_dict(datasets_dict.values()))
+collections = get_collections_dict(datasets_dict.values())
+collections = filter_collections_for_env(collections, datasets_dict, config["env"])
+collections = sort_collections_dict(collections)
+
 
 with DAG(
     dag_id="trigger-collection-dags-scheduled",
