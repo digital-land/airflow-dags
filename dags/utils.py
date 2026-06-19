@@ -64,19 +64,22 @@ def get_collections_dict(datasets):
 
 def is_dataset_available(dataset, env):
     """
-    Given a dataset row (with an 'availability' value of '', 'development',
+    Given a dataset row (with an 'environment' value of '', 'development',
     'staging' or 'production') and an environment name, return True if the
     dataset should be available in that environment.
     """
-    availability = dataset.get("availability", "")
+    # Transitional: prefer the new 'environment' column, fall back to the legacy
+    # 'availability' column so the spec and airflow-dags can be merged in any
+    # order. Drop the fallback once the spec rename is fully rolled out.
+    environment = dataset.get("environment") or dataset.get("availability", "")
 
-    if availability == "production":
+    if environment == "production":
         return True
 
-    if availability == "staging":
+    if environment == "staging":
         return env in ("development", "staging")
 
-    if availability == "development":
+    if environment == "development":
         return env == "development"
 
     return False
