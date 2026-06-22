@@ -11,7 +11,7 @@ def test_sort_collections_dict_moves_priority_keys_to_front():
 
 
 @pytest.mark.parametrize(
-    "availability,env,expected",
+    "environment,env,expected",
     [
         ("production", "development", True),
         ("production", "staging", True),
@@ -27,18 +27,24 @@ def test_sort_collections_dict_moves_priority_keys_to_front():
         ("", "production", False),
     ],
 )
-def test_is_dataset_available(availability, env, expected):
-    dataset = {"availability": availability}
+def test_is_dataset_available(environment, env, expected):
+    dataset = {"environment": environment}
     assert is_dataset_available(dataset, env) == expected
 
 
-def test_is_dataset_available_treats_missing_availability_as_unavailable():
+def test_is_dataset_available_treats_missing_environment_as_unavailable():
     assert is_dataset_available({}, "development") is False
+
+
+def test_is_dataset_available_falls_back_to_legacy_availability():
+    # transitional: a row that still only has the old 'availability' key works
+    assert is_dataset_available({"availability": "production"}, "production") is True
+    assert is_dataset_available({"availability": "staging"}, "production") is False
 
 
 def test_filter_collections_for_env_drops_collections_with_no_available_datasets():
     collections_dict = {"future-collection": ["future-dataset"]}
-    datasets_dict = {"future-dataset": {"availability": "development"}}
+    datasets_dict = {"future-dataset": {"environment": "development"}}
 
     assert filter_collections_for_env(collections_dict, datasets_dict, "staging") == {}
 
@@ -46,8 +52,8 @@ def test_filter_collections_for_env_drops_collections_with_no_available_datasets
 def test_filter_collections_for_env_keeps_collection_when_any_dataset_available():
     collections_dict = {"organisation": ["local-authority", "new-dataset"]}
     datasets_dict = {
-        "local-authority": {"availability": "production"},
-        "new-dataset": {"availability": "development"},
+        "local-authority": {"environment": "production"},
+        "new-dataset": {"environment": "development"},
     }
 
     # collection DAG still exists in staging because local-authority is available there,
