@@ -68,10 +68,7 @@ def is_dataset_available(dataset, env):
     'staging' or 'production') and an environment name, return True if the
     dataset should be available in that environment.
     """
-    # Transitional: prefer the new 'environment' column, fall back to the legacy
-    # 'availability' column so the spec and airflow-dags can be merged in any
-    # order. Drop the fallback once the spec rename is fully rolled out.
-    environment = dataset.get("environment") or dataset.get("availability", "")
+    environment = dataset.get("environment", "")
 
     if environment == "production":
         return True
