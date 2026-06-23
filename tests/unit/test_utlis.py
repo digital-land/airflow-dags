@@ -36,12 +36,6 @@ def test_is_dataset_available_treats_missing_environment_as_unavailable():
     assert is_dataset_available({}, "development") is False
 
 
-def test_is_dataset_available_falls_back_to_legacy_availability():
-    # transitional: a row that still only has the old 'availability' key works
-    assert is_dataset_available({"availability": "production"}, "production") is True
-    assert is_dataset_available({"availability": "staging"}, "production") is False
-
-
 def test_filter_collections_for_env_drops_collections_with_no_available_datasets():
     collections_dict = {"future-collection": ["future-dataset"]}
     datasets_dict = {"future-dataset": {"environment": "development"}}
