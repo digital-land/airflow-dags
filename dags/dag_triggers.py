@@ -53,7 +53,7 @@ with DAG(
         run_org_collection_dag >> run_org_builder_dag
 
     for collection, datasets in collections.items():
-        if collection not in ["organisation", "document", "title-boundary", "planning-application"]:
+        if collection not in ["organisation"]:
 
             if collection_selected(collection, config):
                 # Set custom CPU for listed-building collection
@@ -96,7 +96,7 @@ with DAG(
     run_org_collection_dag >> run_org_builder_dag
 
     for collection, datasets in collections.items():
-        if collection not in ["organisation", "document", "title-boundary", "planning-application"]:
+        if collection not in ["organisation"]:
 
             # Set custom CPU for listed-building collection
             conf = {"cpu": 16384, "transformed-jobs": 16} if collection in ("listed-building", "tree-preservation-order") else {}
