@@ -1,5 +1,4 @@
 import logging
-import time
 import uuid
 from datetime import timedelta
 
@@ -11,9 +10,10 @@ from airflow.operators.python import PythonOperator
 from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
 from airflow.providers.amazon.aws.operators.emr import EmrServerlessStartJobOperator
 from airflow.providers.slack.notifications.slack import send_slack_notification
+from airflow.sensors.python import PythonSensor
 from botocore.exceptions import BotoCoreError, ClientError
 from emr_dags_utils import get_secrets
-from utils import dag_default_args, get_config, push_log_variables, push_vpc_config
+from utils import dag_default_args, get_config, get_datasette_db_hash, push_log_variables, push_vpc_config
 
 config = get_config()
 logger = logging.getLogger(__name__)
@@ -26,6 +26,13 @@ sqlite_injection_task_container_name = f"{config['env']}-sqlite-ingestion"
 # reporting-task-definition name
 reporting_task_name = f"{config['env']}-reporting-task"
 reporting_task_container_name = f"{config['env']}-reporting"
+
+# Datasette is deployed per-environment; the readiness check must query THIS env's
+# datasette. Prod has no env subdomain; others are datasette.<env>.planning.data.gov.uk.
+if config["env"] == "production":
+    datasette_base_url = "https://datasette.planning.data.gov.uk"
+else:
+    datasette_base_url = f"https://datasette.{config['env']}.planning.data.gov.uk"
 
 
 failure_callbacks = []
@@ -133,6 +140,14 @@ with DAG(
         # push  sqlite_ingestion log variables
         push_log_variables(ti, task_definition_name=reporting_task_name, container_name=reporting_task_container_name, prefix="reporting-task")
 
+        # Capture the digital-land hash datasette is serving BEFORE the build, so
+        # wait-for-datasette-reload can detect when datasette flips to the freshly-built
+        # database. Prod-only (the reporting path that consumes it is prod-only).
+        if config["env"] == "production":
+            prebuild_hash = get_datasette_db_hash("digital-land", base_url=datasette_base_url)
+            logger.info("Pre-build datasette digital-land hash: %s", prebuild_hash)
+            ti.xcom_push(key="datasette-prebuild-hash", value=prebuild_hash)
+
         # push aws vpc config
         push_vpc_config(ti, kwargs["conf"])
 
@@ -179,15 +194,39 @@ with DAG(
 
     build_digital_land_builder >> invalidate_cloudfront_cache_task
 
+    def datasette_has_reloaded(**kwargs):
+        """
+        Poke fn for wait-for-datasette-reload. Returns True once datasette is serving a
+        DIFFERENT digital-land hash than it was before the build — i.e. it has picked up
+        the freshly-built database. An unreachable endpoint / missing hash counts as
+        "not ready yet" (datasette briefly refuses connections while it restarts).
+        """
+        ti = kwargs["ti"]
+        prebuild_hash = ti.xcom_pull(task_ids="configure-dag", key="datasette-prebuild-hash")
+        current_hash = get_datasette_db_hash("digital-land", base_url=datasette_base_url)
+
+        if current_hash is None:
+            logger.info("datasette not serving a digital-land hash yet (restart/unreachable); waiting")
+            return False
+        if current_hash == prebuild_hash:
+            logger.info("datasette still serving pre-build hash %s; waiting for reload", prebuild_hash)
+            return False
+
+        logger.info("datasette reloaded: digital-land hash %s -> %s", prebuild_hash, current_hash)
+        return True
+
     if config["env"] == "production":
 
-        def delay_execution(**kwargs):
-            time.sleep(600)  # (10 minutes)
-
-        # Add delay before reporting task to ensure datasette consistency
-        wait_before_reporting = PythonOperator(
-            task_id="wait-before-reporting",
-            python_callable=delay_execution,
+        # Wait until datasette has picked up the freshly-built digital-land.sqlite3 before
+        # running reporting (which queries datasette over HTTP). Replaces a fixed 10-min
+        # sleep with a real readiness check; on timeout the task fails (Slack alert fires)
+        # so we never report against stale data.
+        wait_for_datasette = PythonSensor(
+            task_id="wait-for-datasette-reload",
+            python_callable=datasette_has_reloaded,
+            poke_interval=30,
+            timeout=1200,  # 20-min cap (was a fixed 10-min sleep); tune to max acceptable wait
+            mode="reschedule",  # release the worker slot between checks
             dag=dag,
         )
 
@@ -216,7 +255,7 @@ with DAG(
             awslogs_fetch_interval=timedelta(seconds=1),
         )
 
-        build_digital_land_builder >> wait_before_reporting >> run_reporting_task
+        build_digital_land_builder >> wait_for_datasette >> run_reporting_task
 
     # now we want to load the digital land db into postgres using the sqlite innjection task
     postgres_loader_task = EcsRunTaskOperator(

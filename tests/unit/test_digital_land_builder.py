@@ -5,7 +5,7 @@ import pytest
 from airflow.exceptions import AirflowSkipException
 from botocore.exceptions import ClientError
 
-from dags.digital_land_builder import dag
+from dags.digital_land_builder import dag, datasette_has_reloaded
 
 
 def get_task_callable(task_id):
@@ -61,3 +61,22 @@ def test_invalidate_cloudfront_cache_does_not_raise_when_cloudfront_rejects_inva
     invalidate_cloudfront_cache(dag_run=SimpleNamespace(run_id="test-run"), conf=make_conf("E1234567890ABC"))
 
     create_invalidation.assert_called_once()
+
+
+def make_ti(prebuild_hash):
+    return SimpleNamespace(xcom_pull=Mock(return_value=prebuild_hash))
+
+
+def test_datasette_has_reloaded_true_when_hash_changes(monkeypatch):
+    monkeypatch.setattr("dags.digital_land_builder.get_datasette_db_hash", Mock(return_value="new-hash"))
+    assert datasette_has_reloaded(ti=make_ti("old-hash")) is True
+
+
+def test_datasette_has_reloaded_false_when_hash_unchanged(monkeypatch):
+    monkeypatch.setattr("dags.digital_land_builder.get_datasette_db_hash", Mock(return_value="same-hash"))
+    assert datasette_has_reloaded(ti=make_ti("same-hash")) is False
+
+
+def test_datasette_has_reloaded_false_when_datasette_unreachable(monkeypatch):
+    monkeypatch.setattr("dags.digital_land_builder.get_datasette_db_hash", Mock(return_value=None))
+    assert datasette_has_reloaded(ti=make_ti("old-hash")) is False
