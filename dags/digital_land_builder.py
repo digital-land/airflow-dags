@@ -143,7 +143,7 @@ with DAG(
         # Capture the digital-land hash datasette is serving BEFORE the build, so
         # wait-for-datasette-reload can detect when datasette flips to the freshly-built
         # database. Prod-only (the reporting path that consumes it is prod-only).
-        if config["env"] == "production":
+        if config["env"] in ("production", "staging"):  # TEMP: staging added for sensor test — revert before merge
             prebuild_hash = get_datasette_db_hash("digital-land", base_url=datasette_base_url)
             logger.info("Pre-build datasette digital-land hash: %s", prebuild_hash)
             ti.xcom_push(key="datasette-prebuild-hash", value=prebuild_hash)
@@ -256,6 +256,17 @@ with DAG(
         )
 
         build_digital_land_builder >> wait_for_datasette >> run_reporting_task
+
+    elif config["env"] == "staging":  # TEMP: sensor-only staging test — revert before merge
+        wait_for_datasette = PythonSensor(
+            task_id="wait-for-datasette-reload",
+            python_callable=datasette_has_reloaded,
+            poke_interval=30,
+            timeout=1200,
+            mode="reschedule",
+            dag=dag,
+        )
+        build_digital_land_builder >> wait_for_datasette
 
     # now we want to load the digital land db into postgres using the sqlite innjection task
     postgres_loader_task = EcsRunTaskOperator(
