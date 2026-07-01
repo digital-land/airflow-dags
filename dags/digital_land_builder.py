@@ -140,14 +140,6 @@ with DAG(
         # push  sqlite_ingestion log variables
         push_log_variables(ti, task_definition_name=reporting_task_name, container_name=reporting_task_container_name, prefix="reporting-task")
 
-        # Capture the digital-land hash datasette is serving BEFORE the build, so
-        # wait-for-datasette-reload can detect when datasette flips to the freshly-built
-        # database. Prod-only (the reporting path that consumes it is prod-only).
-        if config["env"] in ("production", "staging"):  # TEMP: staging added for sensor test — revert before merge
-            prebuild_hash = get_datasette_db_hash("digital-land", base_url=datasette_base_url)
-            logger.info("Pre-build datasette digital-land hash: %s", prebuild_hash)
-            ti.xcom_push(key="datasette-prebuild-hash", value=prebuild_hash)
-
         # push aws vpc config
         push_vpc_config(ti, kwargs["conf"])
 
@@ -194,38 +186,34 @@ with DAG(
 
     build_digital_land_builder >> invalidate_cloudfront_cache_task
 
-    def datasette_has_reloaded(**kwargs):
+    def datasette_is_available(**kwargs):
         """
-        Poke fn for wait-for-datasette-reload. Returns True once datasette is serving a
-        DIFFERENT digital-land hash than it was before the build — i.e. it has picked up
-        the freshly-built database. An unreachable endpoint / missing hash counts as
-        "not ready yet" (datasette briefly refuses connections while it restarts).
+        Poke fn for wait-for-datasette. Returns True once datasette responds and is
+        serving the digital-land database — i.e. it is up and answering queries.
+
+        The reporting task queries datasette over HTTP. Datasette serves immutable
+        files, so it restarts to pick up freshly-built ones, and is briefly unreachable
+        / returns 5xx during that restart — which is what used to make reporting fail.
+        This gates reporting until datasette is back up. get_datasette_db_hash returns
+        None while datasette is down / mid-restart, which we treat as "not ready yet".
         """
-        ti = kwargs["ti"]
-        prebuild_hash = ti.xcom_pull(task_ids="configure-dag", key="datasette-prebuild-hash")
-        current_hash = get_datasette_db_hash("digital-land", base_url=datasette_base_url)
-
-        if current_hash is None:
-            logger.info("datasette not serving a digital-land hash yet (restart/unreachable); waiting")
+        if get_datasette_db_hash("digital-land", base_url=datasette_base_url) is None:
+            logger.info("datasette not responding for digital-land yet (down/mid-restart); waiting")
             return False
-        if current_hash == prebuild_hash:
-            logger.info("datasette still serving pre-build hash %s; waiting for reload", prebuild_hash)
-            return False
-
-        logger.info("datasette reloaded: digital-land hash %s -> %s", prebuild_hash, current_hash)
+        logger.info("datasette is available (serving digital-land)")
         return True
 
     if config["env"] == "production":
 
-        # Wait until datasette has picked up the freshly-built digital-land.sqlite3 before
-        # running reporting (which queries datasette over HTTP). Replaces a fixed 10-min
-        # sleep with a real readiness check; on timeout the task fails (Slack alert fires)
-        # so we never report against stale data.
+        # Wait until datasette is up and answering before running reporting (which queries
+        # datasette over HTTP). Replaces a fixed 10-min sleep whose real purpose was to
+        # avoid hitting datasette while it was mid-restart and returning 5xx. On timeout
+        # the task fails (Slack alert fires) rather than letting reporting run blind.
         wait_for_datasette = PythonSensor(
-            task_id="wait-for-datasette-reload",
-            python_callable=datasette_has_reloaded,
+            task_id="wait-for-datasette",
+            python_callable=datasette_is_available,
             poke_interval=30,
-            timeout=1200,  # 20-min cap (was a fixed 10-min sleep); tune to max acceptable wait
+            timeout=1200,  # 20-min cap (was a fixed 10-min sleep); ample for a datasette restart
             mode="reschedule",  # release the worker slot between checks
             dag=dag,
         )
@@ -256,17 +244,6 @@ with DAG(
         )
 
         build_digital_land_builder >> wait_for_datasette >> run_reporting_task
-
-    elif config["env"] == "staging":  # TEMP: sensor-only staging test — revert before merge
-        wait_for_datasette = PythonSensor(
-            task_id="wait-for-datasette-reload",
-            python_callable=datasette_has_reloaded,
-            poke_interval=30,
-            timeout=1200,
-            mode="reschedule",
-            dag=dag,
-        )
-        build_digital_land_builder >> wait_for_datasette
 
     # now we want to load the digital land db into postgres using the sqlite innjection task
     postgres_loader_task = EcsRunTaskOperator(

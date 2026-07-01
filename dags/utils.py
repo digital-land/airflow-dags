@@ -86,12 +86,11 @@ def is_dataset_available(dataset, env):
 def get_datasette_db_hash(database, base_url="https://datasette.planning.data.gov.uk", timeout=15):
     """
     Return the content hash datasette is currently serving for `database`, read from
-    /-/databases.json. Datasette serves immutable sqlite files, so this hash only
-    changes when it restarts onto a freshly-synced file — making it a reliable
-    "has the new build landed?" signal.
+    /-/databases.json.
 
     Returns None if datasette is unreachable, returns a non-200, or doesn't list the
-    database (e.g. mid-restart), so callers can treat that as "not ready yet".
+    database (e.g. mid-restart), so callers can use "hash is not None" as a simple
+    "datasette is up and serving this database" availability check.
     """
     try:
         response = requests.get(f"{base_url}/-/databases.json", timeout=timeout)
