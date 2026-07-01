@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import boto3
+import requests
 
 # Some useful default args for all DAGs
 dag_default_args = {
@@ -80,6 +81,28 @@ def is_dataset_available(dataset, env):
         return env == "development"
 
     return False
+
+
+def get_datasette_db_hash(database, base_url="https://datasette.planning.data.gov.uk", timeout=15):
+    """
+    Return the content hash datasette is currently serving for `database`, read from
+    /-/databases.json.
+
+    Returns None if datasette is unreachable, returns a non-200, or doesn't list the
+    database (e.g. mid-restart), so callers can use "hash is not None" as a simple
+    "datasette is up and serving this database" availability check.
+    """
+    try:
+        response = requests.get(f"{base_url}/-/databases.json", timeout=timeout)
+        response.raise_for_status()
+        databases = response.json()
+    except (requests.RequestException, ValueError):
+        return None
+
+    for db in databases:
+        if db.get("name") == database:
+            return db.get("hash")
+    return None
 
 
 def filter_collections_for_env(collections_dict, datasets_dict, env):

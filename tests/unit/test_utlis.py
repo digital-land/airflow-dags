@@ -1,6 +1,9 @@
-import pytest
+from unittest.mock import Mock
 
-from dags.utils import filter_collections_for_env, is_dataset_available, sort_collections_dict
+import pytest
+import requests
+
+from dags.utils import filter_collections_for_env, get_datasette_db_hash, is_dataset_available, sort_collections_dict
 
 
 def test_sort_collections_dict_moves_priority_keys_to_front():
@@ -53,3 +56,15 @@ def test_filter_collections_for_env_keeps_collection_when_any_dataset_available(
     # collection DAG still exists in staging because local-authority is available there,
     # but only local-authority's task group is included
     assert filter_collections_for_env(collections_dict, datasets_dict, "staging") == {"organisation": ["local-authority"]}
+
+
+def test_get_datasette_db_hash_returns_hash_for_matching_db(monkeypatch):
+    resp = Mock(raise_for_status=Mock())
+    resp.json = Mock(return_value=[{"name": "digital-land", "hash": "abc"}, {"name": "performance", "hash": "def"}])
+    monkeypatch.setattr("requests.get", Mock(return_value=resp))
+    assert get_datasette_db_hash("digital-land") == "abc"
+
+
+def test_get_datasette_db_hash_returns_none_on_error(monkeypatch):
+    monkeypatch.setattr("requests.get", Mock(side_effect=requests.RequestException))
+    assert get_datasette_db_hash("digital-land") is None
