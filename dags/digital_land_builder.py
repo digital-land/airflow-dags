@@ -120,9 +120,22 @@ with DAG(
             tasks_args.append("--debug")
         ti.xcom_push(key="tasks-entry-point-args", value=tasks_args)
 
-        # add collection_data bucket # add collection bucket name
+        # add collection_data bucket
         collection_dataset_bucket_name = kwargs["conf"].get(section="custom", key="collection_dataset_bucket_name")
         ti.xcom_push(key="collection-dataset-bucket-name", value=collection_dataset_bucket_name)
+
+        # build entry point arguments for provision-quality EMR job
+        provision_quality_args = [
+            "--env",
+            config["env"],
+            "--collection-data-path",
+            S3_DATA_PATH,
+            "--entity-data-path",
+            f"s3://{collection_dataset_bucket_name}/dataset/",
+        ]
+        if debug:
+            provision_quality_args.append("--debug")
+        ti.xcom_push(key="provision-quality-entry-point-args", value=provision_quality_args)
 
         # push collection-task log variables
         push_log_variables(ti, task_definition_name=digital_land_builder_task_name, container_name=digital_land_builder_task_name, prefix="collection-task")
@@ -254,11 +267,12 @@ with DAG(
     S3_BUCKET = f"{ENV}-pd-batch-jobs-codepackage-bucket"
     S3_LOG_BUCKET = f"{ENV}-pd-batch-jobs-logs-bucket"
     S3_TASKS_ENTRY_POINT = f"s3://{S3_BUCKET}/pkg/entry_script/run_tasks.py"
+    S3_PROVISION_QUALITY_ENTRY_POINT = f"s3://{S3_BUCKET}/pkg/entry_script/run_provision_quality.py"
     S3_WHEEL_FILE = f"s3://{S3_BUCKET}/pkg/whl_pkg/pyspark_jobs-0.1.0-py3-none-any.whl"
     S3_LOG_URI = f"s3://{S3_LOG_BUCKET}/"
     S3_DATA_PATH = f"s3://{ENV}-collection-data/"
 
-    def get_tasks_emr_application_id(**context):
+    def get_emr_application_id(**context):
         env = context["ti"].xcom_pull(task_ids="configure-dag", key="env")
         app_name = f"{env}-pd-batch-emrsl-application"
         client = boto3.client("emr-serverless", region_name="eu-west-2")
@@ -270,16 +284,16 @@ with DAG(
                 return app_id
         raise ValueError(f"EMR application '{app_name}' not found")
 
-    get_tasks_app_id = PythonOperator(
-        task_id="get-tasks-emr-app-id",
-        python_callable=get_tasks_emr_application_id,
+    get_emr_app_id = PythonOperator(
+        task_id="get-emr-app-id",
+        python_callable=get_emr_application_id,
         execution_timeout=timedelta(minutes=2),
         dag=dag,
     )
 
     assemble_tasks_emr_task = EmrServerlessStartJobOperator(
         task_id="assemble-tasks",
-        application_id='{{ task_instance.xcom_pull(task_ids="get-tasks-emr-app-id", key="application_id") }}',
+        application_id='{{ task_instance.xcom_pull(task_ids="get-emr-app-id", key="application_id") }}',
         execution_role_arn=EXECUTION_ROLE_ARN,
         job_driver={
             "sparkSubmit": {
@@ -297,4 +311,26 @@ with DAG(
         execution_timeout=timedelta(hours=3),
     )
 
-    configure_dag_task >> get_tasks_app_id >> assemble_tasks_emr_task
+    configure_dag_task >> get_emr_app_id >> assemble_tasks_emr_task
+
+    provision_quality_emr_task = EmrServerlessStartJobOperator(
+        task_id="provision-quality",
+        application_id='{{ task_instance.xcom_pull(task_ids="get-emr-app-id", key="application_id") }}',
+        execution_role_arn=EXECUTION_ROLE_ARN,
+        job_driver={
+            "sparkSubmit": {
+                "entryPoint": S3_PROVISION_QUALITY_ENTRY_POINT,
+                "entryPointArguments": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="provision-quality-entry-point-args") }}',
+                "sparkSubmitParameters": f"--py-files {S3_WHEEL_FILE} " "--conf spark.serializer=org.apache.spark.serializer.KryoSerializer",
+            }
+        },
+        configuration_overrides={"monitoringConfiguration": {"s3MonitoringConfiguration": {"logUri": S3_LOG_URI}}},
+        name="provision-quality-job",
+        wait_for_completion=True,
+        aws_conn_id="aws_default",
+        waiter_max_attempts=180,
+        waiter_delay=60,
+        execution_timeout=timedelta(hours=3),
+    )
+
+    get_emr_app_id >> provision_quality_emr_task
