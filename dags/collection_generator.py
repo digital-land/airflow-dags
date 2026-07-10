@@ -115,6 +115,16 @@ for collection, collection_datasets in collections.items():
             dag=dag,
         )
 
+        # listed-building / tree-preservation-order need a bigger Fargate TASK (not just the container)
+        task_size_override = (
+            {
+                "cpu": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="cpu") | string }}',
+                "memory": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="memory") | string }}',
+            }
+            if collection in ("listed-building", "tree-preservation-order")
+            else {}
+        )
+
         collect_ecs_task = EcsRunTaskOperator(
             task_id=f"{collection}-collect",
             dag=dag,
@@ -123,6 +133,7 @@ for collection, collection_datasets in collections.items():
             task_definition=collection_task_name,
             launch_type="FARGATE",
             overrides={
+                **task_size_override,
                 "containerOverrides": [
                     {
                         "name": collection_task_name,
@@ -151,7 +162,7 @@ for collection, collection_datasets in collections.items():
                             {"name": "REPROCESS", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="force-reprocessing") }}\''},
                         ],
                     },
-                ]
+                ],
             },
             network_configuration={"awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'},
             awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
@@ -198,6 +209,7 @@ for collection, collection_datasets in collections.items():
                 task_definition=collection_task_name,
                 launch_type="FARGATE",
                 overrides={
+                    **task_size_override,
                     "containerOverrides": [
                         {
                             "name": collection_task_name,
@@ -226,7 +238,7 @@ for collection, collection_datasets in collections.items():
                                 {"name": "REGENERATE_LOG_OVERRIDE", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="regenerate-log-override") | string }}\''},
                             ],
                         },
-                    ]
+                    ],
                 },
                 network_configuration={"awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'},
                 awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
