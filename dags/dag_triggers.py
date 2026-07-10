@@ -56,8 +56,8 @@ with DAG(
         if collection not in ["organisation"]:
 
             if collection_selected(collection, config):
-                # Set custom CPU for listed-building collection
-                conf = {"cpu": 16384, "transformed-jobs": 16} if collection in ("listed-building", "tree-preservation-order") else {}
+                # Set custom CPU and RAM for listed-building collection
+                conf = {"cpu": 16384, "memory": 65536, "transformed-jobs": 16} if collection in ("listed-building", "tree-preservation-order") else {}
 
                 collection_dag = TriggerDagRunOperator(
                     task_id=f"trigger-{collection}-collection-dag",
@@ -98,8 +98,8 @@ with DAG(
     for collection, datasets in collections.items():
         if collection not in ["organisation"]:
 
-            # Set custom CPU for listed-building collection
-            conf = {"cpu": 16384, "transformed-jobs": 16} if collection in ("listed-building", "tree-preservation-order") else {}
+            # Set custom CPU and RAM for listed-building collection
+            conf = {"cpu": 16384, "memory": 65536, "transformed-jobs": 16} if collection in ("listed-building", "tree-preservation-order") else {}
 
             collection_dag = TriggerDagRunOperator(task_id=f"trigger-{collection}-collection-dag", trigger_dag_id=f"{collection}-collection", wait_for_completion=True, conf=conf)
             collection_tasks.append(collection_dag)
