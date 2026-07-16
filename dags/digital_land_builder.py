@@ -132,6 +132,8 @@ with DAG(
             S3_DATA_PATH,
             "--entity-data-path",
             f"s3://{collection_dataset_bucket_name}/dataset/",
+            "--parquet-datasets-path",
+            f"s3://{config['env']}-parquet-datasets",
         ]
         if debug:
             provision_quality_args.append("--debug")
