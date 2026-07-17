@@ -280,47 +280,48 @@ for collection, collection_datasets in filtered_collections.items():
             # end of task group
 
             # Now we need to create a data package task to create the sqlite file for datasette
-            package_ecs_task = EcsRunTaskOperator(
-                task_id=f"{dataset}-package",
-                dag=dag,
-                execution_timeout=timedelta(minutes=1800),
-                cluster=ecs_cluster,
-                task_definition=collection_task_name,
-                launch_type="FARGATE",
-                overrides={
-                    "containerOverrides": [
-                        {
-                            "name": collection_task_name,
-                            "cpu": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="cpu") | int }}',
-                            "memory": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="memory") | int }}',
-                            "command": ["./bin/package.sh"],
-                            "environment": [
-                                {"name": "ENVIRONMENT", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="env") | string }}\''},
-                                {"name": "COLLECTION_NAME", "value": collection},
-                                {"name": "DATASET_NAME", "value": dataset},
-                                {
-                                    "name": "COLLECTION_DATA_BUCKET",
-                                    "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}\'',
-                                },
-                                {
-                                    "name": "PARQUET_DATASETS_BUCKET",
-                                    "value": f"s3://{ENV}-parquet-datasets",
-                                },
-                                # {"name": "TRANSFORMED_JOBS", "value": str('{{ task_instance.xcom_pull(task_ids="configure-dag", key="transformed-jobs") | string }}')},
-                                {"name": "TRANSFORMED_JOBS", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="transformed-jobs") | string }}\''},
-                                {"name": "DATASET_JOBS", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="dataset-jobs") | string }}\''},
-                            ],
-                        },
-                    ]
-                },
-                network_configuration={"awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'},
-                awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
-                awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-region") }}',
-                awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}',
-                awslogs_fetch_interval=timedelta(seconds=1),
-            )
+            if dataset not in ["title-boundary"]:
+                package_ecs_task = EcsRunTaskOperator(
+                    task_id=f"{dataset}-package",
+                    dag=dag,
+                    execution_timeout=timedelta(minutes=1800),
+                    cluster=ecs_cluster,
+                    task_definition=collection_task_name,
+                    launch_type="FARGATE",
+                    overrides={
+                        "containerOverrides": [
+                            {
+                                "name": collection_task_name,
+                                "cpu": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="cpu") | int }}',
+                                "memory": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="memory") | int }}',
+                                "command": ["./bin/package.sh"],
+                                "environment": [
+                                    {"name": "ENVIRONMENT", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="env") | string }}\''},
+                                    {"name": "COLLECTION_NAME", "value": collection},
+                                    {"name": "DATASET_NAME", "value": dataset},
+                                    {
+                                        "name": "COLLECTION_DATA_BUCKET",
+                                        "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}\'',
+                                    },
+                                    {
+                                        "name": "PARQUET_DATASETS_BUCKET",
+                                        "value": f"s3://{ENV}-parquet-datasets",
+                                    },
+                                    # {"name": "TRANSFORMED_JOBS", "value": str('{{ task_instance.xcom_pull(task_ids="configure-dag", key="transformed-jobs") | string }}')},
+                                    {"name": "TRANSFORMED_JOBS", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="transformed-jobs") | string }}\''},
+                                    {"name": "DATASET_JOBS", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="dataset-jobs") | string }}\''},
+                                ],
+                            },
+                        ]
+                    },
+                    network_configuration={"awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'},
+                    awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
+                    awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-region") }}',
+                    awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}',
+                    awslogs_fetch_interval=timedelta(seconds=1),
+                )
 
-            assemble_emr_task >> package_ecs_task
+                assemble_emr_task >> package_ecs_task
 
             if datasets_dict[dataset].get("typology") == "geography":
                 # need to add a tiles loader task here
