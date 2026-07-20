@@ -14,6 +14,7 @@ from airflow.providers.amazon.aws.operators.ecs import (
 from airflow.providers.amazon.aws.operators.emr import EmrServerlessStartJobOperator
 from airflow.providers.slack.notifications.slack import send_slack_notification
 from airflow.utils.task_group import TaskGroup
+from collection_config import get_collection_dag_config
 from emr_dags_utils import get_secrets
 from utils import (
     dag_default_args,
@@ -64,6 +65,7 @@ if config["env"] == "production":
 
 for collection, collection_datasets in filtered_collections.items():
     dag_id = f"{collection}-collection"
+    collection_dag_config = get_collection_dag_config(collection)
 
     with DAG(
         f"new-{collection}-collection",
@@ -72,14 +74,14 @@ for collection, collection_datasets in filtered_collections.items():
         schedule=None,
         catchup=False,
         params={
-            "cpu": Param(default=8192, type="integer"),
-            "memory": Param(default=32768, type="integer"),
-            "transformed-jobs": Param(default=8, type="integer"),
-            "dataset-jobs": Param(default=8, type="integer"),
-            "transform-batch-size": Param(default=200, type="integer"),
-            "incremental-loading-override": Param(default=False, type="boolean"),
-            "regenerate-log-override": Param(default=False, type="boolean"),
-            "force-reprocessing": Param(default=False, type="boolean"),
+            "cpu": Param(default=collection_dag_config.cpu, type="integer"),
+            "memory": Param(default=collection_dag_config.memory, type="integer"),
+            "transformed-jobs": Param(default=collection_dag_config.transformed_jobs, type="integer"),
+            "dataset-jobs": Param(default=collection_dag_config.dataset_jobs, type="integer"),
+            "transform-batch-size": Param(default=collection_dag_config.transform_batch_size, type="integer"),
+            "incremental-loading-override": Param(default=collection_dag_config.incremental_loading_override, type="boolean"),
+            "regenerate-log-override": Param(default=collection_dag_config.regenerate_log_override, type="boolean"),
+            "force-reprocessing": Param(default=collection_dag_config.force_reprocessing, type="boolean"),
         },
         render_template_as_native_obj=True,
         is_paused_upon_creation=False,
