@@ -183,7 +183,7 @@ for collection, collection_datasets in filtered_collections.items():
             awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
             awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-region") }}',
             awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}',
-            awslogs_fetch_interval=timedelta(seconds=1),
+            awslogs_fetch_interval=timedelta(seconds=collection_dag_config.awslogs_fetch_interval_seconds),
         )
 
         configure_dag_task >> collect_ecs_task
@@ -210,7 +210,7 @@ for collection, collection_datasets in filtered_collections.items():
                 awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
                 awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-region") }}',
                 awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}',
-                awslogs_fetch_interval=timedelta(seconds=1),
+                awslogs_fetch_interval=timedelta(seconds=collection_dag_config.awslogs_fetch_interval_seconds),
             ).expand(overrides=get_batch_configs.output)
 
             collect_ecs_task >> get_batch_configs >> transform_ecs_tasks
@@ -243,6 +243,15 @@ for collection, collection_datasets in filtered_collections.items():
                 S3_LOG_URI = f"s3://{S3_LOG_BUCKET}/"
                 S3_DATA_PATH = f"s3://{S3_SOURCE_DATA_PATH}/"
 
+                spark_submit_parameters = (
+                    f"--jars /usr/lib/spark/jars/postgresql-42.7.4.jar --py-files {S3_WHEEL_FILE} "
+                    "--conf spark.serializer=org.apache.spark.serializer.KryoSerializer "
+                    "--conf spark.kryo.registrator=org.apache.sedona.core.serde.SedonaKryoRegistrator "
+                    "--conf spark.sql.extensions=org.apache.sedona.sql.SedonaSqlExtensions"
+                )
+                if collection_dag_config.max_executors is not None:
+                    spark_submit_parameters += f" --conf spark.dynamicAllocation.maxExecutors={collection_dag_config.max_executors}"
+
                 assemble_emr_task = EmrServerlessStartJobOperator(
                     task_id="assemble-emr-job",
                     application_id=f'{{{{ task_instance.xcom_pull(task_ids="{dataset}-assemble-load-bake.get-emr-app-id", key="application_id") }}}}',
@@ -262,10 +271,7 @@ for collection, collection_datasets in filtered_collections.items():
                                 "--parquet-datasets-path",
                                 f"s3://{ENV}-parquet-datasets",
                             ],
-                            "sparkSubmitParameters": f"--jars /usr/lib/spark/jars/postgresql-42.7.4.jar --py-files {S3_WHEEL_FILE} "
-                            "--conf spark.serializer=org.apache.spark.serializer.KryoSerializer "
-                            "--conf spark.kryo.registrator=org.apache.sedona.core.serde.SedonaKryoRegistrator "
-                            "--conf spark.sql.extensions=org.apache.sedona.sql.SedonaSqlExtensions",
+                            "sparkSubmitParameters": spark_submit_parameters,
                         }
                     },
                     configuration_overrides={"monitoringConfiguration": {"s3MonitoringConfiguration": {"logUri": S3_LOG_URI}}},
@@ -320,7 +326,7 @@ for collection, collection_datasets in filtered_collections.items():
                     awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
                     awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-region") }}',
                     awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}',
-                    awslogs_fetch_interval=timedelta(seconds=1),
+                    awslogs_fetch_interval=timedelta(seconds=collection_dag_config.awslogs_fetch_interval_seconds),
                 )
 
                 assemble_emr_task >> package_ecs_task
@@ -354,6 +360,6 @@ for collection, collection_datasets in filtered_collections.items():
                     awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="tiles-builder-task-log-group") }}',
                     awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="tiles-builder-task-log-region") }}',
                     awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="tiles-builder-task-log-stream-prefix") }}',
-                    awslogs_fetch_interval=timedelta(seconds=1),
+                    awslogs_fetch_interval=timedelta(seconds=collection_dag_config.awslogs_fetch_interval_seconds),
                 )
                 assemble_emr_task >> tiles_builder_task
