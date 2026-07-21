@@ -14,6 +14,7 @@ from airflow.providers.amazon.aws.operators.ecs import (
 from airflow.providers.amazon.aws.operators.emr import EmrServerlessStartJobOperator
 from airflow.providers.slack.notifications.slack import send_slack_notification
 from airflow.utils.task_group import TaskGroup
+from collection_config import get_collection_dag_config
 from emr_dags_utils import get_secrets
 from utils import (
     dag_default_args,
@@ -64,6 +65,7 @@ if config["env"] == "production":
 
 for collection, collection_datasets in filtered_collections.items():
     dag_id = f"{collection}-collection"
+    collection_dag_config = get_collection_dag_config(collection)
 
     with DAG(
         f"new-{collection}-collection",
@@ -72,14 +74,14 @@ for collection, collection_datasets in filtered_collections.items():
         schedule=None,
         catchup=False,
         params={
-            "cpu": Param(default=8192, type="integer"),
-            "memory": Param(default=32768, type="integer"),
-            "transformed-jobs": Param(default=8, type="integer"),
-            "dataset-jobs": Param(default=8, type="integer"),
-            "transform-batch-size": Param(default=200, type="integer"),
-            "incremental-loading-override": Param(default=False, type="boolean"),
-            "regenerate-log-override": Param(default=False, type="boolean"),
-            "force-reprocessing": Param(default=False, type="boolean"),
+            "cpu": Param(default=collection_dag_config.cpu, type="integer"),
+            "memory": Param(default=collection_dag_config.memory, type="integer"),
+            "transformed-jobs": Param(default=collection_dag_config.transformed_jobs, type="integer"),
+            "dataset-jobs": Param(default=collection_dag_config.dataset_jobs, type="integer"),
+            "transform-batch-size": Param(default=collection_dag_config.transform_batch_size, type="integer"),
+            "incremental-loading-override": Param(default=collection_dag_config.incremental_loading_override, type="boolean"),
+            "regenerate-log-override": Param(default=collection_dag_config.regenerate_log_override, type="boolean"),
+            "force-reprocessing": Param(default=collection_dag_config.force_reprocessing, type="boolean"),
         },
         render_template_as_native_obj=True,
         is_paused_upon_creation=False,
@@ -181,7 +183,7 @@ for collection, collection_datasets in filtered_collections.items():
             awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
             awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-region") }}',
             awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}',
-            awslogs_fetch_interval=timedelta(seconds=1),
+            awslogs_fetch_interval=timedelta(seconds=collection_dag_config.awslogs_fetch_interval_seconds),
         )
 
         configure_dag_task >> collect_ecs_task
@@ -208,7 +210,7 @@ for collection, collection_datasets in filtered_collections.items():
                 awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
                 awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-region") }}',
                 awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}',
-                awslogs_fetch_interval=timedelta(seconds=1),
+                awslogs_fetch_interval=timedelta(seconds=collection_dag_config.awslogs_fetch_interval_seconds),
             ).expand(overrides=get_batch_configs.output)
 
             collect_ecs_task >> get_batch_configs >> transform_ecs_tasks
@@ -241,6 +243,15 @@ for collection, collection_datasets in filtered_collections.items():
                 S3_LOG_URI = f"s3://{S3_LOG_BUCKET}/"
                 S3_DATA_PATH = f"s3://{S3_SOURCE_DATA_PATH}/"
 
+                spark_submit_parameters = (
+                    f"--jars /usr/lib/spark/jars/postgresql-42.7.4.jar --py-files {S3_WHEEL_FILE} "
+                    "--conf spark.serializer=org.apache.spark.serializer.KryoSerializer "
+                    "--conf spark.kryo.registrator=org.apache.sedona.core.serde.SedonaKryoRegistrator "
+                    "--conf spark.sql.extensions=org.apache.sedona.sql.SedonaSqlExtensions"
+                )
+                if collection_dag_config.max_executors is not None:
+                    spark_submit_parameters += f" --conf spark.dynamicAllocation.maxExecutors={collection_dag_config.max_executors}"
+
                 assemble_emr_task = EmrServerlessStartJobOperator(
                     task_id="assemble-emr-job",
                     application_id=f'{{{{ task_instance.xcom_pull(task_ids="{dataset}-assemble-load-bake.get-emr-app-id", key="application_id") }}}}',
@@ -260,10 +271,7 @@ for collection, collection_datasets in filtered_collections.items():
                                 "--parquet-datasets-path",
                                 f"s3://{ENV}-parquet-datasets",
                             ],
-                            "sparkSubmitParameters": f"--jars /usr/lib/spark/jars/postgresql-42.7.4.jar --py-files {S3_WHEEL_FILE} "
-                            "--conf spark.serializer=org.apache.spark.serializer.KryoSerializer "
-                            "--conf spark.kryo.registrator=org.apache.sedona.core.serde.SedonaKryoRegistrator "
-                            "--conf spark.sql.extensions=org.apache.sedona.sql.SedonaSqlExtensions",
+                            "sparkSubmitParameters": spark_submit_parameters,
                         }
                     },
                     configuration_overrides={"monitoringConfiguration": {"s3MonitoringConfiguration": {"logUri": S3_LOG_URI}}},
@@ -318,7 +326,7 @@ for collection, collection_datasets in filtered_collections.items():
                     awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
                     awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-region") }}',
                     awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}',
-                    awslogs_fetch_interval=timedelta(seconds=1),
+                    awslogs_fetch_interval=timedelta(seconds=collection_dag_config.awslogs_fetch_interval_seconds),
                 )
 
                 assemble_emr_task >> package_ecs_task
@@ -352,6 +360,6 @@ for collection, collection_datasets in filtered_collections.items():
                     awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="tiles-builder-task-log-group") }}',
                     awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="tiles-builder-task-log-region") }}',
                     awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="tiles-builder-task-log-stream-prefix") }}',
-                    awslogs_fetch_interval=timedelta(seconds=1),
+                    awslogs_fetch_interval=timedelta(seconds=collection_dag_config.awslogs_fetch_interval_seconds),
                 )
                 assemble_emr_task >> tiles_builder_task
