@@ -7,10 +7,23 @@ collection_generator.py
 from datetime import datetime
 
 from airflow import DAG
+from airflow.operators.python import ShortCircuitOperator
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.utils.trigger_rule import TriggerRule
+from collection_config import DEFAULT_COLLECTION_CONFIG, collection_schedule_matches, get_collection_dag_config
 from collection_schema import CollectionSelection
 from utils import filter_collections_for_env, get_collections_dict, get_config, load_specification_datasets, sort_collections_dict
+
+# title-boundary runs via its newer, EMR-based pipeline; every other collection still runs via
+# the original collection DAG
+NEW_COLLECTION_DAG_COLLECTIONS = {"title-boundary"}
+
+
+def trigger_dag_id_for(collection: str) -> str:
+    if collection in NEW_COLLECTION_DAG_COLLECTIONS:
+        return f"new-{collection}-collection"
+    return f"{collection}-collection"
+
 
 config = get_config()
 dag_schedule = config.get("schedule", None)  # Use "None" as a fallback if "schedule" key is missing
@@ -61,15 +74,31 @@ with DAG(
 
                 collection_dag = TriggerDagRunOperator(
                     task_id=f"trigger-{collection}-collection-dag",
-                    trigger_dag_id=f"{collection}-collection",
+                    trigger_dag_id=trigger_dag_id_for(collection),
                     wait_for_completion=True,
                     trigger_rule=TriggerRule.ALL_DONE,
                     priority_weight=CUSTOM_COLLECTION_DAG_WEIGHTING.get(collection, DEFAULT_WEIGHTING),
                     conf=conf,
                 )
+
+                # the scheduler runs every day; collections with a non-default schedule_rrule
+                # (e.g. title-boundary, monthly) only actually get triggered on a matching day
+                entry_task = collection_dag
+                collection_dag_config = get_collection_dag_config(collection)
+                if collection_dag_config.schedule_rrule != DEFAULT_COLLECTION_CONFIG.schedule_rrule:
+                    check_schedule = ShortCircuitOperator(
+                        task_id=f"check-{collection}-schedule",
+                        python_callable=collection_schedule_matches,
+                        op_kwargs={"collection": collection},
+                        trigger_rule=TriggerRule.ALL_DONE,
+                        ignore_downstream_trigger_rules=False,
+                    )
+                    check_schedule >> collection_dag
+                    entry_task = check_schedule
+
                 collection_tasks.append(collection_dag)
                 if organisation_collection_selected:
-                    run_org_builder_dag >> collection_dag
+                    run_org_builder_dag >> entry_task
 
     dlb_dag = TriggerDagRunOperator(
         task_id="trigger-digital-land-builder-dag", trigger_dag_id="build-digital-land-builder", wait_for_completion=True, trigger_rule=TriggerRule.ALL_DONE
@@ -101,7 +130,9 @@ with DAG(
             # Set custom CPU for listed-building collection
             conf = {"cpu": 16384, "transformed-jobs": 16} if collection in ("listed-building", "tree-preservation-order") else {}
 
-            collection_dag = TriggerDagRunOperator(task_id=f"trigger-{collection}-collection-dag", trigger_dag_id=f"{collection}-collection", wait_for_completion=True, conf=conf)
+            collection_dag = TriggerDagRunOperator(
+                task_id=f"trigger-{collection}-collection-dag", trigger_dag_id=trigger_dag_id_for(collection), wait_for_completion=True, conf=conf
+            )
             collection_tasks.append(collection_dag)
 
             run_org_builder_dag >> collection_dag
