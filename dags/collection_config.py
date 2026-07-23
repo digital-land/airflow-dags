@@ -44,9 +44,10 @@ DEFAULT_COLLECTION_CONFIG = CollectionDagConfig()
 COLLECTION_CONFIG_OVERRIDES = {
     # title-boundary's EMR job can otherwise consume all of the vCPU available to the
     # shared EMR Serverless application, starving other collections' jobs. It's also only
-    # scheduled for the first Sunday of the month, matching HM Land Registry's own release
-    # schedule for the INSPIRE Index Polygons data it's built from
-    "title-boundary": CollectionDagConfig(transform_batch_size=100, max_executors=50, schedule_rrule="FREQ=MONTHLY;BYDAY=1SU"),
+    # scheduled for the first Monday of the month, a day after HM Land Registry's own release
+    # schedule for the INSPIRE Index Polygons data it's built from (first Sunday), so their
+    # data is available by the time we run
+    "title-boundary": CollectionDagConfig(transform_batch_size=100, max_executors=50, schedule_rrule="FREQ=MONTHLY;BYDAY=1MO"),
 }
 
 
