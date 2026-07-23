@@ -3,5 +3,6 @@ apache-airflow-providers-amazon
 apache-airflow-providers-slack
 boto
 pydantic
+python-dateutil
 click
 utils
