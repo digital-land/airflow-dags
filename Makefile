@@ -27,7 +27,10 @@ compose-down::
 	docker compose down  --rmi 'all'
 
 
-test:: test-integration test-acceptance
+test:: test-unit test-integration test-acceptance
+
+test-unit::
+	python -m pytest tests/unit
 
 test-integration::
 	python -m pytest tests/integration

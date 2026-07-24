@@ -6,44 +6,45 @@ import boto3
 import pytest
 from moto import mock_aws
 
+CONFIG_PATH = Path("dags/config.json")
+CONFIG_BACKUP_PATH = CONFIG_PATH.with_suffix(".json.backup")
 
-@pytest.fixture(scope="session", autouse=True)
-def create_test_config():
+# Matches the output of: bin/generate_dag_config.py --env development
+TEST_CONFIG = {"env": "development", "schedule": "0 0 * * *", "max_active_tasks": 50, "collection_selection": "explicit", "collections": ["ancient-woodland", "organisation"]}
+
+# Several DAG modules call get_secrets("emr_execution_role", env) at import time, which hits real
+# AWS Secrets Manager unless overridden. aws_secrets_manager.get_secret_emr_compatible supports a
+# SECRET_<name> environment variable escape hatch specifically for this - see its docstring.
+SECRET_ENV_VAR = "SECRET__DEVELOPMENT_PD_BATCH_DEPLOYMENT_VARIABLES_SECRET"
+TEST_SECRET_VALUE = json.dumps({"emr_execution_role": "arn:aws:iam::000000000000:role/test-emr-execution-role"})
+
+
+def pytest_configure(config):
     """
-    Create a test config.json file for DAG tests.
+    Create a test config.json file, and fake the AWS secret DAGs read at import time.
 
-    This fixture runs automatically before any tests and creates the config file
-    that DAGs expect to find in dags/config.json. If a config already exists,
-    it will be backed up and restored after tests complete.
-
-    The test configuration matches the output of:
-        bin/generate_dag_config.py --env development
-
-    To customize the test config, modify the test_config dictionary below.
+    Some tests import DAG modules directly at module scope (e.g. `from dags.digital_land_builder
+    import dag`), which happens during collection - before any pytest fixture would run. This
+    hook runs earlier still, so both are guaranteed to be in place before anything is collected.
+    If a config already exists, it's backed up and restored in pytest_unconfigure.
     """
-    config_path = Path("dags/config.json")
+    if CONFIG_PATH.exists():
+        CONFIG_PATH.rename(CONFIG_BACKUP_PATH)
 
-    # Create test configuration (matches development environment)
-    test_config = {"env": "development", "schedule": "0 0 * * *", "max_active_tasks": 50, "collection_selection": "explicit", "collections": ["ancient-woodland", "organisation"]}
+    with open(CONFIG_PATH, "w") as f:
+        json.dump(TEST_CONFIG, f, indent=4)
 
-    # Check if config already exists (backup if it does)
-    backup_path = None
-    if config_path.exists():
-        backup_path = config_path.with_suffix(".json.backup")
-        config_path.rename(backup_path)
+    os.environ[SECRET_ENV_VAR] = TEST_SECRET_VALUE
 
-    # Write test config
-    with open(config_path, "w") as f:
-        json.dump(test_config, f, indent=4)
 
-    yield config_path
+def pytest_unconfigure(config):
+    if CONFIG_PATH.exists():
+        CONFIG_PATH.unlink()
 
-    # Cleanup: remove test config and restore backup if it existed
-    if config_path.exists():
-        config_path.unlink()
+    if CONFIG_BACKUP_PATH.exists():
+        CONFIG_BACKUP_PATH.rename(CONFIG_PATH)
 
-    if backup_path and backup_path.exists():
-        backup_path.rename(config_path)
+    os.environ.pop(SECRET_ENV_VAR, None)
 
 
 @pytest.fixture(scope="function")
