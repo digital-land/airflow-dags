@@ -7,15 +7,17 @@ batch size as its transform jobs are larger). Collection-specific overrides are
 defined here rather than being hardcoded into the DAG generation logic.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from dateutil.rrule import rrulestr
 from pydantic import BaseModel
 
 # fixed anchor for expanding schedule_rrule recurrences from; only matters for cadences whose
-# phase depends on a start date (e.g. fortnightly) - harmless for DAILY/MONTHLY;BYDAY rules
-RRULE_SERIES_START = datetime(2025, 1, 1)
+# phase depends on a start date (e.g. fortnightly) - harmless for DAILY/MONTHLY;BYDAY rules.
+# Must be timezone-aware since Airflow's logical_date is UTC-aware, and dateutil can't compare
+# naive and aware datetimes.
+RRULE_SERIES_START = datetime(2025, 1, 1, tzinfo=timezone.utc)
 
 
 class CollectionDagConfig(BaseModel):
