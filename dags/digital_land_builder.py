@@ -323,7 +323,9 @@ with DAG(
             "sparkSubmit": {
                 "entryPoint": S3_PROVISION_QUALITY_ENTRY_POINT,
                 "entryPointArguments": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="provision-quality-entry-point-args") }}',
-                "sparkSubmitParameters": f"--py-files {S3_WHEEL_FILE} " "--conf spark.serializer=org.apache.spark.serializer.KryoSerializer",
+                "sparkSubmitParameters": f"--py-files {S3_WHEEL_FILE} "
+                "--conf spark.serializer=org.apache.spark.serializer.KryoSerializer "
+                "--conf spark.sql.maxPlanStringLength=8192",
             }
         },
         configuration_overrides={"monitoringConfiguration": {"s3MonitoringConfiguration": {"logUri": S3_LOG_URI}}},
