@@ -58,8 +58,13 @@ def get_collection_dag_config(collection: str) -> CollectionDagConfig:
     return COLLECTION_CONFIG_OVERRIDES.get(collection, DEFAULT_COLLECTION_CONFIG)
 
 
-def collection_schedule_matches(collection: str, logical_date, **_) -> bool:
-    """Whether a collection's schedule_rrule has an occurrence on logical_date's date."""
+def collection_schedule_matches(collection: str, data_interval_end, **_) -> bool:
+    """Whether a collection's schedule_rrule has an occurrence on data_interval_end's date.
+
+    data_interval_end - not logical_date - is used deliberately: for a daily schedule,
+    logical_date is the *start* of the interval (i.e. the previous day relative to when the run
+    actually fires), while data_interval_end is the day the run corresponds to.
+    """
     rrule_str = get_collection_dag_config(collection).schedule_rrule
-    occurrence = rrulestr(rrule_str, dtstart=RRULE_SERIES_START).after(logical_date - timedelta(seconds=1), inc=True)
-    return occurrence is not None and occurrence.date() == logical_date.date()
+    occurrence = rrulestr(rrule_str, dtstart=RRULE_SERIES_START).after(data_interval_end - timedelta(seconds=1), inc=True)
+    return occurrence is not None and occurrence.date() == data_interval_end.date()
