@@ -11,7 +11,7 @@ def test_get_collection_dag_config_returns_default_for_unknown_collection():
 def test_get_collection_dag_config_returns_override_for_title_boundary():
     config = get_collection_dag_config("title-boundary")
     assert config.schedule_rrule == "FREQ=MONTHLY;BYDAY=1MO"
-    assert config.transform_batch_size == 100
+    assert config.transform_batch_size == 50
     assert config.max_executors == 50
 
 

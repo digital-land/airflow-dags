@@ -49,7 +49,7 @@ COLLECTION_CONFIG_OVERRIDES = {
     # scheduled for the first Monday of the month, a day after HM Land Registry's own release
     # schedule for the INSPIRE Index Polygons data it's built from (first Sunday), so their
     # data is available by the time we run
-    "title-boundary": CollectionDagConfig(transform_batch_size=100, max_executors=50, schedule_rrule="FREQ=MONTHLY;BYDAY=1MO"),
+    "title-boundary": CollectionDagConfig(transform_batch_size=50, max_executors=50, schedule_rrule="FREQ=MONTHLY;BYDAY=1MO"),
 }
 
 
