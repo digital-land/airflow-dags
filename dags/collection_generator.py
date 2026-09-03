@@ -178,6 +178,7 @@ for collection, collection_datasets in collections.items():
                 task_id=f"{dataset}-transform",
                 dag=dag,
                 execution_timeout=timedelta(minutes=180),
+                max_active_tis_per_dag=config.get("max_active_task_instances"),
                 cluster=ecs_cluster,
                 task_definition=collection_task_name,
                 launch_type="FARGATE",

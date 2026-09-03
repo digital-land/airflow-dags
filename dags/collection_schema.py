@@ -15,6 +15,7 @@ class ScheduledCollectionConfig(BaseModel):
     collections: List[StrictStr] = []
     schedule: Optional[StrictStr] = None
     max_active_tasks: Optional[int] = 100
+    max_active_task_instances: Optional[int] = None
 
 
 class Environments(BaseModel):
