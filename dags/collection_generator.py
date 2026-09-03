@@ -14,6 +14,7 @@ from utils import (
     get_config,
     get_transform_batch_configs,
     load_specification_datasets,
+    max_active_task_instances_for_env,
     push_log_variables,
     push_vpc_config,
 )
@@ -178,6 +179,7 @@ for collection, collection_datasets in collections.items():
                 task_id=f"{dataset}-transform",
                 dag=dag,
                 execution_timeout=timedelta(minutes=180),
+                max_active_tis_per_dag=max_active_task_instances_for_env(config["env"]),
                 cluster=ecs_cluster,
                 task_definition=collection_task_name,
                 launch_type="FARGATE",
