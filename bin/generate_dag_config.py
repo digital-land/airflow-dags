@@ -12,7 +12,11 @@ from dags.collection_schema import CollectionSelection, Environments, ScheduledC
 
 scheduled_collection_config = Environments(
     development=ScheduledCollectionConfig(
-        selection=CollectionSelection.explicit, collections=["ancient-woodland", "organisation"], schedule="0 0 * * *", max_active_tasks=50  # time is UTC
+        selection=CollectionSelection.explicit,
+        collections=["ancient-woodland", "organisation"],
+        schedule="0 0 * * *",  # time is UTC
+        max_active_tasks=50,
+        max_active_task_instances=4,
     ),
     staging=ScheduledCollectionConfig(
         selection=CollectionSelection.explicit,
@@ -21,6 +25,7 @@ scheduled_collection_config = Environments(
             "organisation",
         ],
         schedule="0 0 * * *",
+        max_active_task_instances=4,
     ),
     production=ScheduledCollectionConfig(selection=CollectionSelection.all, schedule="0 0 * * *"),
 )
@@ -50,6 +55,9 @@ def make_dag_config(output_path: Path, env: str):
 
     if env_collection_config.max_active_tasks:
         config_dict["max_active_tasks"] = env_collection_config.max_active_tasks
+
+    if env_collection_config.max_active_task_instances:
+        config_dict["max_active_task_instances"] = env_collection_config.max_active_task_instances
 
     config_dict["collection_selection"] = env_collection_config.selection
     config_dict["collections"] = env_collection_config.collections

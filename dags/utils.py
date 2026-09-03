@@ -309,15 +309,3 @@ def get_transform_batch_configs(ti, collection, collection_task_name, dataset):
 
     print(f"Created {len(overrides_list)} batch configurations for {dataset}")
     return overrides_list
-
-
-def max_active_task_instances_for_env(env, cap=4):
-    """Cap concurrent mapped task instances outside production.
-
-    Development and staging run smaller MWAA environments than production and
-    lose whole mapped fan-outs to zombie reaping when many tasks run at once
-
-    Returns None for production - Airflow's own default, meaning unlimited - so
-    production behaviour is unchanged.
-    """
-    return None if env == "production" else cap
