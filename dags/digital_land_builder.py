@@ -97,6 +97,7 @@ with DAG(
         dataset_jobs = str(kwargs["params"].get("dataset-jobs"))
         incremental_loading_override = bool(kwargs["params"].get("incremental-loading-override"))
         regenerate_log_override = bool(kwargs["params"].get("regenerate-log-override"))
+        debug = bool(params.get("debug", False))
 
         # Push values to XCom
         ti.xcom_push(key="memory", value=memory)
@@ -106,13 +107,17 @@ with DAG(
         ti.xcom_push(key="incremental-loading-override", value=incremental_loading_override)
         ti.xcom_push(key="regenerate-log-override", value=regenerate_log_override)
 
+        collection_dataset_bucket_name = kwargs["conf"].get(section="custom", key="collection_dataset_bucket_name")
+        ti.xcom_push(key="collection-dataset-bucket-name", value=collection_dataset_bucket_name)
+
         # build entry point arguments for assemble-tasks EMR job
-        debug = bool(params.get("debug", False))
         tasks_args = [
             "--env",
             config["env"],
             "--collection-data-path",
             S3_DATA_PATH,
+            "--entity-data-path",
+            f"s3://{collection_dataset_bucket_name}/dataset/",
             "--parquet-datasets-path",
             f"s3://{config['env']}-parquet-datasets",
         ]
@@ -120,11 +125,7 @@ with DAG(
             tasks_args.append("--debug")
         ti.xcom_push(key="tasks-entry-point-args", value=tasks_args)
 
-        # add collection_data bucket
-        collection_dataset_bucket_name = kwargs["conf"].get(section="custom", key="collection_dataset_bucket_name")
-        ti.xcom_push(key="collection-dataset-bucket-name", value=collection_dataset_bucket_name)
-
-        # build entry point arguments for provision-quality EMR job
+        # build entry point arguments for assemble-provision-quality EMR job
         provision_quality_args = [
             "--env",
             config["env"],
@@ -313,10 +314,8 @@ with DAG(
         execution_timeout=timedelta(hours=3),
     )
 
-    configure_dag_task >> get_emr_app_id >> assemble_tasks_emr_task
-
-    provision_quality_emr_task = EmrServerlessStartJobOperator(
-        task_id="provision-quality",
+    assemble_provision_quality_emr_task = EmrServerlessStartJobOperator(
+        task_id="assemble-provision-quality",
         application_id='{{ task_instance.xcom_pull(task_ids="get-emr-app-id", key="application_id") }}',
         execution_role_arn=EXECUTION_ROLE_ARN,
         job_driver={
@@ -329,7 +328,7 @@ with DAG(
             }
         },
         configuration_overrides={"monitoringConfiguration": {"s3MonitoringConfiguration": {"logUri": S3_LOG_URI}}},
-        name="provision-quality-job",
+        name="assemble-provision-quality-job",
         wait_for_completion=True,
         aws_conn_id="aws_default",
         waiter_max_attempts=180,
@@ -337,4 +336,4 @@ with DAG(
         execution_timeout=timedelta(hours=3),
     )
 
-    get_emr_app_id >> provision_quality_emr_task
+    configure_dag_task >> get_emr_app_id >> assemble_tasks_emr_task >> assemble_provision_quality_emr_task
