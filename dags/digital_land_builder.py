@@ -197,13 +197,17 @@ with DAG(
 
     if config["env"] == "production":
 
+        # datasette reloads digital-land.sqlite3 from S3->EFS roughly 13 minutes after the
+        # builder finishes, and is unavailable for ~15 minutes while it reattaches - 404s
+        # while the database is detached. This hour wait is to give a large buffer to
+        # ensure we pick up todays data.
         def delay_execution(**kwargs):
-            time.sleep(600)  # (10 minutes)
+            time.sleep(3600)  # (1 hour)
 
-        # Add delay before reporting task to ensure datasette consistency
         wait_before_reporting = PythonOperator(
             task_id="wait-before-reporting",
             python_callable=delay_execution,
+            execution_timeout=timedelta(minutes=70),
             dag=dag,
         )
 
