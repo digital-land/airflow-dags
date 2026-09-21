@@ -18,6 +18,11 @@ from utils import filter_collections_for_env, get_collections_dict, get_config, 
 # the original collection DAG
 NEW_COLLECTION_DAG_COLLECTIONS = {"title-boundary"}
 
+# collections triggered by a DAG of their own rather than from either master DAG. They run on a
+# cadence of their own and nothing downstream consumes their output during the nightly run, so
+# making the nightly chain wait on them only delays everything after them.
+DECOUPLED_COLLECTIONS = {"title-boundary"}
+
 
 def trigger_dag_id_for(collection: str) -> str:
     if collection in NEW_COLLECTION_DAG_COLLECTIONS:
@@ -66,7 +71,7 @@ with DAG(
         run_org_collection_dag >> run_org_builder_dag
 
     for collection, datasets in collections.items():
-        if collection not in ["organisation"]:
+        if collection not in ["organisation"] and collection not in DECOUPLED_COLLECTIONS:
 
             if collection_selected(collection, config):
                 # Set custom CPU for listed-building collection
@@ -125,7 +130,7 @@ with DAG(
     run_org_collection_dag >> run_org_builder_dag
 
     for collection, datasets in collections.items():
-        if collection not in ["organisation"]:
+        if collection not in ["organisation"] and collection not in DECOUPLED_COLLECTIONS:
 
             # Set custom CPU for listed-building collection
             conf = {"cpu": 16384, "transformed-jobs": 16} if collection in ("listed-building", "tree-preservation-order") else {}
@@ -143,3 +148,37 @@ with DAG(
 
     for task in collection_tasks:
         task >> dlb_dag
+
+
+# title-boundary is decoupled from both master DAGs. It is a monthly job, and having the nightly
+# chain block on a three-hour plus run once a month delayed everything behind it for no benefit -
+# nothing downstream reads its output during that run.
+
+if collection_selected("title-boundary", config) and "title-boundary" in collections:
+    with DAG(
+        dag_id="trigger-title-boundary-monthly",
+        description="Triggers the title-boundary collection on its own monthly schedule, independently of the nightly run",
+        # Midnight is load-bearing: do not move this off 00:00.
+        #
+        # The cron only gets us to "every Monday" - cron cannot intersect day-of-month with
+        # day-of-week, so collection_schedule_matches is what picks which Monday. That check
+        # compares the rrule's occurrences against data_interval_end, and every occurrence
+        # expands at RRULE_SERIES_START's time of day, which is 00:00.
+        schedule="0 0 * * 1",
+        start_date=datetime(2024, 1, 1),
+        catchup=False,
+        is_paused_upon_creation=False,
+    ):
+        check_schedule = ShortCircuitOperator(
+            task_id="check-title-boundary-schedule",
+            python_callable=collection_schedule_matches,
+            op_kwargs={"collection": "title-boundary"},
+        )
+        # deliberately does not wait for completion: nothing depends on the outcome, and waiting
+        # is precisely what this DAG exists to stop doing
+        trigger_title_boundary = TriggerDagRunOperator(
+            task_id="trigger-title-boundary-collection-dag",
+            trigger_dag_id=trigger_dag_id_for("title-boundary"),
+            wait_for_completion=False,
+        )
+        check_schedule >> trigger_title_boundary

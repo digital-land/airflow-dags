@@ -1,7 +1,16 @@
+from datetime import timedelta
+
 import pendulum
 import pytest
 
-from dags.collection_config import DEFAULT_COLLECTION_CONFIG, collection_schedule_matches, get_collection_dag_config
+from dags.collection_config import (
+    ASSEMBLE_WAITER_DELAY_SECONDS,
+    COLLECTION_CONFIG_OVERRIDES,
+    DEFAULT_COLLECTION_CONFIG,
+    assemble_waiter_max_attempts,
+    collection_schedule_matches,
+    get_collection_dag_config,
+)
 
 
 def test_get_collection_dag_config_returns_default_for_unknown_collection():
@@ -97,3 +106,46 @@ def test_title_boundary_runs_once_a_month_the_day_after_the_hmlr_release():
         expected = _first_sunday(month_start.year, month_start.month).add(days=1)
         matching = [day for day in (month_start.add(days=i) for i in range(month_start.days_in_month)) if collection_schedule_matches("title-boundary", day)]
         assert matching == [expected], f"{month_start:%Y-%m}: expected {expected:%a %d %b}, got {[format(d, '%a %d %b') for d in matching]}"
+
+
+def test_default_assemble_timeout_is_three_hours():
+    assert DEFAULT_COLLECTION_CONFIG.assemble_timeout == timedelta(hours=3)
+
+
+def test_title_boundary_assemble_timeout_is_raised_above_the_default():
+    """The 2026-09-07 production run was cancelled at the default three hours having not finished.
+    Raising it is only safe because nothing waits on this collection any more - see dag_triggers."""
+    assert get_collection_dag_config("title-boundary").assemble_timeout == timedelta(hours=12)
+
+
+@pytest.mark.parametrize("collection", ["central-activities-zone", *COLLECTION_CONFIG_OVERRIDES])
+def test_waiter_budget_always_outlasts_execution_timeout(collection):
+    """The assemble EMR operator's two bounds are not interchangeable and execution_timeout must
+    always be the one that fires.
+
+    Exceeding execution_timeout raises AirflowTaskTimeout, which Airflow answers by calling the
+    operator's on_kill(); EmrServerlessStartJobOperator.on_kill() calls cancel_job_run(), so the
+    EMR job actually stops. Exhausting the waiter raises a plain exception with no on_kill() - the
+    task would fail while the job carried on running on the shared EMR Serverless application with
+    nothing left tracking it.
+    """
+    config = get_collection_dag_config(collection)
+    waiter_budget_seconds = assemble_waiter_max_attempts(config.assemble_timeout) * ASSEMBLE_WAITER_DELAY_SECONDS
+
+    assert waiter_budget_seconds > config.assemble_timeout.total_seconds()
+
+
+@pytest.mark.parametrize(
+    "assemble_timeout",
+    [
+        timedelta(hours=3),
+        timedelta(hours=12),
+        timedelta(minutes=90),
+        timedelta(minutes=90, seconds=30),  # not a whole number of poll intervals
+        timedelta(seconds=1),  # shorter than a single poll interval
+    ],
+)
+def test_assemble_waiter_max_attempts_always_exceeds_its_input(assemble_timeout):
+    """Flooring to whole poll intervals and adding one has to stay strictly above the input for
+    every timeout, not just the ones that divide evenly."""
+    assert assemble_waiter_max_attempts(assemble_timeout) * ASSEMBLE_WAITER_DELAY_SECONDS > assemble_timeout.total_seconds()
