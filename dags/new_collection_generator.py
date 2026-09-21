@@ -14,7 +14,7 @@ from airflow.providers.amazon.aws.operators.ecs import (
 from airflow.providers.amazon.aws.operators.emr import EmrServerlessStartJobOperator
 from airflow.providers.slack.notifications.slack import send_slack_notification
 from airflow.utils.task_group import TaskGroup
-from collection_config import get_collection_dag_config
+from collection_config import ASSEMBLE_WAITER_DELAY_SECONDS, assemble_waiter_max_attempts, get_collection_dag_config
 from emr_dags_utils import get_secrets
 from utils import (
     dag_default_args,
@@ -279,9 +279,9 @@ for collection, collection_datasets in filtered_collections.items():
                     name=f"{dataset}-job",
                     wait_for_completion=True,
                     aws_conn_id="aws_default",
-                    waiter_max_attempts=180,
-                    waiter_delay=60,
-                    execution_timeout=timedelta(hours=3),
+                    waiter_max_attempts=assemble_waiter_max_attempts(collection_dag_config.assemble_timeout),
+                    waiter_delay=ASSEMBLE_WAITER_DELAY_SECONDS,
+                    execution_timeout=collection_dag_config.assemble_timeout,
                 )
 
                 transform_ecs_tasks >> get_app_id >> assemble_emr_task
