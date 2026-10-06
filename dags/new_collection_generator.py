@@ -248,7 +248,12 @@ for collection, collection_datasets in filtered_collections.items():
                     f"--jars /usr/lib/spark/jars/postgresql-42.7.4.jar --py-files {S3_WHEEL_FILE} "
                     "--conf spark.serializer=org.apache.spark.serializer.KryoSerializer "
                     "--conf spark.kryo.registrator=org.apache.sedona.core.serde.SedonaKryoRegistrator "
-                    "--conf spark.sql.extensions=org.apache.sedona.sql.SedonaSqlExtensions"
+                    "--conf spark.sql.extensions=org.apache.sedona.sql.SedonaSqlExtensions "
+                    # The default overhead (10% of executor memory, ~1.4g) left too little room outside
+                    # the heap: title-boundary executors were killed with exit code 137 (container out
+                    # of memory) while their heaps peaked well under 14g. 14g + 6g = a 20 GB worker.
+                    "--conf spark.executor.memory=14g "
+                    "--conf spark.executor.memoryOverhead=6g"
                 )
                 if collection_dag_config.max_executors is not None:
                     spark_submit_parameters += f" --conf spark.dynamicAllocation.maxExecutors={collection_dag_config.max_executors}"
