@@ -3,7 +3,7 @@ import pytest
 from airflow.exceptions import AirflowFailException
 from moto import mock_aws
 
-from dags.retire_dataset import check_dataset_can_be_retired, dag, find_dataset_files
+from dags.retire_dataset import check_dataset_can_be_retired, collection_to_retire, dag, dry_run_value, find_dataset_files
 
 DATASETS = {
     "in-production": {"dataset": "in-production", "environment": "production"},
@@ -78,3 +78,45 @@ def test_find_dataset_files_returns_nothing_for_an_unknown_dataset(s3_client):
 
 def test_guard_runs_before_discover():
     assert dag.get_task("discover").upstream_task_ids == {"guard"}
+
+
+def test_collection_to_retire_drops_the_collection_suffix():
+    """The collection task adds -collection itself"""
+    assert collection_to_retire("tree", ["tree-preservation-order-collection"]) == "tree-preservation-order"
+
+
+def test_collection_to_retire_falls_back_to_the_dataset_when_only_public_downloads_are_left():
+    assert collection_to_retire("tree", []) == "tree"
+
+
+def test_collection_to_retire_refuses_files_in_more_than_one_collection():
+    with pytest.raises(AirflowFailException, match="more than one collection"):
+        collection_to_retire("tree", ["tree-collection", "tree-preservation-order-collection"])
+
+
+def test_only_unticking_dry_run_removes_files():
+    """The collection task only removes files when DRY_RUN is exactly "false", so nothing else may send it"""
+    assert dry_run_value(False) == "false"
+    assert dry_run_value(True) == "true"
+    assert dry_run_value(None) == "true"
+
+
+def test_files_runs_after_discover():
+    assert dag.get_task("files").upstream_task_ids == {"discover"}
+
+
+def test_files_runs_the_collection_task_retire_script_with_everything_it_needs():
+    container = dag.get_task("files").overrides["containerOverrides"][0]
+
+    assert container["command"] == ["./bin/retire.sh"]
+    assert {variable["name"] for variable in container["environment"]} == {
+        "DATASET_NAME",
+        "COLLECTION_NAME",
+        "COLLECTION_DATASET_BUCKET_NAME",
+        "DRY_RUN",
+    }
+
+
+def test_dag_has_docs():
+    """Shown on the DAG's page in Airflow, for whoever runs it"""
+    assert "dry_run" in dag.doc_md
