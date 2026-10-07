@@ -31,6 +31,8 @@ config = get_config()
 
 ecs_cluster = f"{config['env']}-cluster"
 collection_task_name = f"{config['env']}-mwaa-collection-task"
+postgres_task_name = f"{config['env']}-sqlite-ingestion-task"
+postgres_container_name = f"{config['env']}-sqlite-ingestion"
 
 DAG_DOC = """
 ### Retire a dataset
@@ -50,8 +52,11 @@ Raw collected files (resources, logs, transformed data) are kept, so the dataset
 - `guard`: fails if the specification still builds the dataset in this environment.
 - `discover`: lists the dataset's files: the public downloads under `dataset/` and the built files in its collection's `dataset/` folder.
 - `files`: runs the collection task's `bin/retire.sh`, which removes those files, or only lists them on a dry run.
+- `postgres`: runs the Postgres loader's `retire.sh`, which removes the dataset's rows from `entity`, `old_entity` and `entity_subdivided`, or only counts them on a dry run.
 
-Removed files can be restored from the bucket's previous versions for 7 days. The dataset's Postgres rows, tiles and datasette database are not removed yet.
+Removed files can be restored from the bucket's previous versions for 7 days.
+Removed Postgres rows can be loaded again with `manual-postgres-loader`, once the dataset's `.sqlite3` file has been restored.
+The dataset's tiles and datasette database are not removed yet.
 """
 
 
@@ -171,6 +176,12 @@ with DAG(
             container_name=collection_task_name,
             prefix="collection-task",
         )
+        push_log_variables(
+            ti,
+            task_definition_name=postgres_task_name,
+            container_name=postgres_container_name,
+            prefix="postgres-task",
+        )
 
     guard_task = PythonOperator(task_id="guard", python_callable=guard)
     discover_task = PythonOperator(task_id="discover", python_callable=discover)
@@ -212,4 +223,33 @@ with DAG(
         awslogs_fetch_interval=timedelta(seconds=10),
     )
 
-    guard_task >> discover_task >> files_task
+    # Runs the Postgres loader's retire mode, which counts the dataset's rows and, unless this is a dry run, removes them
+    postgres_task = EcsRunTaskOperator(
+        task_id="postgres",
+        execution_timeout=timedelta(minutes=30),
+        cluster=ecs_cluster,
+        task_definition=postgres_task_name,
+        launch_type="FARGATE",
+        overrides={
+            "containerOverrides": [
+                {
+                    "name": postgres_container_name,
+                    "command": ["./retire.sh"],
+                    "environment": [
+                        {"name": "DATASET_NAME", "value": "'{{ params.dataset }}'"},
+                        {
+                            "name": "DRY_RUN",
+                            "value": '\'{{ task_instance.xcom_pull(task_ids="discover", key="dry-run") }}\'',
+                        },
+                    ],
+                },
+            ]
+        },
+        network_configuration={"awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="discover", key="aws_vpc_config") }}'},
+        awslogs_group='{{ task_instance.xcom_pull(task_ids="discover", key="postgres-task-log-group") }}',
+        awslogs_region='{{ task_instance.xcom_pull(task_ids="discover", key="postgres-task-log-region") }}',
+        awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="discover", key="postgres-task-log-stream-prefix") }}',
+        awslogs_fetch_interval=timedelta(seconds=10),
+    )
+
+    guard_task >> discover_task >> [files_task, postgres_task]
