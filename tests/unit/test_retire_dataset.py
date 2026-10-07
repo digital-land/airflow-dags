@@ -117,6 +117,17 @@ def test_files_runs_the_collection_task_retire_script_with_everything_it_needs()
     }
 
 
+def test_postgres_runs_after_discover():
+    assert dag.get_task("postgres").upstream_task_ids == {"discover"}
+
+
+def test_postgres_runs_the_loader_retire_script_with_everything_it_needs():
+    container = dag.get_task("postgres").overrides["containerOverrides"][0]
+
+    assert container["command"] == ["./retire.sh"]
+    assert {variable["name"] for variable in container["environment"]} == {"DATASET_NAME", "DRY_RUN"}
+
+
 def test_dag_has_docs():
     """Shown on the DAG's page in Airflow, for whoever runs it"""
     assert "dry_run" in dag.doc_md
