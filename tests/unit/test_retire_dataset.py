@@ -128,6 +128,29 @@ def test_postgres_runs_the_loader_retire_script_with_everything_it_needs():
     assert {variable["name"] for variable in container["environment"]} == {"DATASET_NAME", "DRY_RUN"}
 
 
+def test_datasette_runs_after_discover():
+    assert dag.get_task("datasette").upstream_task_ids == {"discover"}
+
+
+def test_datasette_runs_the_datasette_sync_retire_script_with_everything_it_needs():
+    task = dag.get_task("datasette")
+    container = task.overrides["containerOverrides"][0]
+
+    assert task.task_definition == "development-efs-sync-task"
+    assert container["name"] == "development-efs-sync"
+    assert container["command"] == ["./retire.sh"]
+    assert {variable["name"] for variable in container["environment"]} == {"DATASET_NAME", "DRY_RUN"}
+
+
+@pytest.mark.parametrize("task_id", ["files", "postgres", "datasette"])
+def test_every_task_that_removes_data_takes_dry_run_from_discover(task_id):
+    """So unticking dry_run is the only way any of them removes anything"""
+    container = dag.get_task(task_id).overrides["containerOverrides"][0]
+    environment = {variable["name"]: variable["value"] for variable in container["environment"]}
+
+    assert environment["DRY_RUN"] == '\'{{ task_instance.xcom_pull(task_ids="discover", key="dry-run") }}\''
+
+
 def test_dag_has_docs():
     """Shown on the DAG's page in Airflow, for whoever runs it"""
     assert "dry_run" in dag.doc_md
