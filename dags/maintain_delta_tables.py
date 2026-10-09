@@ -5,9 +5,9 @@ import boto3
 from airflow import DAG
 from airflow.models.param import Param
 from airflow.operators.python import PythonOperator
-from airflow.providers.amazon.aws.operators.emr import EmrServerlessStartJobOperator
 from airflow.providers.slack.notifications.slack import send_slack_notification
 from emr_dags_utils import get_secrets
+from emr_log_streaming import EmrServerlessStartJobWithLogsOperator, emr_log_group, emr_monitoring_configuration
 from utils import dag_default_args, get_config, push_vpc_config
 
 config = get_config()
@@ -87,7 +87,7 @@ with DAG(
         dag=dag,
     )
 
-    maintain_delta_tables_task = EmrServerlessStartJobOperator(
+    maintain_delta_tables_task = EmrServerlessStartJobWithLogsOperator(
         task_id="maintain-delta-tables",
         application_id='{{ task_instance.xcom_pull(task_ids="get-emr-app-id", key="application_id") }}',
         execution_role_arn=EXECUTION_ROLE_ARN,
@@ -98,7 +98,7 @@ with DAG(
                 "sparkSubmitParameters": f"--py-files {S3_WHEEL_FILE} " "--conf spark.serializer=org.apache.spark.serializer.KryoSerializer",
             }
         },
-        configuration_overrides={"monitoringConfiguration": {"s3MonitoringConfiguration": {"logUri": S3_LOG_URI}}},
+        configuration_overrides=emr_monitoring_configuration(S3_LOG_URI, emr_log_group(ENV)),
         name="maintain-delta-tables-job",
         wait_for_completion=True,
         aws_conn_id="aws_default",
