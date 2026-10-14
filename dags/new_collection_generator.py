@@ -175,6 +175,7 @@ for collection, collection_datasets in filtered_collections.items():
                                 "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="incremental-loading-override") | string }}\'',
                             },
                             {"name": "REGENERATE_LOG_OVERRIDE", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="regenerate-log-override") | string }}\''},
+                            {"name": "REPROCESS", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="force-reprocessing") }}\''},
                         ],
                     },
                 ]
@@ -315,7 +316,7 @@ for collection, collection_datasets in filtered_collections.items():
                                     {"name": "DATASET_NAME", "value": dataset},
                                     {
                                         "name": "COLLECTION_DATA_BUCKET",
-                                        "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}\'',
+                                        "value": '\'s3://{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}\'',
                                     },
                                     {
                                         "name": "PARQUET_DATASETS_BUCKET",
