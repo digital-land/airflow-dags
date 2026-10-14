@@ -319,6 +319,10 @@ for collection, collection_datasets in filtered_collections.items():
                                         "value": '\'s3://{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}\'',
                                     },
                                     {
+                                        "name": "COLLECTION_DATASET_BUCKET_NAME",
+                                        "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}\'',
+                                    },
+                                    {
                                         "name": "PARQUET_DATASETS_BUCKET",
                                         "value": f"s3://{ENV}-parquet-datasets",
                                     },
