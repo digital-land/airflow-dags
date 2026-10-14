@@ -11,11 +11,11 @@ from airflow.operators.python import PythonOperator
 from airflow.providers.amazon.aws.operators.ecs import (
     EcsRunTaskOperator,
 )
-from airflow.providers.amazon.aws.operators.emr import EmrServerlessStartJobOperator
 from airflow.providers.slack.notifications.slack import send_slack_notification
 from airflow.utils.task_group import TaskGroup
 from collection_config import ASSEMBLE_WAITER_DELAY_SECONDS, assemble_waiter_max_attempts, get_collection_dag_config
 from emr_dags_utils import get_secrets
+from emr_log_streaming import EmrServerlessStartJobWithLogsOperator, emr_log_group, emr_monitoring_configuration
 from utils import (
     dag_default_args,
     filter_collections_for_env,
@@ -259,7 +259,7 @@ for collection, collection_datasets in filtered_collections.items():
                 if collection_dag_config.max_executors is not None:
                     spark_submit_parameters += f" --conf spark.dynamicAllocation.maxExecutors={collection_dag_config.max_executors}"
 
-                assemble_emr_task = EmrServerlessStartJobOperator(
+                assemble_emr_task = EmrServerlessStartJobWithLogsOperator(
                     task_id="assemble-emr-job",
                     application_id=f'{{{{ task_instance.xcom_pull(task_ids="{dataset}-assemble-load-bake.get-emr-app-id", key="application_id") }}}}',
                     execution_role_arn=EXECUTION_ROLE_ARN,
@@ -281,7 +281,7 @@ for collection, collection_datasets in filtered_collections.items():
                             "sparkSubmitParameters": spark_submit_parameters,
                         }
                     },
-                    configuration_overrides={"monitoringConfiguration": {"s3MonitoringConfiguration": {"logUri": S3_LOG_URI}}},
+                    configuration_overrides=emr_monitoring_configuration(S3_LOG_URI, emr_log_group(ENV)),
                     name=f"{dataset}-job",
                     wait_for_completion=True,
                     aws_conn_id="aws_default",
