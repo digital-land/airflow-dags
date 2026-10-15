@@ -92,3 +92,20 @@ def test_trigger_dag_is_scheduled_at_a_time_the_rrule_check_can_match(dag_bag):
         f"schedule '{dag.schedule_interval}' puts data_interval_end at {int(hour):02d}:{int(minute):02d}, which collection_schedule_matches cannot match - "
         "see the comment on the schedule in dag_triggers.py"
     )
+
+
+@pytest.mark.parametrize("master_dag_id", [SCHEDULED_MASTER_DAG_ID, MANUAL_MASTER_DAG_ID])
+def test_master_dags_only_trigger_dags_that_exist(dag_bag, master_dag_id):
+    """Moving a collection to the new DAG means listing it in NEW_COLLECTION_DAG_COLLECTIONS,
+    and the new DAG is only built for the collections new_collection_generator lists. A
+    collection in one list but not the other would only show up as a failed trigger in a
+    nightly run."""
+    missing = [task.trigger_dag_id for task in dag_bag.dags[master_dag_id].tasks if hasattr(task, "trigger_dag_id") and task.trigger_dag_id not in dag_bag.dags]
+
+    assert missing == []
+
+
+def test_central_activities_zone_is_triggered_via_the_new_collection_dag(dag_bag):
+    trigger = dag_bag.dags[MANUAL_MASTER_DAG_ID].get_task("trigger-central-activities-zone-collection-dag")
+
+    assert trigger.trigger_dag_id == "new-central-activities-zone-collection"
