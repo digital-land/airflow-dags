@@ -14,9 +14,9 @@ from collection_config import DEFAULT_COLLECTION_CONFIG, collection_schedule_mat
 from collection_schema import CollectionSelection
 from utils import filter_collections_for_env, get_collections_dict, get_config, load_specification_datasets, sort_collections_dict
 
-# title-boundary runs via its newer, EMR-based pipeline; every other collection still runs via
-# the original collection DAG
-NEW_COLLECTION_DAG_COLLECTIONS = {"title-boundary"}
+# collections run via the newer, EMR-based collection DAG (new-<collection>-collection); every
+# other collection still runs via the original collection DAG
+NEW_COLLECTION_DAG_COLLECTIONS = {"central-activities-zone", "title-boundary"}
 
 # collections triggered by a DAG of their own rather than from either master DAG. They run on a
 # cadence of their own and nothing downstream consumes their output during the nightly run, so
