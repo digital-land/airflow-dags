@@ -109,3 +109,17 @@ def test_central_activities_zone_is_triggered_via_the_new_collection_dag(dag_bag
     trigger = dag_bag.dags[MANUAL_MASTER_DAG_ID].get_task("trigger-central-activities-zone-collection-dag")
 
     assert trigger.trigger_dag_id == "new-central-activities-zone-collection"
+
+
+def test_listed_building_is_triggered_via_the_new_collection_dag(dag_bag):
+    trigger = dag_bag.dags[MANUAL_MASTER_DAG_ID].get_task("trigger-listed-building-collection-dag")
+
+    assert trigger.trigger_dag_id == "new-listed-building-collection"
+
+
+def test_listed_building_keeps_its_larger_task_size_on_the_new_collection_dag(dag_bag):
+    """listed-building's transform needs about two of its three hours at 16 vCPU and 16 jobs,
+    so the new DAG must be triggered with the same overrides rather than its defaults."""
+    trigger = dag_bag.dags[MANUAL_MASTER_DAG_ID].get_task("trigger-listed-building-collection-dag")
+
+    assert trigger.conf == {"cpu": 16384, "transformed-jobs": 16}
