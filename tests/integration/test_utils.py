@@ -221,3 +221,42 @@ def test_get_transform_batch_configs_passes_reprocess_flag(mock_aws_credentials)
     assert len(result) == 2
     for override in result:
         assert override["containerOverrides"][0]["environment"][9]["value"] == "True"  # REPROCESS
+
+
+@mock_aws
+@pytest.mark.parametrize(
+    "dataset, resources, expected_batches, expected_limit",
+    [
+        ("listed-building", 140, 9, "16"),
+        ("listed-building-outline", 2819, 15, "200"),
+    ],
+)
+def test_get_transform_batch_configs_uses_dataset_batch_size(mock_aws_credentials, dataset, resources, expected_batches, expected_limit):
+    """A dataset with its own batch size in the collection config is split by that, not by the
+    collection-wide transform-batch-size, which still applies to the collection's other datasets."""
+    s3_client = boto3.client("s3", region_name="us-east-1")
+    bucket_name = "test-collection-bucket"
+    s3_client.create_bucket(Bucket=bucket_name)
+
+    state_data = {"transform_count_by_dataset": {dataset: resources}}
+    s3_client.put_object(Bucket=bucket_name, Key="listed-building-collection/state.json", Body=json.dumps(state_data))
+
+    mock_ti = MagicMock()
+    mock_ti.xcom_pull.side_effect = lambda task_ids, key: {
+        ("configure-dag", "transform-batch-size"): 200,
+        ("configure-dag", "collection-dataset-bucket-name"): bucket_name,
+        ("configure-dag", "cpu"): 16384,
+        ("configure-dag", "memory"): 32768,
+        ("configure-dag", "env"): "development",
+        ("configure-dag", "transformed-jobs"): "16",
+        ("configure-dag", "dataset-jobs"): "8",
+        ("configure-dag", "incremental-loading-override"): False,
+        ("configure-dag", "regenerate-log-override"): False,
+        ("configure-dag", "force-reprocessing"): "",
+    }[(task_ids, key)]
+
+    result = get_transform_batch_configs(mock_ti, "listed-building", "test-task", dataset)
+
+    assert len(result) == expected_batches
+    assert result[0]["containerOverrides"][0]["environment"][-2]["value"] == expected_limit  # TRANSFORMATION_LIMIT
+    assert result[1]["containerOverrides"][0]["environment"][-1]["value"] == expected_limit  # TRANSFORMATION_OFFSET

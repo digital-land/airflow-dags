@@ -24,6 +24,14 @@ def test_get_collection_dag_config_returns_override_for_title_boundary():
     assert config.max_executors == 50
 
 
+def test_listed_building_transform_is_batched_per_dataset():
+    """listed-building's own resources are split into small batches; the collection's other
+    datasets, such as listed-building-outline's thousands of LPA files, keep the default."""
+    config = get_collection_dag_config("listed-building")
+    assert config.transform_batch_size_by_dataset == {"listed-building": 16}
+    assert config.transform_batch_size == DEFAULT_COLLECTION_CONFIG.transform_batch_size
+
+
 def test_default_collection_schedule_is_daily():
     assert DEFAULT_COLLECTION_CONFIG.schedule_rrule == "FREQ=DAILY"
 

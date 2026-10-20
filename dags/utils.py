@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import boto3
+from collection_config import get_collection_dag_config
 
 # Some useful default args for all DAGs
 dag_default_args = {
@@ -246,6 +247,7 @@ def get_transform_batch_configs(ti, collection, collection_task_name, dataset):
     """
     # Pull all required values from XCom
     batch_size = ti.xcom_pull(task_ids="configure-dag", key="transform-batch-size")
+    batch_size = get_collection_dag_config(collection).transform_batch_size_by_dataset.get(dataset, batch_size)
     collection_dataset_bucket_name = ti.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name")
     cpu = ti.xcom_pull(task_ids="configure-dag", key="cpu")
     memory = ti.xcom_pull(task_ids="configure-dag", key="memory")

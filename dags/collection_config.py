@@ -26,6 +26,10 @@ class CollectionDagConfig(BaseModel):
     transformed_jobs: int = 8
     dataset_jobs: int = 8
     transform_batch_size: int = 200
+    # batch sizes for individual datasets, taking precedence over transform_batch_size (including
+    # a transform-batch-size DAG param) for a dataset whose resources are far slower to transform
+    # than the rest of its collection's
+    transform_batch_size_by_dataset: dict[str, int] = {}
     incremental_loading_override: bool = False
     regenerate_log_override: bool = False
     force_reprocessing: bool = False
@@ -47,6 +51,11 @@ DEFAULT_COLLECTION_CONFIG = CollectionDagConfig()
 
 # collections whose defaults diverge from DEFAULT_COLLECTION_CONFIG
 COLLECTION_CONFIG_OVERRIDES = {
+    # listed-building's resources are mostly full national Historic England snapshots, each far
+    # slower to transform than an LPA file. One batch per 16 resources - the transformed-jobs
+    # dag_triggers gives this collection - runs them side by side in separate ECS tasks rather
+    # than queueing them in one. Its other datasets keep the default batch size.
+    "listed-building": CollectionDagConfig(transform_batch_size_by_dataset={"listed-building": 16}),
     # title-boundary's EMR job can otherwise consume all of the vCPU available to the
     # shared EMR Serverless application, starving other collections' jobs. It's also only
     # scheduled monthly, the day after HM Land Registry's own release schedule for the
