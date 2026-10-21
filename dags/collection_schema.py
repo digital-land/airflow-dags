@@ -8,6 +8,7 @@ class CollectionSelection(str, Enum):
     none = "none"
     all = "all"
     explicit = "explicit"
+    exclude = "exclude"
 
 
 class ScheduledCollectionConfig(BaseModel):
