@@ -24,7 +24,7 @@ scheduled_collection_config = Environments(
             "ancient-woodland",
             "organisation",
         ],
-        schedule="0 0 * * *",
+        schedule="0 0 1 * *",
         max_active_task_instances=4,
     ),
     production=ScheduledCollectionConfig(selection=CollectionSelection.all, schedule="0 0 * * *"),
