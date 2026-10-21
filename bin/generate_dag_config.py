@@ -21,7 +21,7 @@ scheduled_collection_config = Environments(
     staging=ScheduledCollectionConfig(
         selection=CollectionSelection.exclude,
         collections=["title-boundary"],
-        schedule="0 0 * * 6",
+        schedule="0 0 1 * *",
         max_active_task_instances=4,
     ),
     production=ScheduledCollectionConfig(selection=CollectionSelection.all, schedule="0 0 * * *"),
@@ -29,7 +29,7 @@ scheduled_collection_config = Environments(
 
 
 @click.command()
-@click.option(
+@click.option(git 
     "--output-path",
     type=click.Path(),
     default=Path("dags/config.json"),
