@@ -40,9 +40,16 @@ CUSTOM_COLLECTION_DAG_WEIGHTING = {"tree-preservation-order": 90, "transport-acc
 
 
 def collection_selected(collection_name, configuration):
-    return configuration["collection_selection"] == CollectionSelection.all or (
-        configuration["collection_selection"] == CollectionSelection.explicit and collection_name in configuration["collections"]
-    )
+    selection = configuration["collection_selection"]
+    collections = configuration["collections"]
+
+    if selection == CollectionSelection.all:
+        return True
+    if selection == CollectionSelection.explicit:
+        return collection_name in collections
+    if selection == CollectionSelection.exclude:
+        return collection_name not in collections
+    return False
 
 
 datasets_dict = load_specification_datasets()
