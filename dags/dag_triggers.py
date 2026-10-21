@@ -16,7 +16,7 @@ from utils import filter_collections_for_env, get_collections_dict, get_config, 
 
 # collections run via the newer, EMR-based collection DAG (new-<collection>-collection); every
 # other collection still runs via the original collection DAG
-NEW_COLLECTION_DAG_COLLECTIONS = {"central-activities-zone", "listed-building", "title-boundary"}
+NEW_COLLECTION_DAG_COLLECTIONS = {"border", "central-activities-zone", "listed-building", "title-boundary"}
 
 # collections triggered by a DAG of their own rather than from either master DAG. They run on a
 # cadence of their own and nothing downstream consumes their output during the nightly run, so
