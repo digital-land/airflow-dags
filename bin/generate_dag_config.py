@@ -18,14 +18,7 @@ scheduled_collection_config = Environments(
         max_active_tasks=50,
         max_active_task_instances=4,
     ),
-    staging=ScheduledCollectionConfig(
-        selection=CollectionSelection.explicit,
-        collections=[
-            "ancient-woodland",
-            "organisation",
-        ],
-        schedule="0 0 1 * *",
-        max_active_task_instances=4,
+    staging=ScheduledCollectionConfig(selection=CollectionSelection.all, schedule="0 0 * * 6", max_active_task_instances=4,
     ),
     production=ScheduledCollectionConfig(selection=CollectionSelection.all, schedule="0 0 * * *"),
 )
