@@ -29,7 +29,7 @@ scheduled_collection_config = Environments(
 
 
 @click.command()
-@click.option(git 
+@click.option(
     "--output-path",
     type=click.Path(),
     default=Path("dags/config.json"),
