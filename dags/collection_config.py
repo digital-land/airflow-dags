@@ -33,9 +33,12 @@ class CollectionDagConfig(BaseModel):
     incremental_loading_override: bool = False
     regenerate_log_override: bool = False
     force_reprocessing: bool = False
-    # caps spark.dynamicAllocation.maxExecutors on the assemble EMR Serverless job; None leaves
-    # EMR Serverless's own default in place
-    max_executors: Optional[int] = None
+    # caps spark.dynamicAllocation.maxExecutors on the assemble EMR Serverless job, so one
+    # collection cannot take all of the shared EMR Serverless application's vCPU and leave other
+    # collections' jobs waiting. 40 executors at 4 vCPU each, plus the driver, is about 164 vCPU,
+    # leaving room for a second large job alongside it within the application's 400. None removes
+    # the cap.
+    max_executors: Optional[int] = 40
     # how often (in seconds) the ECS task operators poll CloudWatch for new log lines; too low a
     # value puts workers under load when many ECS tasks are triggered at once
     awslogs_fetch_interval_seconds: int = 10

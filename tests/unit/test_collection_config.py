@@ -32,6 +32,14 @@ def test_listed_building_transform_is_batched_per_dataset():
     assert config.transform_batch_size == DEFAULT_COLLECTION_CONFIG.transform_batch_size
 
 
+def test_emr_executors_are_capped_by_default():
+    """Every collection's assemble EMR job is capped so one collection cannot take the whole shared
+    EMR Serverless application; title-boundary keeps its own higher cap."""
+    assert DEFAULT_COLLECTION_CONFIG.max_executors == 40
+    assert get_collection_dag_config("listed-building").max_executors == 40
+    assert get_collection_dag_config("title-boundary").max_executors == 50
+
+
 def test_default_collection_schedule_is_daily():
     assert DEFAULT_COLLECTION_CONFIG.schedule_rrule == "FREQ=DAILY"
 
