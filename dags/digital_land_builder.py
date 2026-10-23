@@ -10,6 +10,7 @@ from airflow.models.param import Param
 from airflow.operators.python import PythonOperator
 from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
 from airflow.providers.slack.notifications.slack import send_slack_notification
+from airflow.utils.trigger_rule import TriggerRule
 from botocore.exceptions import BotoCoreError, ClientError
 from emr_dags_utils import get_secrets
 from emr_log_streaming import EmrServerlessStartJobWithLogsOperator, emr_log_group, emr_monitoring_configuration
@@ -32,9 +33,20 @@ failure_callbacks = []
 if config["env"] == "production":
     failure_callbacks.append(send_slack_notification(text="The DAG {{ dag.dag_id }} failed", channel="#planning-data-alerts", username="Airflow"))
 
+dag_doc = """
+Builds `digital-land.sqlite3` from every collection's outputs, uploads it to S3 and loads it into Postgres,
+and runs the assemble-tasks and provision-quality EMR jobs.
+
+Once Datasette has had time to reload the new data (production waits an hour), Datasette's CloudFront
+cache is cleared and the job waits for that to complete before the front-end caches are cleared, because
+the front ends read Datasette through its CDN. Production then runs the reporting task.
+"""
+
+
 with DAG(
     dag_id="build-digital-land-builder",
     default_args=dag_default_args,
+    doc_md=dag_doc,
     description="Run digital-land-builder and upload files to S3",
     schedule=None,
     catchup=False,
@@ -73,6 +85,36 @@ with DAG(
                 )
             except (BotoCoreError, ClientError):
                 logger.exception("CloudFront cache invalidation failed for distribution %s", distribution_id)
+
+    def invalidate_datasette_cache(**kwargs):
+        """
+        Clear Datasette's CloudFront cache and wait for the invalidation to complete, so the
+        front ends cleared after this can't re-cache answers Datasette's CDN held from before
+        the new data was served.
+        """
+        distribution_id = kwargs["conf"].get(section="custom", key="datasette_cloudfront_distribution_id", fallback="").strip()
+
+        if not distribution_id:
+            logger.info("No Datasette CloudFront distribution ID found for environment %s. Skipping cache invalidation.", config["env"])
+            raise AirflowSkipException("No datasette_cloudfront_distribution_id configured")
+
+        paths = ["/*"]
+        cloudfront = boto3.client("cloudfront")
+        logger.info("Invalidating Datasette CloudFront cache for distribution %s with paths %s", distribution_id, paths)
+        try:
+            invalidation = cloudfront.create_invalidation(
+                DistributionId=distribution_id,
+                InvalidationBatch={
+                    "Paths": {
+                        "Quantity": len(paths),
+                        "Items": paths,
+                    },
+                    "CallerReference": f"{kwargs['dag_run'].run_id}-{distribution_id}-{uuid.uuid4()}",
+                },
+            )
+            cloudfront.get_waiter("invalidation_completed").wait(DistributionId=distribution_id, Id=invalidation["Invalidation"]["Id"])
+        except (BotoCoreError, ClientError):
+            logger.exception("Datasette CloudFront cache invalidation failed for distribution %s", distribution_id)
 
     def configure_dag(**kwargs):
         """
@@ -187,33 +229,45 @@ with DAG(
     )
     configure_dag_task >> build_digital_land_builder
 
-    invalidate_cloudfront_cache_task = PythonOperator(
-        task_id="invalidate-cloudfront-cache",
-        python_callable=invalidate_cloudfront_cache,
+    invalidate_datasette_cache_task = PythonOperator(
+        task_id="invalidate-datasette-cache",
+        python_callable=invalidate_datasette_cache,
+        execution_timeout=timedelta(minutes=30),
         dag=dag,
     )
 
-    build_digital_land_builder >> invalidate_cloudfront_cache_task
+    # submit reads Datasette through Datasette's CDN, so Datasette's cache is cleared first.
+    # none_failed lets this still run when the Datasette invalidation is skipped
+    invalidate_cloudfront_cache_task = PythonOperator(
+        task_id="invalidate-cloudfront-cache",
+        python_callable=invalidate_cloudfront_cache,
+        trigger_rule=TriggerRule.NONE_FAILED,
+        dag=dag,
+    )
+
+    invalidate_datasette_cache_task >> invalidate_cloudfront_cache_task
 
     if config["env"] == "production":
 
         # datasette reloads digital-land.sqlite3 from S3->EFS roughly 13 minutes after the
         # builder finishes, and is unavailable for ~15 minutes while it reattaches - 404s
         # while the database is detached. This hour wait is to give a large buffer to
-        # ensure we pick up todays data.
+        # ensure the cache invalidations and reporting pick up todays data.
         def delay_execution(**kwargs):
             time.sleep(3600)  # (1 hour)
 
-        wait_before_reporting = PythonOperator(
-            task_id="wait-before-reporting",
+        wait_for_datasette_reload = PythonOperator(
+            task_id="wait-for-datasette-reload",
             python_callable=delay_execution,
             execution_timeout=timedelta(minutes=70),
             dag=dag,
         )
 
+        # reporting reads Datasette through its CDN, so runs once that cache is cleared
         run_reporting_task = EcsRunTaskOperator(
             task_id="run-reporting-task",
             dag=dag,
+            trigger_rule=TriggerRule.NONE_FAILED,
             execution_timeout=timedelta(minutes=1800),
             cluster=ecs_cluster,
             task_definition=reporting_task_name,
@@ -236,7 +290,9 @@ with DAG(
             awslogs_fetch_interval=timedelta(seconds=1),
         )
 
-        build_digital_land_builder >> wait_before_reporting >> run_reporting_task
+        build_digital_land_builder >> wait_for_datasette_reload >> invalidate_datasette_cache_task >> run_reporting_task
+    else:
+        build_digital_land_builder >> invalidate_datasette_cache_task
 
     # now we want to load the digital land db into postgres using the sqlite innjection task
     postgres_loader_task = EcsRunTaskOperator(
