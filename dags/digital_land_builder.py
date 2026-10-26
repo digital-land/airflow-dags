@@ -10,7 +10,6 @@ from airflow.models.param import Param
 from airflow.operators.python import PythonOperator
 from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
 from airflow.providers.slack.notifications.slack import send_slack_notification
-from airflow.utils.trigger_rule import TriggerRule
 from botocore.exceptions import BotoCoreError, ClientError
 from emr_dags_utils import get_secrets
 from emr_log_streaming import EmrServerlessStartJobWithLogsOperator, emr_log_group, emr_monitoring_configuration
@@ -37,9 +36,11 @@ dag_doc = """
 Builds `digital-land.sqlite3` from every collection's outputs, uploads it to S3 and loads it into Postgres,
 and runs the assemble-tasks and provision-quality EMR jobs.
 
-Once Datasette has had time to reload the new data (production waits an hour), Datasette's CloudFront
-cache is cleared and the job waits for that to complete before the front-end caches are cleared, because
-the front ends read Datasette through its CDN. Production then runs the reporting task.
+Once Datasette has had time to reload the new data (production waits an hour), the CloudFront caches
+for Datasette and the front ends are cleared, the job waits for those invalidations to complete, and then
+clears them all again. The front ends read Datasette through its CDN, so they can re-cache old Datasette
+answers until Datasette's own cache is clear; the second pass removes anything cached that way.
+Production then runs the reporting task.
 """
 
 
@@ -61,6 +62,12 @@ with DAG(
 ) as dag:
 
     def invalidate_cloudfront_cache(**kwargs):
+        """
+        Clear every configured CloudFront distribution, wait for those invalidations to complete,
+        then clear them all again. The front ends read Datasette through its CDN, so one can
+        re-cache an old Datasette answer before Datasette's own invalidation completes; the
+        second pass clears anything cached that way.
+        """
         distribution_ids = kwargs["conf"].get(section="custom", key="digital_land_cloudfront_distribution_ids", fallback="")
         distribution_ids = [distribution_id.strip() for distribution_id in distribution_ids.split(",") if distribution_id.strip()]
 
@@ -70,51 +77,35 @@ with DAG(
 
         paths = ["/*"]
         cloudfront = boto3.client("cloudfront")
-        logger.info("Invalidating CloudFront cache for distributions %s with paths %s", distribution_ids, paths)
-        for distribution_id in distribution_ids:
-            try:
-                cloudfront.create_invalidation(
-                    DistributionId=distribution_id,
-                    InvalidationBatch={
-                        "Paths": {
-                            "Quantity": len(paths),
-                            "Items": paths,
+
+        def invalidate_all():
+            invalidation_ids = {}
+            for distribution_id in distribution_ids:
+                try:
+                    invalidation = cloudfront.create_invalidation(
+                        DistributionId=distribution_id,
+                        InvalidationBatch={
+                            "Paths": {
+                                "Quantity": len(paths),
+                                "Items": paths,
+                            },
+                            "CallerReference": f"{kwargs['dag_run'].run_id}-{distribution_id}-{uuid.uuid4()}",
                         },
-                        "CallerReference": f"{kwargs['dag_run'].run_id}-{distribution_id}-{uuid.uuid4()}",
-                    },
-                )
+                    )
+                    invalidation_ids[distribution_id] = invalidation["Invalidation"]["Id"]
+                except (BotoCoreError, ClientError):
+                    logger.exception("CloudFront cache invalidation failed for distribution %s", distribution_id)
+            return invalidation_ids
+
+        logger.info("Invalidating CloudFront cache for distributions %s with paths %s", distribution_ids, paths)
+        for distribution_id, invalidation_id in invalidate_all().items():
+            try:
+                cloudfront.get_waiter("invalidation_completed").wait(DistributionId=distribution_id, Id=invalidation_id)
             except (BotoCoreError, ClientError):
-                logger.exception("CloudFront cache invalidation failed for distribution %s", distribution_id)
+                logger.exception("Waiting for CloudFront invalidation %s on distribution %s failed", invalidation_id, distribution_id)
 
-    def invalidate_datasette_cache(**kwargs):
-        """
-        Clear Datasette's CloudFront cache and wait for the invalidation to complete, so the
-        front ends cleared after this can't re-cache answers Datasette's CDN held from before
-        the new data was served.
-        """
-        distribution_id = kwargs["conf"].get(section="custom", key="datasette_cloudfront_distribution_id", fallback="").strip()
-
-        if not distribution_id:
-            logger.info("No Datasette CloudFront distribution ID found for environment %s. Skipping cache invalidation.", config["env"])
-            raise AirflowSkipException("No datasette_cloudfront_distribution_id configured")
-
-        paths = ["/*"]
-        cloudfront = boto3.client("cloudfront")
-        logger.info("Invalidating Datasette CloudFront cache for distribution %s with paths %s", distribution_id, paths)
-        try:
-            invalidation = cloudfront.create_invalidation(
-                DistributionId=distribution_id,
-                InvalidationBatch={
-                    "Paths": {
-                        "Quantity": len(paths),
-                        "Items": paths,
-                    },
-                    "CallerReference": f"{kwargs['dag_run'].run_id}-{distribution_id}-{uuid.uuid4()}",
-                },
-            )
-            cloudfront.get_waiter("invalidation_completed").wait(DistributionId=distribution_id, Id=invalidation["Invalidation"]["Id"])
-        except (BotoCoreError, ClientError):
-            logger.exception("Datasette CloudFront cache invalidation failed for distribution %s", distribution_id)
+        logger.info("Invalidating CloudFront cache again for distributions %s with paths %s", distribution_ids, paths)
+        invalidate_all()
 
     def configure_dag(**kwargs):
         """
@@ -229,23 +220,12 @@ with DAG(
     )
     configure_dag_task >> build_digital_land_builder
 
-    invalidate_datasette_cache_task = PythonOperator(
-        task_id="invalidate-datasette-cache",
-        python_callable=invalidate_datasette_cache,
-        execution_timeout=timedelta(minutes=30),
-        dag=dag,
-    )
-
-    # submit reads Datasette through Datasette's CDN, so Datasette's cache is cleared first.
-    # none_failed lets this still run when the Datasette invalidation is skipped
     invalidate_cloudfront_cache_task = PythonOperator(
         task_id="invalidate-cloudfront-cache",
         python_callable=invalidate_cloudfront_cache,
-        trigger_rule=TriggerRule.NONE_FAILED,
+        execution_timeout=timedelta(minutes=60),
         dag=dag,
     )
-
-    invalidate_datasette_cache_task >> invalidate_cloudfront_cache_task
 
     if config["env"] == "production":
 
@@ -263,11 +243,10 @@ with DAG(
             dag=dag,
         )
 
-        # reporting reads Datasette through its CDN, so runs once that cache is cleared
+        # reporting reads Datasette through its CDN, so runs once the caches are cleared
         run_reporting_task = EcsRunTaskOperator(
             task_id="run-reporting-task",
             dag=dag,
-            trigger_rule=TriggerRule.NONE_FAILED,
             execution_timeout=timedelta(minutes=1800),
             cluster=ecs_cluster,
             task_definition=reporting_task_name,
@@ -290,9 +269,9 @@ with DAG(
             awslogs_fetch_interval=timedelta(seconds=1),
         )
 
-        build_digital_land_builder >> wait_for_datasette_reload >> invalidate_datasette_cache_task >> run_reporting_task
+        build_digital_land_builder >> wait_for_datasette_reload >> invalidate_cloudfront_cache_task >> run_reporting_task
     else:
-        build_digital_land_builder >> invalidate_datasette_cache_task
+        build_digital_land_builder >> invalidate_cloudfront_cache_task
 
     # now we want to load the digital land db into postgres using the sqlite innjection task
     postgres_loader_task = EcsRunTaskOperator(
