@@ -43,7 +43,9 @@ collections = get_collections_dict(datasets_dict.values())
 
 
 filtered_collections = {
-    k: v for k, v in collections.items() if k in ["border", "central-activities-zone", "listed-building", "transport-access-node", "title-boundary", "tree-preservation-order"]
+    k: v
+    for k, v in collections.items()
+    if k in ["border", "brownfield-land", "central-activities-zone", "listed-building", "transport-access-node", "title-boundary", "tree-preservation-order"]
 }
 filtered_collections = filter_collections_for_env(filtered_collections, datasets_dict, config["env"])
 
