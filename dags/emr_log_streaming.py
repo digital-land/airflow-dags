@@ -11,7 +11,7 @@ and print call in pyspark-jobs ends up there. The driver's stderr is Spark's own
 is too noisy to stream; its last lines are printed only if the job fails, because that is where the
 reason for a failure usually is.
 """
-
+import datetime
 from datetime import timedelta
 
 from airflow.providers.amazon.aws.hooks.logs import AwsLogsHook
@@ -50,7 +50,10 @@ class _LogFetcher(AwsTaskLogFetcher):
 
     def _log_events(self, continuation_token):
         for log_event in self._get_log_events(continuation_token):
-            self.logger.info(self.event_to_str(log_event))
+            #self.logger.info(self.event_to_str(log_event))
+            dt = datetime.datetime.fromtimestamp(log_event['timestamp'] / 1000.0, tz=datetime.timezone.utc)
+            message = log_event['message'].strip()
+            self.logger.info(f"[{dt}] {message}")
 
 
 class EmrServerlessStartJobWithLogsOperator(EmrServerlessStartJobOperator):
