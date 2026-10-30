@@ -79,9 +79,7 @@ class EmrServerlessStartJobWithLogsOperator(EmrServerlessStartJobOperator):
         self._log_fetcher = None
 
     def _log_fetcher_for(self, log_type):
-        cloudwatch_config = self.configuration_overrides["monitoringConfiguration"][
-            "cloudWatchLoggingConfiguration"
-        ]
+        cloudwatch_config = self.configuration_overrides["monitoringConfiguration"]["cloudWatchLoggingConfiguration"]
         return _LogFetcher(
             log_group=cloudwatch_config["logGroupName"],
             log_stream_name=f"/applications/{self.application_id}/jobs/{self.job_id}/SPARK_DRIVER/{log_type}",
@@ -120,9 +118,7 @@ class EmrServerlessStartJobWithLogsOperator(EmrServerlessStartJobOperator):
             return
         # Reading logs must never be the reason the task fails, or hide the reason it did.
         try:
-            lines = self._log_fetcher_for("stderr").get_last_log_messages(
-                self.stderr_tail_lines
-            )
+            lines = self._log_fetcher_for("stderr").get_last_log_messages(self.stderr_tail_lines)
         except Exception as error:
             self.log.warning(
                 "Could not read the Spark driver's stderr from CloudWatch (the job may have failed before the driver started): %s",
