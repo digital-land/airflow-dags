@@ -12,8 +12,8 @@ is too noisy to stream; its last lines are printed only if the job fails, becaus
 reason for a failure usually is.
 """
 
-import re
 import logging
+import re
 from datetime import timedelta
 from airflow.providers.amazon.aws.hooks.logs import AwsLogsHook
 from airflow.providers.amazon.aws.operators.emr import EmrServerlessStartJobOperator
