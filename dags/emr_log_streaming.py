@@ -11,7 +11,6 @@ and print call in pyspark-jobs ends up there. The driver's stderr is Spark's own
 is too noisy to stream; its last lines are printed only if the job fails, because that is where the
 reason for a failure usually is.
 """
-
 import logging
 import re
 from datetime import timedelta
