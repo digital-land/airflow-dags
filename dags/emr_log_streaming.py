@@ -12,7 +12,7 @@ is too noisy to stream; its last lines are printed only if the job fails, becaus
 reason for a failure usually is.
 """
 
-import datetime
+#import datetime
 from datetime import timedelta
 
 from airflow.providers.amazon.aws.hooks.logs import AwsLogsHook
