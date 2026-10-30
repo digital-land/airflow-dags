@@ -16,7 +16,7 @@ reason for a failure usually is.
 import re
 import logging
 from datetime import timedelta
-from airflow.plugins_manager import AirflowPlugin
+#from airflow.plugins_manager import AirflowPlugin
 from airflow.providers.amazon.aws.hooks.logs import AwsLogsHook
 from airflow.providers.amazon.aws.operators.emr import EmrServerlessStartJobOperator
 from airflow.providers.amazon.aws.utils.task_log_fetcher import AwsTaskLogFetcher
@@ -120,15 +120,15 @@ class EmrServerlessStartJobWithLogsOperator(EmrServerlessStartJobOperator):
         self._log_fetcher.daemon = True
         self._log_fetcher.start()
 
-    def execute(self, context, event=None):
-        try:
-            job_id = super().execute(context, event)
-        except Exception:
-            self._stop_log_fetcher()
-            self._log_stderr_tail()
-            raise
-        self._stop_log_fetcher()
-        return job_id
+    #def execute(self, context, event=None):
+    #    try:
+    #        job_id = super().execute(context, event)
+    #    except Exception:
+    #        self._stop_log_fetcher()
+    #        self._log_stderr_tail()
+    #        raise
+    #    self._stop_log_fetcher()
+    #    return job_id
 
     def _stop_log_fetcher(self):
         if self._log_fetcher:
