@@ -21,6 +21,7 @@ NEW_COLLECTION_DAG_COLLECTIONS = {
     "border",
     "brownfield-land",
     "central-activities-zone",
+    "conservation-area",
     "listed-building",
     "local-plan",
     "title-boundary",
