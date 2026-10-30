@@ -14,11 +14,32 @@ reason for a failure usually is.
 
 # import datetime
 import re
+import logging
 from datetime import timedelta
-
+from airflow.plugins_manager import AirflowPlugin
 from airflow.providers.amazon.aws.hooks.logs import AwsLogsHook
 from airflow.providers.amazon.aws.operators.emr import EmrServerlessStartJobOperator
 from airflow.providers.amazon.aws.utils.task_log_fetcher import AwsTaskLogFetcher
+
+
+class StateChangeFilter(logging.Filter):
+    def __init__(self, name=""):
+        super().__init__(name)
+        self.last_status = None
+
+    def filter(self, record):
+        # Always pass warnings and errors
+        if record.levelno >= logging.WARNING:
+            return True
+
+        msg = record.getMessage()
+
+        # Deduplicate identical consecutive status polls
+        if msg == self.last_status:
+            return False
+
+        self.last_status = msg
+        return True
 
 
 def emr_log_group(env):
@@ -132,3 +153,24 @@ class EmrServerlessStartJobWithLogsOperator(EmrServerlessStartJobOperator):
             len(lines),
             "\n".join(lines),
         )
+
+    def execute(self, context, event=None):
+        # Get the specific AWS waiter logger targeted for silencing
+        waiter_logger = logging.getLogger("airflow.providers.amazon.aws.utils.waiter_with_logging")
+        status_filter = StateChangeFilter()
+
+        # Add the filter before the polling loop begins
+        waiter_logger.addFilter(status_filter)
+
+        try:
+            job_id = super().execute(context, event)
+        except Exception:
+            self._stop_log_fetcher()
+            self._log_stderr_tail()
+            raise
+        finally:
+            # ALWAYS remove the filter afterward so it doesn't leak or affect other tasks
+            waiter_logger.removeFilter(status_filter)
+
+        self._stop_log_fetcher()
+        return job_id
