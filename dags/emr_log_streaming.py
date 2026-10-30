@@ -12,11 +12,33 @@ is too noisy to stream; its last lines are printed only if the job fails, becaus
 reason for a failure usually is.
 """
 
+import logging
+import re
 from datetime import timedelta
 
 from airflow.providers.amazon.aws.hooks.logs import AwsLogsHook
 from airflow.providers.amazon.aws.operators.emr import EmrServerlessStartJobOperator
 from airflow.providers.amazon.aws.utils.task_log_fetcher import AwsTaskLogFetcher
+
+
+class StateChangeFilter(logging.Filter):
+    def __init__(self, name=""):
+        super().__init__(name)
+        self.last_status = None
+
+    def filter(self, record):
+        # Always pass warnings and errors
+        if record.levelno >= logging.WARNING:
+            return True
+
+        msg = record.getMessage()
+
+        # Deduplicate identical consecutive status polls
+        if msg == self.last_status:
+            return False
+
+        self.last_status = msg
+        return True
 
 
 def emr_log_group(env):
@@ -50,7 +72,7 @@ class _LogFetcher(AwsTaskLogFetcher):
 
     def _log_events(self, continuation_token):
         for log_event in self._get_log_events(continuation_token):
-            self.logger.info(self.event_to_str(log_event))
+            self.logger.info(re.sub(r"(?<=-\s\[).*(?=\])", "", log_event["message"]))
 
 
 class EmrServerlessStartJobWithLogsOperator(EmrServerlessStartJobOperator):
@@ -61,7 +83,13 @@ class EmrServerlessStartJobWithLogsOperator(EmrServerlessStartJobOperator):
     the logs are read by a thread on the worker, which a deferred task gives up.
     """
 
-    def __init__(self, *, log_fetch_interval=timedelta(seconds=30), stderr_tail_lines=100, **kwargs):
+    def __init__(
+        self,
+        *,
+        log_fetch_interval=timedelta(seconds=30),
+        stderr_tail_lines=100,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
         self.log_fetch_interval = log_fetch_interval
         self.stderr_tail_lines = stderr_tail_lines
@@ -86,16 +114,6 @@ class EmrServerlessStartJobWithLogsOperator(EmrServerlessStartJobOperator):
         self._log_fetcher.daemon = True
         self._log_fetcher.start()
 
-    def execute(self, context, event=None):
-        try:
-            job_id = super().execute(context, event)
-        except Exception:
-            self._stop_log_fetcher()
-            self._log_stderr_tail()
-            raise
-        self._stop_log_fetcher()
-        return job_id
-
     def _stop_log_fetcher(self):
         if self._log_fetcher:
             self._log_fetcher.stop()
@@ -109,6 +127,34 @@ class EmrServerlessStartJobWithLogsOperator(EmrServerlessStartJobOperator):
         try:
             lines = self._log_fetcher_for("stderr").get_last_log_messages(self.stderr_tail_lines)
         except Exception as error:
-            self.log.warning("Could not read the Spark driver's stderr from CloudWatch (the job may have failed before the driver started): %s", error)
+            self.log.warning(
+                "Could not read the Spark driver's stderr from CloudWatch (the job may have failed before the driver started): %s",
+                error,
+            )
             return
-        self.log.info("Last %d lines of the Spark driver's stderr:\n%s", len(lines), "\n".join(lines))
+        self.log.info(
+            "Last %d lines of the Spark driver's stderr:\n%s",
+            len(lines),
+            "\n".join(lines),
+        )
+
+    def execute(self, context, event=None):
+        # Get the specific AWS waiter logger targeted for silencing
+        waiter_logger = logging.getLogger("airflow.providers.amazon.aws.utils.waiter_with_logging")
+        status_filter = StateChangeFilter()
+
+        # Add the filter before the polling loop begins
+        waiter_logger.addFilter(status_filter)
+
+        try:
+            job_id = super().execute(context, event)
+        except Exception:
+            self._stop_log_fetcher()
+            self._log_stderr_tail()
+            raise
+        finally:
+            # ALWAYS remove the filter afterward so it doesn't leak or affect other tasks
+            waiter_logger.removeFilter(status_filter)
+
+        self._stop_log_fetcher()
+        return job_id
