@@ -13,6 +13,7 @@ reason for a failure usually is.
 """
 
 # import datetime
+import re
 from datetime import timedelta
 
 from airflow.providers.amazon.aws.hooks.logs import AwsLogsHook
@@ -55,7 +56,8 @@ class _LogFetcher(AwsTaskLogFetcher):
             # dt = datetime.datetime.fromtimestamp(log_event['timestamp'] / 1000.0, tz=datetime.timezone.utc)
             # message = log_event['message'].strip()
             # self.logger.info(f"[{dt}] {message}")
-            self.logger.info(log_event["message"])
+            self.logger.info(re.sub(r"(?<=-\s\[).*(?=\])", "", log_event["message"]))
+            # self.logger.info(log_event["message"])
 
 
 class EmrServerlessStartJobWithLogsOperator(EmrServerlessStartJobOperator):
