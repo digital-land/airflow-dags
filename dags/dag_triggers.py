@@ -17,6 +17,7 @@ from utils import filter_collections_for_env, get_collections_dict, get_config, 
 # collections run via the newer, EMR-based collection DAG (new-<collection>-collection); every
 # other collection still runs via the original collection DAG
 NEW_COLLECTION_DAG_COLLECTIONS = {
+    "article-4-direction",
     "border",
     "brownfield-land",
     "central-activities-zone",
