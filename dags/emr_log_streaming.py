@@ -11,6 +11,7 @@ and print call in pyspark-jobs ends up there. The driver's stderr is Spark's own
 is too noisy to stream; its last lines are printed only if the job fails, because that is where the
 reason for a failure usually is.
 """
+
 import datetime
 from datetime import timedelta
 
@@ -50,10 +51,11 @@ class _LogFetcher(AwsTaskLogFetcher):
 
     def _log_events(self, continuation_token):
         for log_event in self._get_log_events(continuation_token):
-            #self.logger.info(self.event_to_str(log_event))
-            dt = datetime.datetime.fromtimestamp(log_event['timestamp'] / 1000.0, tz=datetime.timezone.utc)
-            message = log_event['message'].strip()
-            self.logger.info(f"[{dt}] {message}")
+            # self.logger.info(self.event_to_str(log_event))
+            # dt = datetime.datetime.fromtimestamp(log_event['timestamp'] / 1000.0, tz=datetime.timezone.utc)
+            # message = log_event['message'].strip()
+            # self.logger.info(f"[{dt}] {message}")
+            self.logger.info(log_event["message"])
 
 
 class EmrServerlessStartJobWithLogsOperator(EmrServerlessStartJobOperator):
@@ -64,14 +66,22 @@ class EmrServerlessStartJobWithLogsOperator(EmrServerlessStartJobOperator):
     the logs are read by a thread on the worker, which a deferred task gives up.
     """
 
-    def __init__(self, *, log_fetch_interval=timedelta(seconds=30), stderr_tail_lines=100, **kwargs):
+    def __init__(
+        self,
+        *,
+        log_fetch_interval=timedelta(seconds=30),
+        stderr_tail_lines=100,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
         self.log_fetch_interval = log_fetch_interval
         self.stderr_tail_lines = stderr_tail_lines
         self._log_fetcher = None
 
     def _log_fetcher_for(self, log_type):
-        cloudwatch_config = self.configuration_overrides["monitoringConfiguration"]["cloudWatchLoggingConfiguration"]
+        cloudwatch_config = self.configuration_overrides["monitoringConfiguration"][
+            "cloudWatchLoggingConfiguration"
+        ]
         return _LogFetcher(
             log_group=cloudwatch_config["logGroupName"],
             log_stream_name=f"/applications/{self.application_id}/jobs/{self.job_id}/SPARK_DRIVER/{log_type}",
@@ -110,8 +120,17 @@ class EmrServerlessStartJobWithLogsOperator(EmrServerlessStartJobOperator):
             return
         # Reading logs must never be the reason the task fails, or hide the reason it did.
         try:
-            lines = self._log_fetcher_for("stderr").get_last_log_messages(self.stderr_tail_lines)
+            lines = self._log_fetcher_for("stderr").get_last_log_messages(
+                self.stderr_tail_lines
+            )
         except Exception as error:
-            self.log.warning("Could not read the Spark driver's stderr from CloudWatch (the job may have failed before the driver started): %s", error)
+            self.log.warning(
+                "Could not read the Spark driver's stderr from CloudWatch (the job may have failed before the driver started): %s",
+                error,
+            )
             return
-        self.log.info("Last %d lines of the Spark driver's stderr:\n%s", len(lines), "\n".join(lines))
+        self.log.info(
+            "Last %d lines of the Spark driver's stderr:\n%s",
+            len(lines),
+            "\n".join(lines),
+        )
