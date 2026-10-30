@@ -16,7 +16,6 @@ reason for a failure usually is.
 import re
 import logging
 from datetime import timedelta
-
 # from airflow.plugins_manager import AirflowPlugin
 from airflow.providers.amazon.aws.hooks.logs import AwsLogsHook
 from airflow.providers.amazon.aws.operators.emr import EmrServerlessStartJobOperator
