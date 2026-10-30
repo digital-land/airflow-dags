@@ -12,11 +12,9 @@ is too noisy to stream; its last lines are printed only if the job fails, becaus
 reason for a failure usually is.
 """
 
-# import datetime
 import re
 import logging
 from datetime import timedelta
-# from airflow.plugins_manager import AirflowPlugin
 from airflow.providers.amazon.aws.hooks.logs import AwsLogsHook
 from airflow.providers.amazon.aws.operators.emr import EmrServerlessStartJobOperator
 from airflow.providers.amazon.aws.utils.task_log_fetcher import AwsTaskLogFetcher
@@ -102,7 +100,9 @@ class EmrServerlessStartJobWithLogsOperator(EmrServerlessStartJobOperator):
         self._log_fetcher = None
 
     def _log_fetcher_for(self, log_type):
-        cloudwatch_config = self.configuration_overrides["monitoringConfiguration"]["cloudWatchLoggingConfiguration"]
+        cloudwatch_config = self.configuration_overrides["monitoringConfiguration"][
+            "cloudWatchLoggingConfiguration"
+        ]
         return _LogFetcher(
             log_group=cloudwatch_config["logGroupName"],
             log_stream_name=f"/applications/{self.application_id}/jobs/{self.job_id}/SPARK_DRIVER/{log_type}",
@@ -141,7 +141,9 @@ class EmrServerlessStartJobWithLogsOperator(EmrServerlessStartJobOperator):
             return
         # Reading logs must never be the reason the task fails, or hide the reason it did.
         try:
-            lines = self._log_fetcher_for("stderr").get_last_log_messages(self.stderr_tail_lines)
+            lines = self._log_fetcher_for("stderr").get_last_log_messages(
+                self.stderr_tail_lines
+            )
         except Exception as error:
             self.log.warning(
                 "Could not read the Spark driver's stderr from CloudWatch (the job may have failed before the driver started): %s",
@@ -156,7 +158,9 @@ class EmrServerlessStartJobWithLogsOperator(EmrServerlessStartJobOperator):
 
     def execute(self, context, event=None):
         # Get the specific AWS waiter logger targeted for silencing
-        waiter_logger = logging.getLogger("airflow.providers.amazon.aws.utils.waiter_with_logging")
+        waiter_logger = logging.getLogger(
+            "airflow.providers.amazon.aws.utils.waiter_with_logging"
+        )
         status_filter = StateChangeFilter()
 
         # Add the filter before the polling loop begins
