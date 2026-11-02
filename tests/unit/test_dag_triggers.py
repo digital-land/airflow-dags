@@ -96,9 +96,9 @@ def test_trigger_dag_is_scheduled_at_a_time_the_rrule_check_can_match(dag_bag):
 
 @pytest.mark.parametrize("master_dag_id", [SCHEDULED_MASTER_DAG_ID, MANUAL_MASTER_DAG_ID])
 def test_master_dags_only_trigger_dags_that_exist(dag_bag, master_dag_id):
-    """Moving a collection to the new DAG means listing it in NEW_COLLECTION_DAG_COLLECTIONS,
-    and the new DAG is only built for the collections new_collection_generator lists. A
-    collection in one list but not the other would only show up as a failed trigger in a
+    """A collection is triggered via the new DAG unless it is in ORIGINAL_COLLECTION_DAG_COLLECTIONS,
+    and the new DAG is only built for the collections new_collection_generator selects. A
+    collection on the new DAG with no new DAG built would only show up as a failed trigger in a
     nightly run."""
     missing = [task.trigger_dag_id for task in dag_bag.dags[master_dag_id].tasks if hasattr(task, "trigger_dag_id") and task.trigger_dag_id not in dag_bag.dags]
 
