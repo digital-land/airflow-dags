@@ -42,23 +42,9 @@ datasets_dict = load_specification_datasets()
 collections = get_collections_dict(datasets_dict.values())
 
 
-filtered_collections = {
-    k: v
-    for k, v in collections.items()
-    if k
-    in [
-        "article-4-direction",
-        "border",
-        "brownfield-land",
-        "central-activities-zone",
-        "conservation-area",
-        "listed-building",
-        "local-plan",
-        "transport-access-node",
-        "title-boundary",
-        "tree-preservation-order",
-    ]
-}
+# organisation stays on the original collection DAG for now: both master DAGs trigger
+# organisation-collection by name, and organisation.csv feeds every other collection
+filtered_collections = {k: v for k, v in collections.items() if k != "organisation"}
 filtered_collections = filter_collections_for_env(filtered_collections, datasets_dict, config["env"])
 
 # read config from file and environment
@@ -78,6 +64,10 @@ collections = get_collections_dict(datasets_dict.values())
 failure_callbacks = []
 if config["env"] == "production":
     failure_callbacks.append(send_slack_notification(text="The DAG {{ dag.dag_id }} failed", channel="#planning-data-alerts", username="Airflow"))
+
+ENV = config["env"]
+# get execution role arn from airflow executer - once per parse, as the value is the same for every dataset
+EXECUTION_ROLE_ARN = get_secrets("emr_execution_role", ENV)
 
 for collection, collection_datasets in filtered_collections.items():
     dag_id = f"{collection}-collection"
@@ -250,9 +240,6 @@ for collection, collection_datasets in filtered_collections.items():
 
                 get_app_id = PythonOperator(task_id="get-emr-app-id", python_callable=get_emr_application_id, execution_timeout=timedelta(minutes=2))
 
-                ENV = config["env"]
-                # get execution role arn from airflow executer
-                EXECUTION_ROLE_ARN = get_secrets("emr_execution_role", ENV)
                 S3_BUCKET = f"{ENV}-pd-batch-jobs-codepackage-bucket"
                 S3_LOG_BUCKET = f"{ENV}-pd-batch-jobs-logs-bucket"
                 S3_SOURCE_DATA_PATH = f"{ENV}-collection-data"
