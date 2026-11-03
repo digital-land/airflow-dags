@@ -42,10 +42,7 @@ datasets_dict = load_specification_datasets()
 collections = get_collections_dict(datasets_dict.values())
 
 
-# organisation stays on the original collection DAG for now: both master DAGs trigger
-# organisation-collection by name, and organisation.csv feeds every other collection
-filtered_collections = {k: v for k, v in collections.items() if k != "organisation"}
-filtered_collections = filter_collections_for_env(filtered_collections, datasets_dict, config["env"])
+filtered_collections = filter_collections_for_env(collections, datasets_dict, config["env"])
 
 # read config from file and environment
 config = get_config()
