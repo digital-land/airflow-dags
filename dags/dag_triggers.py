@@ -17,9 +17,8 @@ from utils import filter_collections_for_env, get_collections_dict, get_config, 
 # collections still run via the original collection DAG; every other collection runs via the
 # newer, EMR-based collection DAG (new-<collection>-collection). organisation stays because both
 # master DAGs trigger organisation-collection by name, and organisation.csv feeds every other
-# collection. flood-risk-zone stays because only the original DAG's Postgres load writes its
-# subdivided geometries to entity_subdivided, which the site's spatial queries read
-ORIGINAL_COLLECTION_DAG_COLLECTIONS = {"organisation", "flood-risk-zone"}
+# collection
+ORIGINAL_COLLECTION_DAG_COLLECTIONS = {"organisation"}
 
 
 # collections triggered by a DAG of their own rather than from either master DAG. They run on a
