@@ -117,6 +117,15 @@ def test_listed_building_is_triggered_via_the_new_collection_dag(dag_bag):
     assert trigger.trigger_dag_id == "new-listed-building-collection"
 
 
+@pytest.mark.parametrize("master_dag_id", [SCHEDULED_MASTER_DAG_ID, MANUAL_MASTER_DAG_ID])
+def test_organisation_is_triggered_via_the_new_collection_dag(dag_bag, master_dag_id):
+    """Both master DAGs build their own organisation trigger rather than going through the
+    collection loop, so each is checked separately."""
+    trigger = dag_bag.dags[master_dag_id].get_task("trigger-organisation-collection-dag")
+
+    assert trigger.trigger_dag_id == "new-organisation-collection"
+
+
 def test_listed_building_keeps_its_larger_task_size_on_the_new_collection_dag(dag_bag):
     """listed-building's transform needs about two of its three hours at 16 vCPU and 16 jobs,
     so the new DAG must be triggered with the same overrides rather than its defaults."""
