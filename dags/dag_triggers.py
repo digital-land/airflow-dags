@@ -15,10 +15,9 @@ from collection_schema import CollectionSelection
 from utils import filter_collections_for_env, get_collections_dict, get_config, load_specification_datasets, sort_collections_dict
 
 # collections still run via the original collection DAG; every other collection runs via the
-# newer, EMR-based collection DAG (new-<collection>-collection). organisation stays because both
-# master DAGs trigger organisation-collection by name, and organisation.csv feeds every other
-# collection
-ORIGINAL_COLLECTION_DAG_COLLECTIONS = {"organisation"}
+# newer, EMR-based collection DAG (new-<collection>-collection). Empty now that every collection
+# has moved; add a collection back here to return it to the original DAG
+ORIGINAL_COLLECTION_DAG_COLLECTIONS = set()
 
 
 # collections triggered by a DAG of their own rather than from either master DAG. They run on a
@@ -74,7 +73,7 @@ with DAG(
     collection_tasks = []
 
     if organisation_collection_selected:
-        run_org_collection_dag = TriggerDagRunOperator(task_id="trigger-organisation-collection-dag", trigger_dag_id="organisation-collection", wait_for_completion=True)
+        run_org_collection_dag = TriggerDagRunOperator(task_id="trigger-organisation-collection-dag", trigger_dag_id=trigger_dag_id_for("organisation"), wait_for_completion=True)
         run_org_builder_dag = TriggerDagRunOperator(
             task_id="trigger-organisation-builder-dag", trigger_dag_id="organisation-builder", wait_for_completion=True, trigger_rule=TriggerRule.ALL_DONE
         )
@@ -133,7 +132,7 @@ with DAG(
 ):
 
     collection_tasks = []
-    run_org_collection_dag = TriggerDagRunOperator(task_id="trigger-organisation-collection-dag", trigger_dag_id="organisation-collection", wait_for_completion=True)
+    run_org_collection_dag = TriggerDagRunOperator(task_id="trigger-organisation-collection-dag", trigger_dag_id=trigger_dag_id_for("organisation"), wait_for_completion=True)
 
     run_org_builder_dag = TriggerDagRunOperator(task_id="trigger-organisation-builder-dag", trigger_dag_id="organisation-builder", wait_for_completion=True)
 
