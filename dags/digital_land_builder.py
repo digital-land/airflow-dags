@@ -17,6 +17,7 @@ from emr_log_streaming import (
     emr_log_group,
     emr_monitoring_configuration,
 )
+from github_actions import trigger_workflow
 from utils import dag_default_args, get_config, push_log_variables, push_vpc_config
 
 config = get_config()
@@ -50,7 +51,9 @@ Once Datasette has had time to reload the new data (production waits an hour), t
 for Datasette and the front ends are cleared, the job waits for those invalidations to complete, and then
 clears them all again. The front ends read Datasette through its CDN, so they can re-cache old Datasette
 answers until Datasette's own cache is clear; the second pass removes anything cached that way.
-Production then runs the reporting task.
+Production then runs the reporting task and, on weekdays, starts config's `batch-assign.yml` workflow,
+which reads the issue data this job has just rebuilt. Airflow only starts that workflow; the workflow
+raises its own Slack alert if it fails.
 """
 
 
@@ -138,6 +141,17 @@ with DAG(
             paths,
         )
         invalidate_all()
+
+    def trigger_batch_assign(**kwargs):
+        """
+        Start config's batch-assign workflow for every scope. It reads the issue data this DAG has just
+        rebuilt through Datasette's CDN, so it runs once the caches are cleared. Weekdays only, because
+        its commits wait on config-manager-update until the evening pipeline merges them, Mon-Fri.
+        """
+        if kwargs["logical_date"].weekday() >= 5:
+            raise AirflowSkipException("Batch assign only runs on weekdays")
+
+        trigger_workflow(config["env"], repository="digital-land/config", workflow="batch-assign.yml", inputs={"scope": "all"})
 
     def configure_dag(**kwargs):
         """
@@ -322,7 +336,15 @@ with DAG(
             awslogs_fetch_interval=timedelta(seconds=1),
         )
 
+        trigger_batch_assign_task = PythonOperator(
+            task_id="trigger-batch-assign",
+            python_callable=trigger_batch_assign,
+            execution_timeout=timedelta(minutes=5),
+            dag=dag,
+        )
+
         (build_digital_land_builder >> wait_for_datasette_reload >> invalidate_cloudfront_cache_task >> run_reporting_task)
+        invalidate_cloudfront_cache_task >> trigger_batch_assign_task
     else:
         build_digital_land_builder >> invalidate_cloudfront_cache_task
 
