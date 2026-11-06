@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import Mock, call
 
@@ -5,7 +6,7 @@ import pytest
 from airflow.exceptions import AirflowSkipException
 from botocore.exceptions import ClientError, WaiterError
 
-from dags.digital_land_builder import config, dag
+from dags.digital_land_builder import config, dag, trigger_batch_assign
 
 
 def get_task_callable(task_id):
@@ -116,3 +117,30 @@ def test_caches_are_cleared_after_datasette_has_had_time_to_reload():
         assert dag.get_task("run-reporting-task").upstream_task_ids == {"invalidate-cloudfront-cache"}
     else:
         assert invalidate_cloudfront_cache_task.upstream_task_ids == {"build-digital-land-builder"}
+
+
+def test_batch_assign_is_started_once_caches_are_cleared():
+    if config["env"] == "production":
+        assert dag.get_task("trigger-batch-assign").upstream_task_ids == {"invalidate-cloudfront-cache"}
+    else:
+        assert "trigger-batch-assign" not in dag.task_ids
+
+
+def test_trigger_batch_assign_starts_every_scope_on_a_weekday(monkeypatch):
+    trigger_workflow = Mock()
+    monkeypatch.setattr("dags.digital_land_builder.trigger_workflow", trigger_workflow)
+
+    trigger_batch_assign(logical_date=datetime(2026, 11, 9, 2, 30, tzinfo=timezone.utc))  # a Monday
+
+    trigger_workflow.assert_called_once_with(config["env"], repository="digital-land/config", workflow="batch-assign.yml", inputs={"scope": "all"})
+
+
+@pytest.mark.parametrize("logical_date", [datetime(2026, 11, 7, 2, 30, tzinfo=timezone.utc), datetime(2026, 11, 8, 2, 30, tzinfo=timezone.utc)])
+def test_trigger_batch_assign_skips_at_weekends(monkeypatch, logical_date):
+    trigger_workflow = Mock()
+    monkeypatch.setattr("dags.digital_land_builder.trigger_workflow", trigger_workflow)
+
+    with pytest.raises(AirflowSkipException):
+        trigger_batch_assign(logical_date=logical_date)
+
+    trigger_workflow.assert_not_called()
