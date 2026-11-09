@@ -291,36 +291,36 @@ with DAG(
         )
 
         # reporting reads Datasette through its CDN, so runs once the caches are cleared
-        run_reporting_task = EcsRunTaskOperator(
-            task_id="run-reporting-task",
-            dag=dag,
-            execution_timeout=timedelta(minutes=1800),
-            cluster=ecs_cluster,
-            task_definition=reporting_task_name,
-            launch_type="FARGATE",
-            overrides={
-                "containerOverrides": [
-                    {
-                        "name": f"{reporting_task_container_name}",
-                        "environment": [
-                            {
-                                "name": "ENVIRONMENT",
-                                "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="env") | string }}\'',
-                            },
-                            {
-                                "name": "COLLECTION_DATA_BUCKET",
-                                "value": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}',
-                            },
-                        ],
-                    },
-                ]
-            },
-            network_configuration={"awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'},
-            awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="reporting-task-log-group") }}',
-            awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="reporting-task-log-region") }}',
-            awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="reporting-task-log-stream-prefix") }}',
-            awslogs_fetch_interval=timedelta(seconds=1),
-        )
+        #run_reporting_task = EcsRunTaskOperator(
+        #    task_id="run-reporting-task",
+        #    dag=dag,
+        #    execution_timeout=timedelta(minutes=1800),
+        #    cluster=ecs_cluster,
+        #    task_definition=reporting_task_name,
+        #    launch_type="FARGATE",
+        #    overrides={
+        #        "containerOverrides": [
+        #            {
+        #                "name": f"{reporting_task_container_name}",
+        #                "environment": [
+        #                    {
+        #                        "name": "ENVIRONMENT",
+        #                        "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="env") | string }}\'',
+        #                    },
+        #                    {
+        #                        "name": "COLLECTION_DATA_BUCKET",
+        #                        "value": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}',
+        #                    },
+        #                ],
+        #            },
+        #        ]
+        #    },
+        #    network_configuration={"awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'},
+        #    awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="reporting-task-log-group") }}',
+        #    awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="reporting-task-log-region") }}',
+        #    awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="reporting-task-log-stream-prefix") }}',
+        #    awslogs_fetch_interval=timedelta(seconds=1),
+        #)
 
         (build_digital_land_builder >> wait_for_datasette_reload >> invalidate_cloudfront_cache_task)  # >> run_reporting_task)
     else:
