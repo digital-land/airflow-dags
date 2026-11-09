@@ -291,7 +291,7 @@ with DAG(
         )
 
         # reporting reads Datasette through its CDN, so runs once the caches are cleared
-        #run_reporting_task = EcsRunTaskOperator(
+        # run_reporting_task = EcsRunTaskOperator(
         #    task_id="run-reporting-task",
         #    dag=dag,
         #    execution_timeout=timedelta(minutes=1800),
@@ -320,7 +320,7 @@ with DAG(
         #    awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="reporting-task-log-region") }}',
         #    awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="reporting-task-log-stream-prefix") }}',
         #    awslogs_fetch_interval=timedelta(seconds=1),
-        #)
+        # )
 
         (build_digital_land_builder >> wait_for_datasette_reload >> invalidate_cloudfront_cache_task)  # >> run_reporting_task)
     else:
