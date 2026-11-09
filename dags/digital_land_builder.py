@@ -12,7 +12,11 @@ from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
 from airflow.providers.slack.notifications.slack import send_slack_notification
 from botocore.exceptions import BotoCoreError, ClientError
 from emr_dags_utils import get_secrets
-from emr_log_streaming import EmrServerlessStartJobWithLogsOperator, emr_log_group, emr_monitoring_configuration
+from emr_log_streaming import (
+    EmrServerlessStartJobWithLogsOperator,
+    emr_log_group,
+    emr_monitoring_configuration,
+)
 from utils import dag_default_args, get_config, push_log_variables, push_vpc_config
 
 config = get_config()
@@ -30,7 +34,13 @@ reporting_task_container_name = f"{config['env']}-reporting"
 
 failure_callbacks = []
 if config["env"] == "production":
-    failure_callbacks.append(send_slack_notification(text="The DAG {{ dag.dag_id }} failed", channel="#planning-data-alerts", username="Airflow"))
+    failure_callbacks.append(
+        send_slack_notification(
+            text="The DAG {{ dag.dag_id }} failed",
+            channel="#planning-data-alerts",
+            username="Airflow",
+        )
+    )
 
 dag_doc = """
 Builds `digital-land.sqlite3` from every collection's outputs, uploads it to S3 and loads it into Postgres,
@@ -68,11 +78,18 @@ with DAG(
         re-cache an old Datasette answer before Datasette's own invalidation completes; the
         second pass clears anything cached that way.
         """
-        distribution_ids = kwargs["conf"].get(section="custom", key="digital_land_cloudfront_distribution_ids", fallback="")
+        distribution_ids = kwargs["conf"].get(
+            section="custom",
+            key="digital_land_cloudfront_distribution_ids",
+            fallback="",
+        )
         distribution_ids = [distribution_id.strip() for distribution_id in distribution_ids.split(",") if distribution_id.strip()]
 
         if not distribution_ids:
-            logger.info("No CloudFront distribution IDs found for environment %s. Skipping cache invalidation.", config["env"])
+            logger.info(
+                "No CloudFront distribution IDs found for environment %s. Skipping cache invalidation.",
+                config["env"],
+            )
             raise AirflowSkipException("No digital_land_cloudfront_distribution_ids configured")
 
         paths = ["/*"]
@@ -94,17 +111,32 @@ with DAG(
                     )
                     invalidation_ids[distribution_id] = invalidation["Invalidation"]["Id"]
                 except (BotoCoreError, ClientError):
-                    logger.exception("CloudFront cache invalidation failed for distribution %s", distribution_id)
+                    logger.exception(
+                        "CloudFront cache invalidation failed for distribution %s",
+                        distribution_id,
+                    )
             return invalidation_ids
 
-        logger.info("Invalidating CloudFront cache for distributions %s with paths %s", distribution_ids, paths)
+        logger.info(
+            "Invalidating CloudFront cache for distributions %s with paths %s",
+            distribution_ids,
+            paths,
+        )
         for distribution_id, invalidation_id in invalidate_all().items():
             try:
                 cloudfront.get_waiter("invalidation_completed").wait(DistributionId=distribution_id, Id=invalidation_id)
             except (BotoCoreError, ClientError):
-                logger.exception("Waiting for CloudFront invalidation %s on distribution %s failed", invalidation_id, distribution_id)
+                logger.exception(
+                    "Waiting for CloudFront invalidation %s on distribution %s failed",
+                    invalidation_id,
+                    distribution_id,
+                )
 
-        logger.info("Invalidating CloudFront cache again for distributions %s with paths %s", distribution_ids, paths)
+        logger.info(
+            "Invalidating CloudFront cache again for distributions %s with paths %s",
+            distribution_ids,
+            paths,
+        )
         invalidate_all()
 
     def configure_dag(**kwargs):
@@ -174,13 +206,28 @@ with DAG(
         ti.xcom_push(key="provision-quality-entry-point-args", value=provision_quality_args)
 
         # push collection-task log variables
-        push_log_variables(ti, task_definition_name=digital_land_builder_task_name, container_name=digital_land_builder_task_name, prefix="collection-task")
+        push_log_variables(
+            ti,
+            task_definition_name=digital_land_builder_task_name,
+            container_name=digital_land_builder_task_name,
+            prefix="collection-task",
+        )
 
         # push  sqlite_ingestion log variables
-        push_log_variables(ti, task_definition_name=sqlite_injection_task_name, container_name=sqlite_injection_task_container_name, prefix="sqlite-ingestion-task")
+        push_log_variables(
+            ti,
+            task_definition_name=sqlite_injection_task_name,
+            container_name=sqlite_injection_task_container_name,
+            prefix="sqlite-ingestion-task",
+        )
 
         # push  sqlite_ingestion log variables
-        push_log_variables(ti, task_definition_name=reporting_task_name, container_name=reporting_task_container_name, prefix="reporting-task")
+        push_log_variables(
+            ti,
+            task_definition_name=reporting_task_name,
+            container_name=reporting_task_container_name,
+            prefix="reporting-task",
+        )
 
         # push aws vpc config
         push_vpc_config(ti, kwargs["conf"])
@@ -244,32 +291,38 @@ with DAG(
         )
 
         # reporting reads Datasette through its CDN, so runs once the caches are cleared
-        run_reporting_task = EcsRunTaskOperator(
-            task_id="run-reporting-task",
-            dag=dag,
-            execution_timeout=timedelta(minutes=1800),
-            cluster=ecs_cluster,
-            task_definition=reporting_task_name,
-            launch_type="FARGATE",
-            overrides={
-                "containerOverrides": [
-                    {
-                        "name": f"{reporting_task_container_name}",
-                        "environment": [
-                            {"name": "ENVIRONMENT", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="env") | string }}\''},
-                            {"name": "COLLECTION_DATA_BUCKET", "value": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}'},
-                        ],
-                    },
-                ]
-            },
-            network_configuration={"awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'},
-            awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="reporting-task-log-group") }}',
-            awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="reporting-task-log-region") }}',
-            awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="reporting-task-log-stream-prefix") }}',
-            awslogs_fetch_interval=timedelta(seconds=1),
-        )
+        # run_reporting_task = EcsRunTaskOperator(
+        #    task_id="run-reporting-task",
+        #    dag=dag,
+        #    execution_timeout=timedelta(minutes=1800),
+        #    cluster=ecs_cluster,
+        #    task_definition=reporting_task_name,
+        #    launch_type="FARGATE",
+        #    overrides={
+        #        "containerOverrides": [
+        #            {
+        #                "name": f"{reporting_task_container_name}",
+        #                "environment": [
+        #                    {
+        #                        "name": "ENVIRONMENT",
+        #                        "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="env") | string }}\'',
+        #                    },
+        #                    {
+        #                        "name": "COLLECTION_DATA_BUCKET",
+        #                        "value": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}',
+        #                    },
+        #                ],
+        #            },
+        #        ]
+        #    },
+        #    network_configuration={"awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'},
+        #    awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="reporting-task-log-group") }}',
+        #    awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="reporting-task-log-region") }}',
+        #    awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="reporting-task-log-stream-prefix") }}',
+        #    awslogs_fetch_interval=timedelta(seconds=1),
+        # )
 
-        build_digital_land_builder >> wait_for_datasette_reload >> invalidate_cloudfront_cache_task >> run_reporting_task
+        (build_digital_land_builder >> wait_for_datasette_reload >> invalidate_cloudfront_cache_task)  # >> run_reporting_task)
     else:
         build_digital_land_builder >> invalidate_cloudfront_cache_task
 
@@ -286,7 +339,10 @@ with DAG(
                 {
                     "name": f"{sqlite_injection_task_container_name}",
                     "environment": [
-                        {"name": "ENVIRONMENT", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="env") | string }}\''},
+                        {
+                            "name": "ENVIRONMENT",
+                            "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="env") | string }}\'',
+                        },
                         {
                             "name": "S3_OBJECT_ARN",
                             "value": '\'arn:aws:s3:::{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}/digital-land-builder/dataset/digital-land.sqlite3\'',  # noqa E501
@@ -375,4 +431,40 @@ with DAG(
         execution_timeout=timedelta(hours=3),
     )
 
-    configure_dag_task >> get_emr_app_id >> assemble_tasks_emr_task >> assemble_provision_quality_emr_task
+    # reporting reads Datasette through its CDN, so runs once the caches are cleared
+    run_reporting_task = EcsRunTaskOperator(
+        task_id="run-reporting-task",
+        dag=dag,
+        execution_timeout=timedelta(minutes=1800),
+        cluster=ecs_cluster,
+        task_definition=reporting_task_name,
+        launch_type="FARGATE",
+        overrides={
+            "containerOverrides": [
+                {
+                    "name": f"{reporting_task_container_name}",
+                    "environment": [
+                        {
+                            "name": "ENVIRONMENT",
+                            "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="env") | string }}\'',
+                        },
+                        {
+                            "name": "COLLECTION_DATA_BUCKET",
+                            "value": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}',
+                        },
+                    ],
+                },
+            ]
+        },
+        network_configuration={"awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'},
+        awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="reporting-task-log-group") }}',
+        awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="reporting-task-log-region") }}',
+        awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="reporting-task-log-stream-prefix") }}',
+        awslogs_fetch_interval=timedelta(seconds=1),
+    )
+
+    # check for production if so run different order
+    if config["env"] == "production":
+        (configure_dag_task >> get_emr_app_id >> assemble_tasks_emr_task >> assemble_provision_quality_emr_task >> run_reporting_task)
+    else:
+        (configure_dag_task >> get_emr_app_id >> assemble_tasks_emr_task >> assemble_provision_quality_emr_task)
