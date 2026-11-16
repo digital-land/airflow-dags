@@ -432,7 +432,7 @@ with DAG(
     )
 
     # check for production if so run different order and only show the run_reporting_task in this environment
-    if config["env"] == "development":
+    if config["env"] == "production":
         # reporting reads Datasette through its CDN, so runs once the caches are cleared
         run_reporting_task = EcsRunTaskOperator(
             task_id="run-reporting-task",
