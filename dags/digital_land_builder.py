@@ -83,14 +83,20 @@ with DAG(
             key="digital_land_cloudfront_distribution_ids",
             fallback="",
         )
-        distribution_ids = [distribution_id.strip() for distribution_id in distribution_ids.split(",") if distribution_id.strip()]
+        distribution_ids = [
+            distribution_id.strip()
+            for distribution_id in distribution_ids.split(",")
+            if distribution_id.strip()
+        ]
 
         if not distribution_ids:
             logger.info(
                 "No CloudFront distribution IDs found for environment %s. Skipping cache invalidation.",
                 config["env"],
             )
-            raise AirflowSkipException("No digital_land_cloudfront_distribution_ids configured")
+            raise AirflowSkipException(
+                "No digital_land_cloudfront_distribution_ids configured"
+            )
 
         paths = ["/*"]
         cloudfront = boto3.client("cloudfront")
@@ -109,7 +115,9 @@ with DAG(
                             "CallerReference": f"{kwargs['dag_run'].run_id}-{distribution_id}-{uuid.uuid4()}",
                         },
                     )
-                    invalidation_ids[distribution_id] = invalidation["Invalidation"]["Id"]
+                    invalidation_ids[distribution_id] = invalidation["Invalidation"][
+                        "Id"
+                    ]
                 except (BotoCoreError, ClientError):
                     logger.exception(
                         "CloudFront cache invalidation failed for distribution %s",
@@ -124,7 +132,9 @@ with DAG(
         )
         for distribution_id, invalidation_id in invalidate_all().items():
             try:
-                cloudfront.get_waiter("invalidation_completed").wait(DistributionId=distribution_id, Id=invalidation_id)
+                cloudfront.get_waiter("invalidation_completed").wait(
+                    DistributionId=distribution_id, Id=invalidation_id
+                )
             except (BotoCoreError, ClientError):
                 logger.exception(
                     "Waiting for CloudFront invalidation %s on distribution %s failed",
@@ -160,7 +170,9 @@ with DAG(
         cpu = int(params.get("cpu"))
         transformed_jobs = str(kwargs["params"].get("transformed-jobs"))
         dataset_jobs = str(kwargs["params"].get("dataset-jobs"))
-        incremental_loading_override = bool(kwargs["params"].get("incremental-loading-override"))
+        incremental_loading_override = bool(
+            kwargs["params"].get("incremental-loading-override")
+        )
         regenerate_log_override = bool(kwargs["params"].get("regenerate-log-override"))
         debug = bool(params.get("debug", False))
 
@@ -169,11 +181,17 @@ with DAG(
         ti.xcom_push(key="cpu", value=cpu)
         ti.xcom_push(key="transformed-jobs", value=transformed_jobs)
         ti.xcom_push(key="dataset-jobs", value=dataset_jobs)
-        ti.xcom_push(key="incremental-loading-override", value=incremental_loading_override)
+        ti.xcom_push(
+            key="incremental-loading-override", value=incremental_loading_override
+        )
         ti.xcom_push(key="regenerate-log-override", value=regenerate_log_override)
 
-        collection_dataset_bucket_name = kwargs["conf"].get(section="custom", key="collection_dataset_bucket_name")
-        ti.xcom_push(key="collection-dataset-bucket-name", value=collection_dataset_bucket_name)
+        collection_dataset_bucket_name = kwargs["conf"].get(
+            section="custom", key="collection_dataset_bucket_name"
+        )
+        ti.xcom_push(
+            key="collection-dataset-bucket-name", value=collection_dataset_bucket_name
+        )
 
         # build entry point arguments for assemble-tasks EMR job
         tasks_args = [
@@ -203,7 +221,9 @@ with DAG(
         ]
         if debug:
             provision_quality_args.append("--debug")
-        ti.xcom_push(key="provision-quality-entry-point-args", value=provision_quality_args)
+        ti.xcom_push(
+            key="provision-quality-entry-point-args", value=provision_quality_args
+        )
 
         # push collection-task log variables
         push_log_variables(
@@ -259,7 +279,9 @@ with DAG(
                 }
             ]
         },
-        network_configuration={"awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'},
+        network_configuration={
+            "awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'
+        },
         awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
         awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-region") }}',
         awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}',
@@ -322,7 +344,11 @@ with DAG(
         #    awslogs_fetch_interval=timedelta(seconds=1),
         # )
 
-        (build_digital_land_builder >> wait_for_datasette_reload >> invalidate_cloudfront_cache_task)  # >> run_reporting_task)
+        (
+            build_digital_land_builder
+            >> wait_for_datasette_reload
+            >> invalidate_cloudfront_cache_task
+        )  # >> run_reporting_task)
     else:
         build_digital_land_builder >> invalidate_cloudfront_cache_task
 
@@ -351,7 +377,9 @@ with DAG(
                 },
             ]
         },
-        network_configuration={"awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'},
+        network_configuration={
+            "awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'
+        },
         awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="sqlite-ingestion-task-log-group") }}',
         awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="sqlite-ingestion-task-log-region") }}',
         awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="sqlite-ingestion-task-log-stream-prefix") }}',
@@ -365,7 +393,9 @@ with DAG(
     S3_BUCKET = f"{ENV}-pd-batch-jobs-codepackage-bucket"
     S3_LOG_BUCKET = f"{ENV}-pd-batch-jobs-logs-bucket"
     S3_TASKS_ENTRY_POINT = f"s3://{S3_BUCKET}/pkg/entry_script/run_tasks.py"
-    S3_PROVISION_QUALITY_ENTRY_POINT = f"s3://{S3_BUCKET}/pkg/entry_script/run_provision_quality.py"
+    S3_PROVISION_QUALITY_ENTRY_POINT = (
+        f"s3://{S3_BUCKET}/pkg/entry_script/run_provision_quality.py"
+    )
     S3_WHEEL_FILE = f"s3://{S3_BUCKET}/pkg/whl_pkg/pyspark_jobs-0.1.0-py3-none-any.whl"
     S3_LOG_URI = f"s3://{S3_LOG_BUCKET}/"
     S3_DATA_PATH = f"s3://{ENV}-collection-data/"
@@ -397,10 +427,13 @@ with DAG(
             "sparkSubmit": {
                 "entryPoint": S3_TASKS_ENTRY_POINT,
                 "entryPointArguments": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="tasks-entry-point-args") }}',
-                "sparkSubmitParameters": f"--py-files {S3_WHEEL_FILE} " "--conf spark.serializer=org.apache.spark.serializer.KryoSerializer",
+                "sparkSubmitParameters": f"--py-files {S3_WHEEL_FILE} "
+                "--conf spark.serializer=org.apache.spark.serializer.KryoSerializer",
             }
         },
-        configuration_overrides=emr_monitoring_configuration(S3_LOG_URI, emr_log_group(ENV)),
+        configuration_overrides=emr_monitoring_configuration(
+            S3_LOG_URI, emr_log_group(ENV)
+        ),
         name="assemble-tasks-job",
         wait_for_completion=True,
         aws_conn_id="aws_default",
@@ -422,7 +455,9 @@ with DAG(
                 "--conf spark.sql.maxPlanStringLength=8192",
             }
         },
-        configuration_overrides=emr_monitoring_configuration(S3_LOG_URI, emr_log_group(ENV)),
+        configuration_overrides=emr_monitoring_configuration(
+            S3_LOG_URI, emr_log_group(ENV)
+        ),
         name="assemble-provision-quality-job",
         wait_for_completion=True,
         aws_conn_id="aws_default",
@@ -435,38 +470,49 @@ with DAG(
     if config["env"] == "development":
         # reporting reads Datasette through its CDN, so runs once the caches are cleared
         run_reporting_task = EcsRunTaskOperator(
-                task_id="run-reporting-task",
-                dag=dag,
-                execution_timeout=timedelta(minutes=1800),
-                cluster=ecs_cluster,
-                task_definition=reporting_task_name,
-                launch_type="FARGATE",
-                overrides={
-                    "containerOverrides": [
-                        {
-                            "name": f"{reporting_task_container_name}",
-                            "environment": [
-                                {
-                                    "name": "ENVIRONMENT",
-                                    "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="env") | string }}\'',
-                                },
-                                {
-                                    "name": "COLLECTION_DATA_BUCKET",
-                                    "value": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}',
-                                },
-                            ],
-                        },
-                    ]
-                },
-                network_configuration={"awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'},
-                awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="reporting-task-log-group") }}',
-                awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="reporting-task-log-region") }}',
-                awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="reporting-task-log-stream-prefix") }}',
-                awslogs_fetch_interval=timedelta(seconds=1),
-            )
+            task_id="run-reporting-task",
+            dag=dag,
+            execution_timeout=timedelta(minutes=1800),
+            cluster=ecs_cluster,
+            task_definition=reporting_task_name,
+            launch_type="FARGATE",
+            overrides={
+                "containerOverrides": [
+                    {
+                        "name": f"{reporting_task_container_name}",
+                        "environment": [
+                            {
+                                "name": "ENVIRONMENT",
+                                "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="env") | string }}\'',
+                            },
+                            {
+                                "name": "COLLECTION_DATA_BUCKET",
+                                "value": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}',
+                            },
+                        ],
+                    },
+                ]
+            },
+            network_configuration={
+                "awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'
+            },
+            awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="reporting-task-log-group") }}',
+            awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="reporting-task-log-region") }}',
+            awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="reporting-task-log-stream-prefix") }}',
+            awslogs_fetch_interval=timedelta(seconds=1),
+        )
 
-
-
-        (configure_dag_task >> get_emr_app_id >> assemble_tasks_emr_task >> assemble_provision_quality_emr_task >> run_reporting_task)
+        (
+            configure_dag_task
+            >> get_emr_app_id
+            >> assemble_tasks_emr_task
+            >> assemble_provision_quality_emr_task
+            >> run_reporting_task
+        )
     else:
-        (configure_dag_task >> get_emr_app_id >> assemble_tasks_emr_task >> assemble_provision_quality_emr_task)
+        (
+            configure_dag_task
+            >> get_emr_app_id
+            >> assemble_tasks_emr_task
+            >> assemble_provision_quality_emr_task
+        )
