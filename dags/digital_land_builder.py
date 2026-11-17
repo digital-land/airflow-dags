@@ -433,6 +433,6 @@ with DAG(
 
     # check for production if so run different order and only show the run_reporting_task in this environment
     if config["env"] == "production":
-        (configure_dag_task >> get_emr_app_id >> assemble_tasks_emr_task >> assemble_provision_quality_emr_task >> run_reporting_task)
+        (assemble_provision_quality_emr_task >> run_reporting_task)
     else:
         (configure_dag_task >> get_emr_app_id >> assemble_tasks_emr_task >> assemble_provision_quality_emr_task)
