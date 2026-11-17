@@ -432,6 +432,6 @@ with DAG(
     )
 
     (configure_dag_task >> get_emr_app_id >> assemble_tasks_emr_task >> assemble_provision_quality_emr_task)
-    
+
     if config["env"] == "production":
-            (assemble_provision_quality_emr_task >> run_reporting_task)
+        (assemble_provision_quality_emr_task >> run_reporting_task)
