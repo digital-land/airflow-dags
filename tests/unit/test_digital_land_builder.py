@@ -23,7 +23,13 @@ def make_cloudfront_client():
     invalidation_ids = iter(f"I{number}" for number in range(1, 100))
     create_invalidation = Mock(side_effect=lambda **kwargs: {"Invalidation": {"Id": next(invalidation_ids)}})
     waiter = Mock()
-    return Mock(create_invalidation=create_invalidation, get_waiter=Mock(return_value=waiter)), waiter
+    return (
+        Mock(
+            create_invalidation=create_invalidation,
+            get_waiter=Mock(return_value=waiter),
+        ),
+        waiter,
+    )
 
 
 def test_invalidate_cloudfront_cache_invalidates_each_distribution_twice(monkeypatch):
@@ -72,14 +78,18 @@ def test_invalidate_cloudfront_cache_waits_for_first_pass_before_second(monkeypa
     ]
 
 
-def test_invalidate_cloudfront_cache_skips_when_no_distribution_ids_configured(monkeypatch):
+def test_invalidate_cloudfront_cache_skips_when_no_distribution_ids_configured(
+    monkeypatch,
+):
     invalidate_cloudfront_cache = get_task_callable("invalidate-cloudfront-cache")
 
     with pytest.raises(AirflowSkipException):
         invalidate_cloudfront_cache(dag_run=SimpleNamespace(run_id="test-run"), conf=make_conf(""))
 
 
-def test_invalidate_cloudfront_cache_does_not_raise_when_cloudfront_rejects_invalidation(monkeypatch):
+def test_invalidate_cloudfront_cache_does_not_raise_when_cloudfront_rejects_invalidation(
+    monkeypatch,
+):
     create_invalidation = Mock(
         side_effect=ClientError(
             error_response={"Error": {"Code": "AccessDenied", "Message": "Access denied"}},
@@ -96,7 +106,9 @@ def test_invalidate_cloudfront_cache_does_not_raise_when_cloudfront_rejects_inva
     cloudfront_client.get_waiter.assert_not_called()
 
 
-def test_invalidate_cloudfront_cache_still_runs_second_pass_when_waiting_fails(monkeypatch):
+def test_invalidate_cloudfront_cache_still_runs_second_pass_when_waiting_fails(
+    monkeypatch,
+):
     cloudfront_client, waiter = make_cloudfront_client()
     waiter.wait.side_effect = WaiterError(name="InvalidationCompleted", reason="Max attempts exceeded", last_response={})
     monkeypatch.setattr("dags.digital_land_builder.boto3.client", Mock(return_value=cloudfront_client))
@@ -113,6 +125,7 @@ def test_caches_are_cleared_after_datasette_has_had_time_to_reload():
 
     if config["env"] == "production":
         assert invalidate_cloudfront_cache_task.upstream_task_ids == {"wait-for-datasette-reload"}
-        assert dag.get_task("run-reporting-task").upstream_task_ids == {"invalidate-cloudfront-cache"}
+        assert dag.get_task("assemble-provision-quality-emr-task").upstream_task_ids == {"invaidate-cloudfront-cache"}
+        assert dag.get_task("run-reporting-task").upstream_task_ids == {"assemble-provision-quality-emr-task"}
     else:
         assert invalidate_cloudfront_cache_task.upstream_task_ids == {"build-digital-land-builder"}
