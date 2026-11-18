@@ -14,12 +14,6 @@ from collection_config import DEFAULT_COLLECTION_CONFIG, collection_schedule_mat
 from collection_schema import CollectionSelection
 from utils import filter_collections_for_env, get_collections_dict, get_config, load_specification_datasets, sort_collections_dict
 
-# collections still run via the original collection DAG; every other collection runs via the
-# newer, EMR-based collection DAG (new-<collection>-collection). Empty now that every collection
-# has moved; add a collection back here to return it to the original DAG
-ORIGINAL_COLLECTION_DAG_COLLECTIONS = set()
-
-
 # collections triggered by a DAG of their own rather than from either master DAG. They run on a
 # cadence of their own and nothing downstream consumes their output during the nightly run, so
 # making the nightly chain wait on them only delays everything after them.
@@ -27,9 +21,7 @@ DECOUPLED_COLLECTIONS = {"title-boundary"}
 
 
 def trigger_dag_id_for(collection: str) -> str:
-    if collection in ORIGINAL_COLLECTION_DAG_COLLECTIONS:
-        return f"{collection}-collection"
-    return f"new-{collection}-collection"
+    return f"{collection}-collection"
 
 
 config = get_config()

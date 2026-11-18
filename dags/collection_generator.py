@@ -1,5 +1,11 @@
+"""
+Generates one <collection>-collection DAG per collection: collect and transform on ECS, assemble on
+EMR Serverless, then package and tiles on ECS. The master DAGs in dag_triggers.py trigger them.
+"""
+
 from datetime import timedelta
 
+import boto3
 from airflow import DAG
 from airflow.models.param import Param
 from airflow.operators.python import PythonOperator
@@ -7,6 +13,10 @@ from airflow.providers.amazon.aws.operators.ecs import (
     EcsRunTaskOperator,
 )
 from airflow.providers.slack.notifications.slack import send_slack_notification
+from airflow.utils.task_group import TaskGroup
+from collection_config import ASSEMBLE_WAITER_DELAY_SECONDS, assemble_waiter_max_attempts, get_collection_dag_config
+from emr_dags_utils import get_secrets
+from emr_log_streaming import EmrServerlessStartJobWithLogsOperator, emr_log_group, emr_monitoring_configuration
 from utils import (
     dag_default_args,
     filter_collections_for_env,
@@ -24,37 +34,67 @@ config = get_config()
 # set some variables needed for ECS tasks,
 ecs_cluster = f"{config['env']}-cluster"
 collection_task_name = f"{config['env']}-mwaa-collection-task"
-sqlite_injection_task_name = f"{config['env']}-sqlite-ingestion-task"
-sqlite_injection_task_container_name = f"{config['env']}-sqlite-ingestion"
 tiles_builder_task_name = f"{config['env']}-tile-builder-task"
 tiles_builder_container_name = f"{config['env']}-tile-builder"
 
 datasets_dict = load_specification_datasets()
 collections = get_collections_dict(datasets_dict.values())
-collections = filter_collections_for_env(collections, datasets_dict, config["env"])
+filtered_collections = filter_collections_for_env(collections, datasets_dict, config["env"])
+
 
 failure_callbacks = []
 if config["env"] == "production":
     failure_callbacks.append(send_slack_notification(text="The DAG {{ dag.dag_id }} failed", channel="#planning-data-alerts", username="Airflow"))
 
-for collection, collection_datasets in collections.items():
-    dag_id = f"{collection}-collection"
+ENV = config["env"]
+# get execution role arn from airflow executer - once per parse, as the value is the same for every dataset
+EXECUTION_ROLE_ARN = get_secrets("emr_execution_role", ENV)
+
+
+COLLECTION_DAG_DOC = """
+Collects, processes and publishes every dataset in the `{collection}` collection.
+
+Triggered by `trigger-collection-dags-scheduled` (on the environment's schedule) or `trigger-collection-dags-manual`, which wait for it to finish.
+Title-boundary is the exception: `trigger-title-boundary-monthly` triggers it once a month and does not wait. Any collection DAG can also be triggered on its own.
+
+**Tasks**
+
+1. `{collection}-collect` (ECS, collection-task): fetches every endpoint and saves new resources and logs.
+2. `<dataset>-transform` (ECS, collection-task): transforms new resources, in parallel batches of `transform-batch-size`.
+3. `<dataset>-assemble-load-bake.assemble-emr-job` (EMR Serverless, pyspark-jobs): assembles the dataset and loads it into Postgres.
+4. `<dataset>-package` (ECS, collection-task): builds the dataset sqlite file for Datasette and runs its expectations. Not built for title-boundary.
+5. `<dataset>-tiles-builder` (ECS): rebuilds map tiles. Geography datasets only.
+
+**Parameters**
+
+- `cpu`, `memory`: size of the collect, transform and package containers.
+- `transformed-jobs`, `dataset-jobs`: parallel jobs inside each container.
+- `transform-batch-size`: resources per transform task.
+- `incremental-loading-override`: passed to `digital-land save-state` in the collect task.
+- `regenerate-log-override`: passed to makerules as `REGENERATE_LOG_OVERRIDE`, which sets `--refill-todays-logs` on the collector.
+- `force-reprocessing`: the collect task skips downloading the dataset resource logs, so every resource is transformed again rather than only new ones.
+"""
+
+
+for collection, collection_datasets in filtered_collections.items():
+    collection_dag_config = get_collection_dag_config(collection)
 
     with DAG(
         f"{collection}-collection",
         default_args=dag_default_args,
         description=f"Collection task for the {collection} collection",
+        doc_md=COLLECTION_DAG_DOC.format(collection=collection),
         schedule=None,
         catchup=False,
         params={
-            "cpu": Param(default=8192, type="integer"),
-            "memory": Param(default=32768, type="integer"),
-            "transformed-jobs": Param(default=8, type="integer"),
-            "dataset-jobs": Param(default=8, type="integer"),
-            "transform-batch-size": Param(default=200, type="integer"),
-            "incremental-loading-override": Param(default=False, type="boolean"),
-            "regenerate-log-override": Param(default=False, type="boolean"),
-            "force-reprocessing": Param(default=False, type="boolean"),
+            "cpu": Param(default=collection_dag_config.cpu, type="integer"),
+            "memory": Param(default=collection_dag_config.memory, type="integer"),
+            "transformed-jobs": Param(default=collection_dag_config.transformed_jobs, type="integer"),
+            "dataset-jobs": Param(default=collection_dag_config.dataset_jobs, type="integer"),
+            "transform-batch-size": Param(default=collection_dag_config.transform_batch_size, type="integer"),
+            "incremental-loading-override": Param(default=collection_dag_config.incremental_loading_override, type="boolean"),
+            "regenerate-log-override": Param(default=collection_dag_config.regenerate_log_override, type="boolean"),
+            "force-reprocessing": Param(default=collection_dag_config.force_reprocessing, type="boolean"),
         },
         render_template_as_native_obj=True,
         is_paused_upon_creation=False,
@@ -101,8 +141,6 @@ for collection, collection_datasets in collections.items():
 
             # push collection-task log variables
             push_log_variables(ti, task_definition_name=collection_task_name, container_name=collection_task_name, prefix="collection-task")
-            # push sqlite_ingestion task variables
-            push_log_variables(ti, task_definition_name=sqlite_injection_task_name, container_name=sqlite_injection_task_container_name, prefix="sqlite-ingestion-task")
 
             # push tiles builder task variables
             push_log_variables(ti, task_definition_name=tiles_builder_task_name, container_name=tiles_builder_container_name, prefix="tiles-builder-task")
@@ -157,13 +195,12 @@ for collection, collection_datasets in collections.items():
             awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
             awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-region") }}',
             awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}',
-            awslogs_fetch_interval=timedelta(seconds=1),
+            awslogs_fetch_interval=timedelta(seconds=collection_dag_config.awslogs_fetch_interval_seconds),
         )
 
         configure_dag_task >> collect_ecs_task
 
-        # now add loaders for datasets
-        # start with  postgres tasks
+        # now collection has been completed we run to dataset partitioned pipelines
         for dataset in collection_datasets:
 
             get_batch_configs = PythonOperator(
@@ -186,87 +223,132 @@ for collection, collection_datasets in collections.items():
                 awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
                 awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-region") }}',
                 awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}',
-                awslogs_fetch_interval=timedelta(seconds=1),
+                awslogs_fetch_interval=timedelta(seconds=collection_dag_config.awslogs_fetch_interval_seconds),
             ).expand(overrides=get_batch_configs.output)
 
             collect_ecs_task >> get_batch_configs >> transform_ecs_tasks
 
-            assemble_ecs_task = EcsRunTaskOperator(
-                task_id=f"{dataset}-assemble-and-bake",
-                dag=dag,
-                execution_timeout=timedelta(minutes=1800),
-                cluster=ecs_cluster,
-                task_definition=collection_task_name,
-                launch_type="FARGATE",
-                overrides={
-                    "containerOverrides": [
-                        {
-                            "name": collection_task_name,
-                            "cpu": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="cpu") | int }}',
-                            "memory": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="memory") | int }}',
-                            "command": ["./bin/assemble.sh"],
-                            "environment": [
-                                {"name": "ENVIRONMENT", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="env") | string }}\''},
-                                {"name": "COLLECTION_NAME", "value": collection},
-                                {"name": "DATASET_NAME", "value": dataset},
-                                {
-                                    "name": "COLLECTION_DATASET_BUCKET_NAME",
-                                    "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}\'',
-                                },
-                                {
-                                    "name": "HOISTED_COLLECTION_DATASET_BUCKET_NAME",
-                                    "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}\'',
-                                },
-                                # {"name": "TRANSFORMED_JOBS", "value": str('{{ task_instance.xcom_pull(task_ids="configure-dag", key="transformed-jobs") | string }}')},
-                                {"name": "TRANSFORMED_JOBS", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="transformed-jobs") | string }}\''},
-                                {"name": "DATASET_JOBS", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="dataset-jobs") | string }}\''},
-                                {
-                                    "name": "INCREMENTAL_LOADING_OVERRIDE",
-                                    "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="incremental-loading-override") | string }}\'',
-                                },
-                                {"name": "REGENERATE_LOG_OVERRIDE", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="regenerate-log-override") | string }}\''},
-                            ],
-                        },
-                    ]
-                },
-                network_configuration={"awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'},
-                awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
-                awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-region") }}',
-                awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}',
-                awslogs_fetch_interval=timedelta(seconds=1),
-            )
+            with TaskGroup(group_id=f"{dataset}-assemble-load-bake") as assemble_task_group:
 
-            transform_ecs_tasks >> assemble_ecs_task
+                def get_emr_application_id(**context):
+                    """Get EMR application ID and push to XCom."""
+                    env = context["ti"].xcom_pull(task_ids="configure-dag", key="env")
+                    app_name = f"{env}-pd-batch-emrsl-application"
+                    client = boto3.client("emr-serverless", region_name="eu-west-2")
+                    response = client.list_applications(maxResults=50)
+                    for app in response.get("applications", []):
+                        if app["name"] == app_name:
+                            app_id = app["id"]
+                            context["ti"].xcom_push(key="application_id", value=app_id)
+                            return app_id
+                    raise ValueError(f"EMR application '{app_name}' not found")
 
-            postgres_loader_task = EcsRunTaskOperator(
-                task_id=f"{dataset}-postgres-loader",
-                dag=dag,
-                execution_timeout=timedelta(minutes=1800),
-                cluster=ecs_cluster,
-                task_definition=sqlite_injection_task_name,
-                launch_type="FARGATE",
-                overrides={
-                    "containerOverrides": [
-                        {
-                            "name": f"{sqlite_injection_task_container_name}",
-                            "environment": [
-                                {"name": "ENVIRONMENT", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="env") | string }}\''},
-                                {
-                                    "name": "S3_OBJECT_ARN",
-                                    "value": '\'arn:aws:s3:::{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}'
-                                    + f"/{collection}-collection/dataset/{dataset}.sqlite3'",
-                                },
+                get_app_id = PythonOperator(task_id="get-emr-app-id", python_callable=get_emr_application_id, execution_timeout=timedelta(minutes=2))
+
+                S3_BUCKET = f"{ENV}-pd-batch-jobs-codepackage-bucket"
+                S3_LOG_BUCKET = f"{ENV}-pd-batch-jobs-logs-bucket"
+                S3_SOURCE_DATA_PATH = f"{ENV}-collection-data"
+                S3_ENTRY_POINT = f"s3://{S3_BUCKET}/pkg/entry_script/run_main.py"
+                S3_WHEEL_FILE = f"s3://{S3_BUCKET}/pkg/whl_pkg/pyspark_jobs-0.1.0-py3-none-any.whl"
+                S3_LOG_URI = f"s3://{S3_LOG_BUCKET}/"
+                S3_DATA_PATH = f"s3://{S3_SOURCE_DATA_PATH}/"
+
+                spark_submit_parameters = (
+                    f"--jars /usr/lib/spark/jars/postgresql-42.7.4.jar --py-files {S3_WHEEL_FILE} "
+                    "--conf spark.serializer=org.apache.spark.serializer.KryoSerializer "
+                    "--conf spark.kryo.registrator=org.apache.sedona.core.serde.SedonaKryoRegistrator "
+                    "--conf spark.sql.extensions=org.apache.sedona.sql.SedonaSqlExtensions "
+                    # The default overhead (10% of executor memory, ~1.4g) left too little room outside
+                    # the heap: title-boundary executors were killed with exit code 137 (container out
+                    # of memory) while their heaps peaked well under 14g. 14g + 6g = a 20 GB worker.
+                    "--conf spark.executor.memory=14g "
+                    "--conf spark.executor.memoryOverhead=6g"
+                )
+                if collection_dag_config.max_executors is not None:
+                    spark_submit_parameters += f" --conf spark.dynamicAllocation.maxExecutors={collection_dag_config.max_executors}"
+
+                assemble_emr_task = EmrServerlessStartJobWithLogsOperator(
+                    task_id="assemble-emr-job",
+                    application_id=f'{{{{ task_instance.xcom_pull(task_ids="{dataset}-assemble-load-bake.get-emr-app-id", key="application_id") }}}}',
+                    execution_role_arn=EXECUTION_ROLE_ARN,
+                    job_driver={
+                        "sparkSubmit": {
+                            "entryPoint": S3_ENTRY_POINT,
+                            "entryPointArguments": [
+                                "--dataset",
+                                dataset,
+                                "--collection",
+                                collection,
+                                "--env",
+                                ENV,
+                                "--collection-data-path",
+                                S3_DATA_PATH,
+                                "--parquet-datasets-path",
+                                f"s3://{ENV}-parquet-datasets",
                             ],
-                        },
-                    ]
-                },
-                network_configuration={"awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'},
-                awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="sqlite-ingestion-task-log-group") }}',
-                awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="sqlite-ingestion-task-log-region") }}',
-                awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="sqlite-ingestion-task-log-stream-prefix") }}',
-                awslogs_fetch_interval=timedelta(seconds=1),
-            )
-            assemble_ecs_task >> postgres_loader_task
+                            "sparkSubmitParameters": spark_submit_parameters,
+                        }
+                    },
+                    configuration_overrides=emr_monitoring_configuration(S3_LOG_URI, emr_log_group(ENV)),
+                    name=f"{dataset}-job",
+                    wait_for_completion=True,
+                    aws_conn_id="aws_default",
+                    waiter_max_attempts=assemble_waiter_max_attempts(collection_dag_config.assemble_timeout),
+                    waiter_delay=ASSEMBLE_WAITER_DELAY_SECONDS,
+                    execution_timeout=collection_dag_config.assemble_timeout,
+                )
+
+                transform_ecs_tasks >> get_app_id >> assemble_emr_task
+
+            # end of task group
+
+            # Now we need to create a data package task to create the sqlite file for datasette
+            if dataset not in ["title-boundary"]:
+                package_ecs_task = EcsRunTaskOperator(
+                    task_id=f"{dataset}-package",
+                    dag=dag,
+                    execution_timeout=timedelta(minutes=1800),
+                    cluster=ecs_cluster,
+                    task_definition=collection_task_name,
+                    launch_type="FARGATE",
+                    overrides={
+                        "containerOverrides": [
+                            {
+                                "name": collection_task_name,
+                                "cpu": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="cpu") | int }}',
+                                "memory": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="memory") | int }}',
+                                "command": ["./bin/package.sh"],
+                                "environment": [
+                                    {"name": "ENVIRONMENT", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="env") | string }}\''},
+                                    {"name": "COLLECTION_NAME", "value": collection},
+                                    {"name": "DATASET_NAME", "value": dataset},
+                                    {
+                                        "name": "COLLECTION_DATA_BUCKET",
+                                        "value": '\'s3://{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}\'',
+                                    },
+                                    {
+                                        "name": "COLLECTION_DATASET_BUCKET_NAME",
+                                        "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}\'',
+                                    },
+                                    {
+                                        "name": "PARQUET_DATASETS_BUCKET",
+                                        "value": f"s3://{ENV}-parquet-datasets",
+                                    },
+                                    # {"name": "TRANSFORMED_JOBS", "value": str('{{ task_instance.xcom_pull(task_ids="configure-dag", key="transformed-jobs") | string }}')},
+                                    {"name": "TRANSFORMED_JOBS", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="transformed-jobs") | string }}\''},
+                                    {"name": "DATASET_JOBS", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="dataset-jobs") | string }}\''},
+                                ],
+                            },
+                        ]
+                    },
+                    network_configuration={"awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'},
+                    awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
+                    awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-region") }}',
+                    awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}',
+                    awslogs_fetch_interval=timedelta(seconds=collection_dag_config.awslogs_fetch_interval_seconds),
+                )
+
+                assemble_emr_task >> package_ecs_task
 
             if datasets_dict[dataset].get("typology") == "geography":
                 # need to add a tiles loader task here
@@ -297,6 +379,6 @@ for collection, collection_datasets in collections.items():
                     awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="tiles-builder-task-log-group") }}',
                     awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="tiles-builder-task-log-region") }}',
                     awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="tiles-builder-task-log-stream-prefix") }}',
-                    awslogs_fetch_interval=timedelta(seconds=1),
+                    awslogs_fetch_interval=timedelta(seconds=collection_dag_config.awslogs_fetch_interval_seconds),
                 )
-                assemble_ecs_task >> tiles_builder_task
+                assemble_emr_task >> tiles_builder_task
