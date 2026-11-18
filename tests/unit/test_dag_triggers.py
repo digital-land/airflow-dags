@@ -9,7 +9,7 @@ from dags.collection_config import collection_schedule_matches
 
 CONFIG_PATH = Path("dags/config.json")
 TRIGGER_DAG_ID = "trigger-title-boundary-monthly"
-COLLECTION_DAG_ID = "new-title-boundary-collection"
+COLLECTION_DAG_ID = "title-boundary-collection"
 SCHEDULED_MASTER_DAG_ID = "trigger-collection-dags-scheduled"
 MANUAL_MASTER_DAG_ID = "trigger-collection-dags-manual"
 
@@ -96,39 +96,39 @@ def test_trigger_dag_is_scheduled_at_a_time_the_rrule_check_can_match(dag_bag):
 
 @pytest.mark.parametrize("master_dag_id", [SCHEDULED_MASTER_DAG_ID, MANUAL_MASTER_DAG_ID])
 def test_master_dags_only_trigger_dags_that_exist(dag_bag, master_dag_id):
-    """A collection is triggered via the new DAG unless it is in ORIGINAL_COLLECTION_DAG_COLLECTIONS,
-    and the new DAG is only built for the collections new_collection_generator selects. A
-    collection on the new DAG with no new DAG built would only show up as a failed trigger in a
-    nightly run."""
+    """trigger_dag_id_for and collection_generator each build the collection DAG id on their own,
+    and the generator only builds DAGs for the collections the environment selects. A trigger
+    pointing at a DAG that was never built would only show up as a failed trigger in a nightly
+    run."""
     missing = [task.trigger_dag_id for task in dag_bag.dags[master_dag_id].tasks if hasattr(task, "trigger_dag_id") and task.trigger_dag_id not in dag_bag.dags]
 
     assert missing == []
 
 
-def test_central_activities_zone_is_triggered_via_the_new_collection_dag(dag_bag):
+def test_central_activities_zone_is_triggered_via_its_collection_dag(dag_bag):
     trigger = dag_bag.dags[MANUAL_MASTER_DAG_ID].get_task("trigger-central-activities-zone-collection-dag")
 
-    assert trigger.trigger_dag_id == "new-central-activities-zone-collection"
+    assert trigger.trigger_dag_id == "central-activities-zone-collection"
 
 
-def test_listed_building_is_triggered_via_the_new_collection_dag(dag_bag):
+def test_listed_building_is_triggered_via_its_collection_dag(dag_bag):
     trigger = dag_bag.dags[MANUAL_MASTER_DAG_ID].get_task("trigger-listed-building-collection-dag")
 
-    assert trigger.trigger_dag_id == "new-listed-building-collection"
+    assert trigger.trigger_dag_id == "listed-building-collection"
 
 
 @pytest.mark.parametrize("master_dag_id", [SCHEDULED_MASTER_DAG_ID, MANUAL_MASTER_DAG_ID])
-def test_organisation_is_triggered_via_the_new_collection_dag(dag_bag, master_dag_id):
+def test_organisation_is_triggered_via_its_collection_dag(dag_bag, master_dag_id):
     """Both master DAGs build their own organisation trigger rather than going through the
     collection loop, so each is checked separately."""
     trigger = dag_bag.dags[master_dag_id].get_task("trigger-organisation-collection-dag")
 
-    assert trigger.trigger_dag_id == "new-organisation-collection"
+    assert trigger.trigger_dag_id == "organisation-collection"
 
 
-def test_listed_building_keeps_its_larger_task_size_on_the_new_collection_dag(dag_bag):
+def test_listed_building_keeps_its_larger_task_size(dag_bag):
     """listed-building's transform needs about two of its three hours at 16 vCPU and 16 jobs,
-    so the new DAG must be triggered with the same overrides rather than its defaults."""
+    so its collection DAG must be triggered with these overrides rather than its defaults."""
     trigger = dag_bag.dags[MANUAL_MASTER_DAG_ID].get_task("trigger-listed-building-collection-dag")
 
     assert trigger.conf == {"cpu": 16384, "transformed-jobs": 16}

@@ -1,5 +1,5 @@
 """
-Default DAG parameter configuration for the new-style collection DAGs.
+Default DAG parameter configuration for the collection DAGs.
 
 Most collections share the same generic defaults, but some need different values
 because of the resources involved (e.g. title-boundary uses a smaller transform
