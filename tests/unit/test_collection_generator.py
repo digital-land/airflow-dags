@@ -46,6 +46,7 @@ def test_configure_dag_uses_custom_branches():
     dags.collection_generator.configure_dag(
         ti=ti,
         **{"params": params},
+        conf={},
         #params=params,
     )
 
