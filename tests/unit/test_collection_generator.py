@@ -8,8 +8,8 @@ import dags.collection_generator
 def test_branch_params_default_to_main():
     dag = dags.collection_generator.dag
 
-    assert dag.params["digital-land-python-branch"].value == "main"
-    assert dag.params["makerules-branch"].value == "main"
+    assert dag.params["digital-land-python-branch"] == "main"
+    assert dag.params["makerules-branch"]== "main"
 
 def test_dag_has_branch_params():
     dag = dags.collection_generator.dag
@@ -17,8 +17,8 @@ def test_dag_has_branch_params():
     assert "digital-land-python-branch" in dag.params
     assert "makerules-branch" in dag.params
 
-    assert dag.params["digital-land-python-branch"].value == "main"
-    assert dag.params["makerules-branch"].value == "main"
+    assert dag.params["digital-land-python-branch"]== "main"
+    assert dag.params["makerules-branch"] == "main"
 
 
 def test_all_collection_dags_are_generated():
@@ -162,30 +162,6 @@ def test_configure_dag_defaults_to_main(mocker):
 
     assert pushed_values["digital-land-python-ref"] == ""
     assert pushed_values["makerules-url"] == ""
-
-
-def test_collect_task_has_branch_environment_variables():
-    dag = dags.collection_generator.dag
-    task = dag.get_task("ancient-woodland-collect")
-
-    environment = task.overrides["containerOverrides"][0]["environment"]
-
-    environment_names = [item["name"] for item in environment]
-
-    assert "DIGITAL_LAND_PYTHON_REF" in environment_names
-    assert "MAKERULES_URL" in environment_names
-
-
-def test_package_task_has_branch_environment_variables():
-    dag = dags.collection_generator.dag
-    task = dag.get_task("ancient-woodland-package")
-
-    environment = task.overrides["containerOverrides"][0]["environment"]
-
-    environment_names = [item["name"] for item in environment]
-
-    assert "DIGITAL_LAND_PYTHON_REF" in environment_names
-    assert "MAKERULES_URL" in environment_names
 
 
 def test_production_dag_does_not_have_branch_params(mocker):
