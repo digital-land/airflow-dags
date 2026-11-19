@@ -337,14 +337,17 @@ def test_get_transform_batch_configs_includes_branch_environment(mocker):
 
     environment = configs[0]["containerOverrides"][0]["environment"]
 
-    environment_variables = {
-        item["name"]: item["value"]
-        for item in environment
+    environment = {
+    item["name"]: item["value"]
+    for item in result[0]["containerOverrides"][0]["environment"]
     }
 
-    assert environment_variables["DIGITAL_LAND_PYTHON_REF"] == "feature/test"
-
-    assert environment_variables["MAKERULES_URL"] == (
+    assert environment["DIGITAL_LAND_PYTHON_REF"] == "feature/dlp"
+    
+    assert environment["MAKERULES_URL"] == (
         "https://raw.githubusercontent.com/"
         "digital-land/makerules/feature/rules/"
-    )
+        )
+
+
+    
