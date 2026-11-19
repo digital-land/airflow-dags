@@ -269,11 +269,11 @@ if config["env"] != "production":
                             },
                             {
                                 "name": "DIGITAL_LAND_PYTHON_REF",
-                                "value": '\'{{ ti.xcom_pull(task_ids="configure-dag", key="digital-land-python-ref"") }}\'',
+                                "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="digital-land-python-ref"") }}\'',
                             },
                             {
                                 "name": "MAKERULES_URL",
-                                "value": '\'{{ ti.xcom_pull(task_ids="configure-dag", key="makerules-url") }}\'',
+                                "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="makerules-url") }}\'',
                             },
                         ],
                     },
