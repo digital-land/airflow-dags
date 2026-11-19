@@ -12,8 +12,8 @@ from dags.collection_config import get_collection_dag_config
 def test_branch_params_default_to_main():
     dag = dags.collection_generator.dag
 
-    assert dag.params["digital-land-python-branch"].default == "main"
-    assert dag.params["makerules-branch"].default == "main"
+    assert dag.params["digital-land-python-branch"] == "main"
+    assert dag.params["makerules-branch"] == "main"
 
 def test_dag_has_branch_params():
     dag = dags.collection_generator.dag
