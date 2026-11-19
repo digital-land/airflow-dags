@@ -54,9 +54,20 @@ def test_configure_dag_uses_custom_branches():
         "makerules-branch": "feature/test-makerules",
     })
 
-    # Call configure_dag using the existing test context.
+    dags.collection_generator.configure_dag(
+        **{
+            "ti": ti,
+            "params": params,
+            "conf": {},
+        }
+    )
 
     assert call(
         key="digital-land-python-ref",
         value="feature/test-branch",
+    ) in ti.xcom_push.call_args_list
+
+    assert call(
+        key="makerules-url",
+        value="https://raw.githubusercontent.com/digital-land/makerules/feature/test-makerules/",
     ) in ti.xcom_push.call_args_list
