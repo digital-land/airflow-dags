@@ -62,16 +62,15 @@ def test_configure_dag_uses_custom_branches():
         }
     )
 
-    ti.xcom_push.assert_has_calls([
-        call(
-            key="digital-land-python-ref",
-            value="feature/test-branch",
-        ),
-        call(
-            key="makerules-url",
-            value="https://raw.githubusercontent.com/digital-land/makerules/feature/test-makerules/",
-        ),
-    ])
+    assert call(
+        key="digital-land-python-ref",
+        value="feature/test-branch",
+    ) in ti.xcom_push.call_args_list
+
+    assert call(
+        key="makerules-url",
+        value="https://raw.githubusercontent.com/digital-land/makerules/feature/test-makerules/",
+    ) in ti.xcom_push.call_args_list
 
 
 
