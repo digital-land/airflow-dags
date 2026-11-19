@@ -1,12 +1,16 @@
-import dags.collection_generator
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
+
+import dags.collection_generator
+
 
 def test_branch_params_default_to_main():
     dag = dags.collection_generator.dag
 
     assert dag.params["digital-land-python-branch"].value == "main"
     assert dag.params["makerules-branch"].value == "main"
+
 
 def test_all_collection_dags_are_generated():
     assert dags.collection_generator.dag
@@ -46,17 +50,11 @@ def test_configure_dag_pushes_branch_xcoms(mocker):
         conf=mocker.MagicMock(),
     )
 
-    pushed_values = {
-        call.kwargs["key"]: call.kwargs["value"]
-        for call in ti.xcom_push.call_args_list
-    }
+    pushed_values = {call.kwargs["key"]: call.kwargs["value"] for call in ti.xcom_push.call_args_list}
 
     assert pushed_values["digital-land-python-ref"] == "feature/test"
 
-    assert pushed_values["makerules-url"] == (
-        "https://raw.githubusercontent.com/"
-        "digital-land/makerules/feature/rules/"
-    )
+    assert pushed_values["makerules-url"] == ("https://raw.githubusercontent.com/" "digital-land/makerules/feature/rules/")
 
 
 def test_configure_dag_defaults_to_main(mocker):
@@ -91,13 +89,11 @@ def test_configure_dag_defaults_to_main(mocker):
         conf=mocker.MagicMock(),
     )
 
-    pushed_values = {
-        call.kwargs["key"]: call.kwargs["value"]
-        for call in ti.xcom_push.call_args_list
-    }
+    pushed_values = {call.kwargs["key"]: call.kwargs["value"] for call in ti.xcom_push.call_args_list}
 
     assert pushed_values["digital-land-python-ref"] == ""
     assert pushed_values["makerules-url"] == ""
+
 
 @pytest.mark.parametrize(
     "task_suffix",
@@ -106,27 +102,15 @@ def test_configure_dag_defaults_to_main(mocker):
 def test_collection_tasks_use_branch_xcoms(task_suffix):
     dag = dags.collection_generator.dag
 
-    task = next(
-        task for task in dag.tasks
-        if task.task_id.endswith(task_suffix)
-    )
+    task = next(task for task in dag.tasks if task.task_id.endswith(task_suffix))
 
     environment = task.overrides["containerOverrides"][0]["environment"]
 
-    environment_values = {
-        item["name"]: item["value"]
-        for item in environment
-    }
+    environment_values = {item["name"]: item["value"] for item in environment}
 
-    assert environment_values["DIGITAL_LAND_PYTHON_REF"] == (
-        '\'{{ task_instance.xcom_pull(task_ids="configure-dag", '
-        'key="digital-land-python-ref") }}\''
-    )
+    assert environment_values["DIGITAL_LAND_PYTHON_REF"] == ('\'{{ task_instance.xcom_pull(task_ids="configure-dag", ' 'key="digital-land-python-ref") }}\'')
 
-    assert environment_values["MAKERULES_URL"] == (
-        '\'{{ task_instance.xcom_pull(task_ids="configure-dag", '
-        'key="makerules-url") }}\''
-    )
+    assert environment_values["MAKERULES_URL"] == ('\'{{ task_instance.xcom_pull(task_ids="configure-dag", ' 'key="makerules-url") }}\'')
 
 
 def test_dag_has_branch_params():
@@ -175,17 +159,11 @@ def test_configure_dag_pushes_branch_xcoms(mocker):
         conf=conf,
     )
 
-    pushed_values = {
-        call.kwargs["key"]: call.kwargs["value"]
-        for call in ti.xcom_push.call_args_list
-    }
+    pushed_values = {call.kwargs["key"]: call.kwargs["value"] for call in ti.xcom_push.call_args_list}
 
     assert pushed_values["digital-land-python-ref"] == "feature/test"
 
-    assert pushed_values["makerules-url"] == (
-        "https://raw.githubusercontent.com/"
-        "digital-land/makerules/feature/rules/"
-    )
+    assert pushed_values["makerules-url"] == ("https://raw.githubusercontent.com/" "digital-land/makerules/feature/rules/")
 
 
 def test_configure_dag_defaults_to_main(mocker):
@@ -220,10 +198,7 @@ def test_configure_dag_defaults_to_main(mocker):
         conf=mocker.MagicMock(),
     )
 
-    pushed_values = {
-        call.kwargs["key"]: call.kwargs["value"]
-        for call in ti.xcom_push.call_args_list
-    }
+    pushed_values = {call.kwargs["key"]: call.kwargs["value"] for call in ti.xcom_push.call_args_list}
 
     assert pushed_values["digital-land-python-ref"] == ""
     assert pushed_values["makerules-url"] == ""
@@ -252,8 +227,10 @@ def test_package_task_has_branch_environment_variables():
     assert "DIGITAL_LAND_PYTHON_REF" in environment_names
     assert "MAKERULES_URL" in environment_names
 
+
 def test_production_dag_does_not_have_branch_params(mocker):
     import importlib
+
     import utils
 
     mocker.patch(

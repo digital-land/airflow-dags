@@ -289,6 +289,7 @@ def test_get_transform_batch_configs_uses_dataset_batch_size(mock_aws_credential
     assert result[0]["containerOverrides"][0]["environment"][-2]["value"] == expected_limit  # TRANSFORMATION_LIMIT
     assert result[1]["containerOverrides"][0]["environment"][-1]["value"] == expected_limit  # TRANSFORMATION_OFFSET
 
+
 def test_get_transform_batch_configs_includes_branch_environment(mocker):
     ti = mocker.MagicMock()
 
@@ -304,28 +305,16 @@ def test_get_transform_batch_configs_includes_branch_environment(mocker):
         "regenerate-log-override": False,
         "force-reprocessing": "",
         "digital-land-python-ref": "feature/test",
-        "makerules-url": (
-            "https://raw.githubusercontent.com/"
-            "digital-land/makerules/feature/rules/"
-        ),
+        "makerules-url": ("https://raw.githubusercontent.com/" "digital-land/makerules/feature/rules/"),
     }.get(key)
 
     mocker.patch(
         "utils.get_collection_dag_config",
-        return_value=mocker.Mock(
-            transform_batch_size_by_dataset={}
-        ),
+        return_value=mocker.Mock(transform_batch_size_by_dataset={}),
     )
 
-    mocker.patch(
-        "utils.boto3.client"
-    ).return_value.get_object.return_value = {
-        "Body": mocker.MagicMock(
-            read=lambda: (
-                b'{"transform_count_by_dataset": '
-                b'{"ancient-woodland": 100}}'
-            )
-        )
+    mocker.patch("utils.boto3.client").return_value.get_object.return_value = {
+        "Body": mocker.MagicMock(read=lambda: (b'{"transform_count_by_dataset": ' b'{"ancient-woodland": 100}}'))
     }
 
     configs = utils.get_transform_batch_configs(
@@ -337,17 +326,8 @@ def test_get_transform_batch_configs_includes_branch_environment(mocker):
 
     environment = configs[0]["containerOverrides"][0]["environment"]
 
-    environment = {
-    item["name"]: item["value"]
-    for item in result[0]["containerOverrides"][0]["environment"]
-    }
+    environment = {item["name"]: item["value"] for item in result[0]["containerOverrides"][0]["environment"]}
 
     assert environment["DIGITAL_LAND_PYTHON_REF"] == "feature/dlp"
-    
-    assert environment["MAKERULES_URL"] == (
-        "https://raw.githubusercontent.com/"
-        "digital-land/makerules/feature/rules/"
-        )
 
-
-    
+    assert environment["MAKERULES_URL"] == ("https://raw.githubusercontent.com/" "digital-land/makerules/feature/rules/")

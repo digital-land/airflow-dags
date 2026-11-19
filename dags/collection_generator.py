@@ -107,18 +107,18 @@ for collection, collection_datasets in filtered_collections.items():
     if config["env"] != "production":
         params.update(
             {
-            "digital-land-python-branch": Param(
-                default="main",
-                type="string",
-                description="Branch of digital-land-python to install",
-            ),
-            "makerules-branch": Param(
-                default="main",
-                type="string",
-                description="Branch of makerules to use",
-            ),
-        }
-    )
+                "digital-land-python-branch": Param(
+                    default="main",
+                    type="string",
+                    description="Branch of digital-land-python to install",
+                ),
+                "makerules-branch": Param(
+                    default="main",
+                    type="string",
+                    description="Branch of makerules to use",
+                ),
+            }
+        )
 
     with DAG(
         f"{collection}-collection",
@@ -144,9 +144,7 @@ for collection, collection_datasets in filtered_collections.items():
             # add DAG parameters
             params = kwargs["params"]
 
-            digital_land_python_branch = params.get(
-            "digital-land-python-branch", "main"
-            )
+            digital_land_python_branch = params.get("digital-land-python-branch", "main")
 
             makerules_branch = params.get("makerules-branch", "main")
 
@@ -269,7 +267,7 @@ for collection, collection_datasets in filtered_collections.items():
                             },
                             {
                                 "name": "DIGITAL_LAND_PYTHON_REF",
-                                "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="digital-land-python-ref"") }}\'',
+                                "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="digital-land-python-ref") }}\'',
                             },
                             {
                                 "name": "MAKERULES_URL",
@@ -443,12 +441,12 @@ for collection, collection_datasets in filtered_collections.items():
                                         "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="dataset-jobs") | string }}\'',
                                     },
                                     {
-                                         "name": "DIGITAL_LAND_PYTHON_REF",
-                                         "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="digital-land-python-ref") }}\'',
+                                        "name": "DIGITAL_LAND_PYTHON_REF",
+                                        "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="digital-land-python-ref") }}\'',
                                     },
                                     {
-                                         "name": "MAKERULES_URL",
-                                         "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="makerules-url") }}\'',
+                                        "name": "MAKERULES_URL",
+                                        "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="makerules-url") }}\'',
                                     },
                                 ],
                             },
