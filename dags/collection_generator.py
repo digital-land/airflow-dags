@@ -104,9 +104,9 @@ for collection, collection_datasets in filtered_collections.items():
         "force-reprocessing": Param(default=collection_dag_config.force_reprocessing, type="boolean"),
     }
 
-if config["env"] != "production":
-    params.update(
-        {
+    if config["env"] != "production":
+        params.update(
+            {
             "digital-land-python-branch": Param(
                 default="main",
                 type="string",

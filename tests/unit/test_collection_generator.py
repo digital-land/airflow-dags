@@ -1,39 +1,131 @@
 import dags.collection_generator
 import pytest
+from unittest.mock import MagicMock
 
-def get_dependency_branch_values(params):
-    dlp_branch = params.get("digital-land-python-branch", "main")
-    makerules_branch = params.get("makerules-branch", "main")
+def test_branch_params_default_to_main():
+    dag = dags.collection_generator.dag
 
-    return {
-        "digital-land-python-ref": (
-            dlp_branch if dlp_branch != "main" else ""
-        ),
-        "makerules-url": (
-            f"https://raw.githubusercontent.com/digital-land/makerules/{makerules_branch}/"
-            if makerules_branch != "main"
-            else ""
-        ),
+    assert dag.params["digital-land-python-branch"].value == "main"
+    assert dag.params["makerules-branch"].value == "main"
+
+def test_all_collection_dags_are_generated():
+    assert dags.collection_generator.dag
+
+
+def test_configure_dag_pushes_branch_xcoms(mocker):
+    dag = dags.collection_generator.dag
+    configure_task = dag.get_task("configure-dag")
+
+    ti = mocker.MagicMock()
+
+    mocker.patch.object(
+        dags.collection_generator,
+        "push_log_variables",
+    )
+    mocker.patch.object(
+        dags.collection_generator,
+        "push_vpc_config",
+    )
+
+    params = {
+        "memory": 2048,
+        "cpu": 1024,
+        "transformed-jobs": 1,
+        "dataset-jobs": 1,
+        "transform-batch-size": 100,
+        "incremental-loading-override": False,
+        "regenerate-log-override": False,
+        "force-reprocessing": False,
+        "digital-land-python-branch": "feature/test",
+        "makerules-branch": "feature/rules",
     }
 
-def test_dependency_branches_default_to_main():
-    result = get_dependency_branch_values({})
+    configure_task.python_callable(
+        ti=ti,
+        params=params,
+        conf=mocker.MagicMock(),
+    )
 
-    assert result["digital-land-python-ref"] == ""
-    assert result["makerules-url"] == ""
+    pushed_values = {
+        call.kwargs["key"]: call.kwargs["value"]
+        for call in ti.xcom_push.call_args_list
+    }
 
+    assert pushed_values["digital-land-python-ref"] == "feature/test"
 
-def test_dependency_branches_use_selected_branches():
-    result = get_dependency_branch_values({
-        "digital-land-python-branch": "feature/dlp",
-        "makerules-branch": "feature/makerules",
-    })
-
-    assert result["digital-land-python-ref"] == "feature/dlp"
-
-    assert result["makerules-url"] == (
+    assert pushed_values["makerules-url"] == (
         "https://raw.githubusercontent.com/"
-        "digital-land/makerules/feature/makerules/"
+        "digital-land/makerules/feature/rules/"
+    )
+
+
+def test_configure_dag_defaults_to_main(mocker):
+    dag = dags.collection_generator.dag
+    configure_task = dag.get_task("configure-dag")
+
+    ti = mocker.MagicMock()
+
+    mocker.patch.object(
+        dags.collection_generator,
+        "push_log_variables",
+    )
+    mocker.patch.object(
+        dags.collection_generator,
+        "push_vpc_config",
+    )
+
+    params = {
+        "memory": 2048,
+        "cpu": 1024,
+        "transformed-jobs": 1,
+        "dataset-jobs": 1,
+        "transform-batch-size": 100,
+        "incremental-loading-override": False,
+        "regenerate-log-override": False,
+        "force-reprocessing": False,
+    }
+
+    configure_task.python_callable(
+        ti=ti,
+        params=params,
+        conf=mocker.MagicMock(),
+    )
+
+    pushed_values = {
+        call.kwargs["key"]: call.kwargs["value"]
+        for call in ti.xcom_push.call_args_list
+    }
+
+    assert pushed_values["digital-land-python-ref"] == ""
+    assert pushed_values["makerules-url"] == ""
+
+@pytest.mark.parametrize(
+    "task_suffix",
+    ["collect", "package"],
+)
+def test_collection_tasks_use_branch_xcoms(task_suffix):
+    dag = dags.collection_generator.dag
+
+    task = next(
+        task for task in dag.tasks
+        if task.task_id.endswith(task_suffix)
+    )
+
+    environment = task.overrides["containerOverrides"][0]["environment"]
+
+    environment_values = {
+        item["name"]: item["value"]
+        for item in environment
+    }
+
+    assert environment_values["DIGITAL_LAND_PYTHON_REF"] == (
+        '\'{{ task_instance.xcom_pull(task_ids="configure-dag", '
+        'key="digital-land-python-ref") }}\''
+    )
+
+    assert environment_values["MAKERULES_URL"] == (
+        '\'{{ task_instance.xcom_pull(task_ids="configure-dag", '
+        'key="makerules-url") }}\''
     )
 
 
