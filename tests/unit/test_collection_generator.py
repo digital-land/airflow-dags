@@ -31,6 +31,14 @@ def test_configure_dag_uses_custom_branches():
     ti = Mock()
 
     params = {
+        "cpu": 1024,
+        "memory": 2048,
+        "transformed-jobs": 1,
+        "dataset-jobs": 1,
+        "transform-batch-size": 100,
+        "incremental-loading-override": False,
+        "regenerate-log-override": False,
+        "force-reprocessing": False,
         "digital-land-python-branch": "feature/test-branch",
         "makerules-branch": "feature/test-makerules",
     }
