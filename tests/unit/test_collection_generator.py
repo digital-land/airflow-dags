@@ -94,9 +94,13 @@ import dags.collection_generator
 
 
 def test_branch_params_not_available_in_production():
+    #with patch(
+    #    {"env": "production"},
+    #    "dags.collection_generator.config",
+    #):
     with patch(
-        "dags.collection_generator.config",
-        {"env": "production"},
+        "dags.collection_generator.get_config",
+        return_value={"env": "production"},
     ):
         importlib.reload(dags.collection_generator)
 
