@@ -442,6 +442,14 @@ if config["env"] != "production":
                                         "name": "DATASET_JOBS",
                                         "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="dataset-jobs") | string }}\'',
                                     },
+                                    {
+                                         "name": "DIGITAL_LAND_PYTHON_REF",
+                                         "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="digital-land-python-ref") }}\'',
+                                    },
+                                    {
+                                         "name": "MAKERULES_URL",
+                                         "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="makerules-url") }}\'',
+                                    },
                                 ],
                             },
                         ]
