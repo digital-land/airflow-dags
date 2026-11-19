@@ -79,6 +79,32 @@ Title-boundary is the exception: `trigger-title-boundary-monthly` triggers it on
 for collection, collection_datasets in filtered_collections.items():
     collection_dag_config = get_collection_dag_config(collection)
 
+    params = {
+                "cpu": Param(default=collection_dag_config.cpu, type="integer"),
+                "memory": Param(default=collection_dag_config.memory, type="integer"),
+                "transformed-jobs": Param(default=collection_dag_config.transformed_jobs, type="integer"),
+                "dataset-jobs": Param(default=collection_dag_config.dataset_jobs, type="integer"),
+                "transform-batch-size": Param(default=collection_dag_config.transform_batch_size, type="integer"),
+                "incremental-loading-override": Param(default=collection_dag_config.incremental_loading_override, type="boolean"),
+                "regenerate-log-override": Param(default=collection_dag_config.regenerate_log_override, type="boolean"),
+                "force-reprocessing": Param(default=collection_dag_config.force_reprocessing, type="boolean"),
+            
+}
+
+if config["env"] != "production":
+    params.update({
+        "digital-land-python-branch": Param(
+            default="main",
+            type="string",
+            description="Branch of digital-land-python to install",
+        ),
+        "makerules-branch": Param(
+            default="main",
+            type="string",
+            description="Branch of makerules to use",
+        ),
+    })
+
     with DAG(
         f"{collection}-collection",
         default_args=dag_default_args,
@@ -86,16 +112,7 @@ for collection, collection_datasets in filtered_collections.items():
         doc_md=COLLECTION_DAG_DOC.format(collection=collection),
         schedule=None,
         catchup=False,
-        params={
-            "cpu": Param(default=collection_dag_config.cpu, type="integer"),
-            "memory": Param(default=collection_dag_config.memory, type="integer"),
-            "transformed-jobs": Param(default=collection_dag_config.transformed_jobs, type="integer"),
-            "dataset-jobs": Param(default=collection_dag_config.dataset_jobs, type="integer"),
-            "transform-batch-size": Param(default=collection_dag_config.transform_batch_size, type="integer"),
-            "incremental-loading-override": Param(default=collection_dag_config.incremental_loading_override, type="boolean"),
-            "regenerate-log-override": Param(default=collection_dag_config.regenerate_log_override, type="boolean"),
-            "force-reprocessing": Param(default=collection_dag_config.force_reprocessing, type="boolean"),
-        },
+        params=params,
         render_template_as_native_obj=True,
         is_paused_upon_creation=False,
         on_failure_callback=failure_callbacks,
@@ -120,6 +137,30 @@ for collection, collection_datasets in filtered_collections.items():
             incremental_loading_override = bool(kwargs["params"].get("incremental-loading-override"))
             regenerate_log_override = bool(kwargs["params"].get("regenerate-log-override"))
             force_reprocessing = bool(kwargs["params"].get("force-reprocessing"))
+
+            digital_land_python_branch = params.get(
+    "digital-land-python-branch", "main"
+)
+
+            makerules_branch = params.get("makerules-branch", "main")
+
+            ti.xcom_push(
+    key="digital-land-python-ref",
+    value=(
+        digital_land_python_branch
+        if digital_land_python_branch != "main"
+        else ""
+    ),
+)
+
+            ti.xcom_push(
+    key="makerules-url",
+    value=(
+        f"https://raw.githubusercontent.com/digital-land/makerules/{makerules_branch}/"
+        if makerules_branch != "main"
+        else ""
+    ),
+)
 
             # Push values to XCom
             ti.xcom_push(key="memory", value=memory)
