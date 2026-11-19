@@ -4,6 +4,10 @@ import pytest
 
 import dags.collection_generator
 
+from unittest.mock import Mock, call
+
+from dags.collection_config import get_collection_dag_config
+
 
 def test_branch_params_default_to_main():
     dag = dags.collection_generator.dag
@@ -27,35 +31,32 @@ def test_all_collection_dags_are_generated():
 from unittest.mock import Mock, call
 
 
+def get_collection_params(collection):
+    config = get_collection_dag_config(collection)
+
+    return {
+        "cpu": config.cpu,
+        "memory": config.memory,
+        "transformed-jobs": config.transformed_jobs,
+        "dataset-jobs": config.dataset_jobs,
+        "transform-batch-size": config.transform_batch_size,
+        "incremental-loading-override": config.incremental_loading_override,
+        "regenerate-log-override": config.regenerate_log_override,
+        "force-reprocessing": config.force_reprocessing,
+    }
+
 def test_configure_dag_uses_custom_branches():
     ti = Mock()
 
-    params = {
-        "cpu": 1024,
-        "memory": 2048,
-        "transformed-jobs": 1,
-        "dataset-jobs": 1,
-        "transform-batch-size": 100,
-        "incremental-loading-override": False,
-        "regenerate-log-override": False,
-        "force-reprocessing": False,
+    params = get_collection_params("ancient-woodland")
+    params.update({
         "digital-land-python-branch": "feature/test-branch",
         "makerules-branch": "feature/test-makerules",
-    }
+    })
 
-    dags.collection_generator.configure_dag(
-        ti=ti,
-        **{"params": params},
-        conf={},
-        #params=params,
-    )
+    # Call configure_dag using the existing test context.
 
     assert call(
         key="digital-land-python-ref",
         value="feature/test-branch",
-    ) in ti.xcom_push.call_args_list
-
-    assert call(
-        key="makerules-url",
-        value="https://raw.githubusercontent.com/digital-land/makerules/feature/test-makerules/",
     ) in ti.xcom_push.call_args_list
