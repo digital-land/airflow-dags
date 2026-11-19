@@ -62,12 +62,33 @@ def test_configure_dag_uses_custom_branches():
         }
     )
 
-    assert call(
-        key="digital-land-python-ref",
-        value="feature/test-branch",
-    ) in ti.xcom_push.call_args_list
+    ti.xcom_push.assert_has_calls([
+        call(
+            key="digital-land-python-ref",
+            value="feature/test-branch",
+        ),
+        call(
+            key="makerules-url",
+            value="https://raw.githubusercontent.com/digital-land/makerules/feature/test-makerules/",
+        ),
+    ])
 
-    assert call(
-        key="makerules-url",
-        value="https://raw.githubusercontent.com/digital-land/makerules/feature/test-makerules/",
-    ) in ti.xcom_push.call_args_list
+
+
+import importlib
+from unittest.mock import patch
+
+import dags.collection_generator
+
+
+def test_branch_params_not_available_in_production():
+    with patch(
+        "dags.collection_generator.config",
+        {"env": "production"},
+    ):
+        importlib.reload(dags.collection_generator)
+
+    dag = dags.collection_generator.dag
+
+    assert "digital-land-python-branch" not in dag.params
+    assert "makerules-branch" not in dag.params
