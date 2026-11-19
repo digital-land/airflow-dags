@@ -144,6 +144,12 @@ if config["env"] != "production":
             # add DAG parameters
             params = kwargs["params"]
 
+            digital_land_python_branch = params.get(
+            "digital-land-python-branch", "main"
+            )
+
+            makerules_branch = params.get("makerules-branch", "main")
+
             memory = int(params.get("memory"))
             cpu = int(params.get("cpu"))
             transformed_jobs = str(kwargs["params"].get("transformed-jobs"))
@@ -263,11 +269,11 @@ if config["env"] != "production":
                             },
                             {
                                 "name": "DIGITAL_LAND_PYTHON_REF",
-                                "value": "{{ ti.xcom_pull(key='digital-land-python-ref') }}",
+                                "value": '\'{{ ti.xcom_pull(task_ids="configure-dag", key="digital-land-python-ref"") }}\'',
                             },
                             {
                                 "name": "MAKERULES_URL",
-                                "value": "{{ ti.xcom_pull(key='makerules-url') }}",
+                                "value": '\'{{ ti.xcom_pull(task_ids="configure-dag", key="makerules-url") }}\'',
                             },
                         ],
                     },
