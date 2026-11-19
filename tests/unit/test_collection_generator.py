@@ -12,8 +12,8 @@ from dags.collection_config import get_collection_dag_config
 def test_branch_params_default_to_main():
     dag = dags.collection_generator.dag
 
-    assert dag.params["digital-land-python-branch"] == "main"
-    assert dag.params["makerules-branch"]== "main"
+    assert dag.params["digital-land-python-branch"].default == "main"
+    assert dag.params["makerules-branch"].default == "main"
 
 def test_dag_has_branch_params():
     dag = dags.collection_generator.dag
@@ -45,8 +45,15 @@ def get_collection_params(collection):
         "force-reprocessing": config.force_reprocessing,
     }
 
+
 def test_configure_dag_uses_custom_branches():
     ti = Mock()
+    conf = Mock()
+
+    conf.get.side_effect = [
+        "test-collection-bucket",
+        "test-tiles-bucket",
+    ]
 
     params = get_collection_params("ancient-woodland")
     params.update({
@@ -54,23 +61,29 @@ def test_configure_dag_uses_custom_branches():
         "makerules-branch": "feature/test-makerules",
     })
 
-    dags.collection_generator.configure_dag(
-        **{
-            "ti": ti,
-            "params": params,
-            "conf": {},
-        }
-    )
+    with patch.object(
+        dags.collection_generator,
+        "push_log_variables",
+    ), patch.object(
+        dags.collection_generator,
+        "push_vpc_config",
+    ):
+        dags.collection_generator.configure_dag(
+            ti=ti,
+            params=params,
+            conf=conf,
+        )
 
-    assert call(
+    ti.xcom_push.assert_any_call(
         key="digital-land-python-ref",
         value="feature/test-branch",
-    ) in ti.xcom_push.call_args_list
+    )
 
-    assert call(
+    ti.xcom_push.assert_any_call(
         key="makerules-url",
         value="https://raw.githubusercontent.com/digital-land/makerules/feature/test-makerules/",
-    ) in ti.xcom_push.call_args_list
+    )
+
 
 
 
