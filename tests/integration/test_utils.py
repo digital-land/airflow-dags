@@ -1,7 +1,7 @@
 """Integration tests for utils module functions."""
 
 import json
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import boto3
 import pytest
@@ -67,6 +67,8 @@ def test_get_transform_batch_configs_creates_correct_batches(mock_aws_credential
         ("configure-dag", "incremental-loading-override"): False,
         ("configure-dag", "regenerate-log-override"): False,
         ("configure-dag", "force-reprocessing"): "",
+        ("configure-dag", "digital-land-python-ref"): "",
+        ("configure-dag", "makerules-url"): "",
     }[(task_ids, key)]
 
     # Execute the function with dataset parameter
@@ -133,6 +135,8 @@ def test_get_transform_batch_configs_handles_zero_resources(mock_aws_credentials
         ("configure-dag", "incremental-loading-override"): False,
         ("configure-dag", "regenerate-log-override"): False,
         ("configure-dag", "force-reprocessing"): "",
+        ("configure-dag", "digital-land-python-ref"): "",
+        ("configure-dag", "makerules-url"): "",
     }[(task_ids, key)]
 
     # Execute the function with dataset parameter
@@ -164,6 +168,8 @@ def test_get_transform_batch_configs_errors_on_missing_file(mock_aws_credentials
         ("configure-dag", "incremental-loading-override"): False,
         ("configure-dag", "regenerate-log-override"): False,
         ("configure-dag", "force-reprocessing"): "",
+        ("configure-dag", "digital-land-python-ref"): "",
+        ("configure-dag", "makerules-url"): "",
     }[(task_ids, key)]
 
     # Should raise an error when state file is missing
@@ -200,6 +206,8 @@ def test_get_transform_batch_configs_with_exact_multiple(mock_aws_credentials):
         ("configure-dag", "incremental-loading-override"): False,
         ("configure-dag", "regenerate-log-override"): False,
         ("configure-dag", "force-reprocessing"): "",
+        ("configure-dag", "digital-land-python-ref"): "",
+        ("configure-dag", "makerules-url"): "",
     }[(task_ids, key)]
 
     # Execute the function with dataset parameter
@@ -237,6 +245,8 @@ def test_get_transform_batch_configs_passes_reprocess_flag(mock_aws_credentials)
         ("configure-dag", "incremental-loading-override"): False,
         ("configure-dag", "regenerate-log-override"): False,
         ("configure-dag", "force-reprocessing"): "True",
+        ("configure-dag", "digital-land-python-ref"): "",
+        ("configure-dag", "makerules-url"): "",
     }[(task_ids, key)]
 
     result = get_transform_batch_configs(mock_ti, "test", "test-task", "test-dataset")
@@ -281,6 +291,8 @@ def test_get_transform_batch_configs_uses_dataset_batch_size(mock_aws_credential
         ("configure-dag", "incremental-loading-override"): False,
         ("configure-dag", "regenerate-log-override"): False,
         ("configure-dag", "force-reprocessing"): "",
+        ("configure-dag", "digital-land-python-ref"): "",
+        ("configure-dag", "makerules-url"): "",
     }[(task_ids, key)]
 
     result = get_transform_batch_configs(mock_ti, "listed-building", "test-task", dataset)
@@ -290,44 +302,40 @@ def test_get_transform_batch_configs_uses_dataset_batch_size(mock_aws_credential
     assert result[1]["containerOverrides"][0]["environment"][-1]["value"] == expected_limit  # TRANSFORMATION_OFFSET
 
 
-def test_get_transform_batch_configs_includes_branch_environment(mocker):
-    ti = mocker.MagicMock()
+def test_get_transform_batch_configs_includes_branch_environment():
+    ti = MagicMock()
 
     ti.xcom_pull.side_effect = lambda task_ids, key: {
-        "transform-batch-size": 100,
-        "collection-dataset-bucket-name": "test-bucket",
-        "cpu": 1024,
-        "memory": 2048,
-        "env": "development",
-        "transformed-jobs": 1,
-        "dataset-jobs": 1,
-        "incremental-loading-override": False,
-        "regenerate-log-override": False,
-        "force-reprocessing": "",
-        "digital-land-python-ref": "feature/test",
-        "makerules-url": ("https://raw.githubusercontent.com/" "digital-land/makerules/feature/rules/"),
-    }.get(key)
+        ("configure-dag", "transform-batch-size"): 100,
+        ("configure-dag", "collection-dataset-bucket-name"): "test-bucket",
+        ("configure-dag", "cpu"): 1024,
+        ("configure-dag", "memory"): 2048,
+        ("configure-dag", "env"): "development",
+        ("configure-dag", "transformed-jobs"): 1,
+        ("configure-dag", "dataset-jobs"): 1,
+        ("configure-dag", "incremental-loading-override"): False,
+        ("configure-dag", "regenerate-log-override"): False,
+        ("configure-dag", "force-reprocessing"): "",
+        ("configure-dag", "digital-land-python-ref"): "feature/test",
+        ("configure-dag", "makerules-url"): ("https://raw.githubusercontent.com/" "digital-land/makerules/feature/rules/"),
+    }[(task_ids, key)]
 
-    mocker.patch(
-        "utils.get_collection_dag_config",
-        return_value=mocker.Mock(transform_batch_size_by_dataset={}),
-    )
+    with patch(
+        "dags.utils.get_collection_dag_config",
+        return_value=MagicMock(transform_batch_size_by_dataset={}),
+    ), patch("dags.utils.boto3.client") as mock_client:
 
-    mocker.patch("utils.boto3.client").return_value.get_object.return_value = {
-        "Body": mocker.MagicMock(read=lambda: (b'{"transform_count_by_dataset": ' b'{"ancient-woodland": 100}}'))
-    }
+        mock_client.return_value.get_object.return_value = {"Body": MagicMock(read=lambda: (b'{"transform_count_by_dataset": ' b'{"ancient-woodland": 100}}'))}
 
-    configs = utils.get_transform_batch_configs(
-        ti=ti,
-        collection="ancient-woodland",
-        collection_task_name="development-mwaa-collection-task",
-        dataset="ancient-woodland",
-    )
+        configs = get_transform_batch_configs(
+            ti=ti,
+            collection="ancient-woodland",
+            collection_task_name="development-mwaa-collection-task",
+            dataset="ancient-woodland",
+        )
 
-    environment = configs[0]["containerOverrides"][0]["environment"]
+    environment = {item["name"]: item["value"] for item in configs[0]["containerOverrides"][0]["environment"]}
 
-    environment = {item["name"]: item["value"] for item in result[0]["containerOverrides"][0]["environment"]}
-
-    assert environment["DIGITAL_LAND_PYTHON_REF"] == "feature/dlp"
+    assert environment["DIGITAL_LAND_PYTHON_REF"] == "feature/test"
 
     assert environment["MAKERULES_URL"] == ("https://raw.githubusercontent.com/" "digital-land/makerules/feature/rules/")

@@ -1,34 +1,25 @@
-#from unittest.mock import MagicMock
+import importlib
+import os
+from unittest.mock import Mock, patch
 
-import pytest
+import utils
 
 import dags.collection_generator
-
-from unittest.mock import Mock, call
-
 from dags.collection_config import get_collection_dag_config
 
 
 def test_branch_params_default_to_main():
     dag = dags.collection_generator.dag
 
-    assert dag.params["digital-land-python-branch"] == "main"
-    assert dag.params["makerules-branch"] == "main"
-
-def test_dag_has_branch_params():
-    dag = dags.collection_generator.dag
-
     assert "digital-land-python-branch" in dag.params
     assert "makerules-branch" in dag.params
 
-    assert dag.params["digital-land-python-branch"]== "main"
+    assert dag.params["digital-land-python-branch"] == "main"
     assert dag.params["makerules-branch"] == "main"
 
 
 def test_all_collection_dags_are_generated():
     assert dags.collection_generator.dag
-
-from unittest.mock import Mock, call
 
 
 def get_collection_params(collection):
@@ -56,10 +47,12 @@ def test_configure_dag_uses_custom_branches():
     ]
 
     params = get_collection_params("ancient-woodland")
-    params.update({
-        "digital-land-python-branch": "feature/test-branch",
-        "makerules-branch": "feature/test-makerules",
-    })
+    params.update(
+        {
+            "digital-land-python-branch": "feature/test-branch",
+            "makerules-branch": "feature/test-makerules",
+        }
+    )
 
     with patch.object(
         dags.collection_generator,
@@ -85,26 +78,40 @@ def test_configure_dag_uses_custom_branches():
     )
 
 
-
-
-import importlib
-from unittest.mock import patch
-
-import dags.collection_generator
-
-
-def test_branch_params_not_available_in_production():
-    #with patch(
-    #    {"env": "production"},
-    #    "dags.collection_generator.config",
-    #):
-    with patch(
-        "dags.collection_generator.get_config",
-        return_value={"env": "production"},
+def test_branch_params_not_available_in_production1():
+    with patch.object(
+        dags.collection_generator,
+        "config",
+        {"env": "production"},
     ):
+        # Recreate the params using the production config.
+        params = get_collection_params("ancient-woodland")
+
+        print(dags.collection_generator.get_config())
+        print(dags.collection_generator.params)
+
+        assert "digital-land-python-branch" not in params
+        assert "makerules-branch" not in params
+
+
+BRANCH_PARAMS = {"digital-land-python-branch", "makerules-branch"}
+
+
+def _dags_for_env(env):
+    """Rebuild the collection DAGs as `env` would, and return them."""
+    config = {**utils.get_config(), "env": env}
+    # The DAG module reads the EMR execution role secret at import time; conftest only fakes development's
+    secret = {f"SECRET__{env.upper()}_PD_BATCH_DEPLOYMENT_VARIABLES_SECRET": os.environ["SECRET__DEVELOPMENT_PD_BATCH_DEPLOYMENT_VARIABLES_SECRET"]}
+    try:
+        with patch("utils.get_config", return_value=config), patch.dict(os.environ, secret):
+            module = importlib.reload(dags.collection_generator)
+            return [obj for obj in vars(module).values() if obj.__class__.__name__ == "DAG"]
+    finally:
         importlib.reload(dags.collection_generator)
 
-    dag = dags.collection_generator.dag
 
-    assert "digital-land-python-branch" not in dag.params
-    assert "makerules-branch" not in dag.params
+def test_branch_params_only_outside_production():
+    assert all(BRANCH_PARAMS <= set(dag.params) for dag in _dags_for_env("development"))
+    production = _dags_for_env("production")
+    assert production
+    assert not any(BRANCH_PARAMS & set(dag.params) for dag in production)

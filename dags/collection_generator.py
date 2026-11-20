@@ -144,10 +144,6 @@ for collection, collection_datasets in filtered_collections.items():
             # add DAG parameters
             params = kwargs["params"]
 
-            digital_land_python_branch = params.get("digital-land-python-branch", "main")
-
-            makerules_branch = params.get("makerules-branch", "main")
-
             memory = int(params.get("memory"))
             cpu = int(params.get("cpu"))
             transformed_jobs = str(kwargs["params"].get("transformed-jobs"))
@@ -156,9 +152,7 @@ for collection, collection_datasets in filtered_collections.items():
             incremental_loading_override = bool(kwargs["params"].get("incremental-loading-override"))
             regenerate_log_override = bool(kwargs["params"].get("regenerate-log-override"))
             force_reprocessing = bool(kwargs["params"].get("force-reprocessing"))
-
             digital_land_python_branch = params.get("digital-land-python-branch", "main")
-
             makerules_branch = params.get("makerules-branch", "main")
 
             ti.xcom_push(
