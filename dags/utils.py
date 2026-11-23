@@ -183,7 +183,12 @@ def setup_configure_dag_callable(config, task_definition_name):
         ti.xcom_push(key="collection-dataset-bucket-name", value=collection_dataset_bucket_name)
 
         # push collection-task log variables
-        push_log_variables(ti, task_definition_name=task_definition_name, container_name=task_definition_name, prefix="collection-task")
+        push_log_variables(
+            ti,
+            task_definition_name=task_definition_name,
+            container_name=task_definition_name,
+            prefix="collection-task",
+        )
         # push aws vpc config
         push_vpc_config(ti, kwargs["conf"])
 
@@ -218,7 +223,13 @@ def sort_collections_dict(collections_dict):
     Given a dictionary of collections and datasets, return a sorted list of collections.
     The sorting is done based on the collection name.
     """
-    priority = ["tree-preservation-order", "transport-access-node", "flood-risk-zone", "listed-building", "conservation-area"]
+    priority = [
+        "tree-preservation-order",
+        "transport-access-node",
+        "flood-risk-zone",
+        "listed-building",
+        "conservation-area",
+    ]
 
     def sort_key(item):
         key, value = item
@@ -256,7 +267,15 @@ def get_transform_batch_configs(ti, collection, collection_task_name, dataset):
     dataset_jobs = ti.xcom_pull(task_ids="configure-dag", key="dataset-jobs")
     incremental_loading_override = ti.xcom_pull(task_ids="configure-dag", key="incremental-loading-override")
     regenerate_log_override = ti.xcom_pull(task_ids="configure-dag", key="regenerate-log-override")
-    force_reprocessing = ti.xcom_pull(task_ids="configure-dag", key="force-reprocessing")
+    force_reprocessing = ti.xcom_pull(
+        task_ids="configure-dag",
+        key="force-reprocessing",
+    )
+
+    # Get the selected dependency branches from XCom
+    digital_land_python_ref = ti.xcom_pull(task_ids="configure-dag", key="digital-land-python-ref") or ""
+
+    makerules_url = ti.xcom_pull(task_ids="configure-dag", key="makerules-url") or ""
 
     # Get the resource count from the state file
     s3 = boto3.client("s3")
@@ -294,13 +313,30 @@ def get_transform_batch_configs(ti, collection, collection_task_name, dataset):
                         {"name": "ENVIRONMENT", "value": str(env)},
                         {"name": "COLLECTION_NAME", "value": collection},
                         {"name": "DATASET", "value": dataset},
-                        {"name": "COLLECTION_DATASET_BUCKET_NAME", "value": str(collection_dataset_bucket_name)},
-                        {"name": "HOISTED_COLLECTION_DATASET_BUCKET_NAME", "value": str(collection_dataset_bucket_name)},
+                        {
+                            "name": "COLLECTION_DATASET_BUCKET_NAME",
+                            "value": str(collection_dataset_bucket_name),
+                        },
+                        {
+                            "name": "HOISTED_COLLECTION_DATASET_BUCKET_NAME",
+                            "value": str(collection_dataset_bucket_name),
+                        },
                         {"name": "TRANSFORMED_JOBS", "value": str(transformed_jobs)},
                         {"name": "DATASET_JOBS", "value": str(dataset_jobs)},
-                        {"name": "INCREMENTAL_LOADING_OVERRIDE", "value": str(incremental_loading_override)},
-                        {"name": "REGENERATE_LOG_OVERRIDE", "value": str(regenerate_log_override)},
+                        {
+                            "name": "INCREMENTAL_LOADING_OVERRIDE",
+                            "value": str(incremental_loading_override),
+                        },
+                        {
+                            "name": "REGENERATE_LOG_OVERRIDE",
+                            "value": str(regenerate_log_override),
+                        },
                         {"name": "REPROCESS", "value": force_reprocessing},
+                        {
+                            "name": "DIGITAL_LAND_PYTHON_REF",
+                            "value": digital_land_python_ref,
+                        },
+                        {"name": "MAKERULES_URL", "value": makerules_url},
                         {"name": "TRANSFORMATION_LIMIT", "value": str(limit)},
                         {"name": "TRANSFORMATION_OFFSET", "value": str(offset)},
                     ],
