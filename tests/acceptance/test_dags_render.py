@@ -12,7 +12,9 @@ def test_dag_rendering():
     # DagBag swallows per-file import errors rather than raising, so a broken DAG module
     # wouldn't otherwise fail this test - it would just silently be missing from dag_bag.dags
     if dag_bag.import_errors:
-        errors = "\n".join(f"{path}: {error}" for path, error in dag_bag.import_errors.items())
+        errors = "\n".join(
+            f"{path}: {error}" for path, error in dag_bag.import_errors.items()
+        )
         pytest.fail(f"DAG files failed to import:\n{errors}")
 
     # Collect any DAGs that failed to load

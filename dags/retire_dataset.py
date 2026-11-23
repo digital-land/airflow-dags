@@ -78,7 +78,9 @@ def check_dataset_can_be_retired(dataset, datasets_dict, env):
         )
 
     if dataset in datasets_dict:
-        logger.info(f"{dataset} is in the specification but its environment does not include {env}")
+        logger.info(
+            f"{dataset} is in the specification but its environment does not include {env}"
+        )
     else:
         logger.info(f"{dataset} is not in the specification")
 
@@ -101,7 +103,10 @@ def find_dataset_files(s3_client, bucket, dataset):
     files = []
     for prefix in prefixes:
         for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
-            files.extend({"key": item["Key"], "size": item["Size"]} for item in page.get("Contents", []))
+            files.extend(
+                {"key": item["Key"], "size": item["Size"]}
+                for item in page.get("Contents", [])
+            )
     return files
 
 
@@ -113,7 +118,9 @@ def collection_to_retire(dataset, collections):
     it gives matches nothing.
     """
     if len(collections) > 1:
-        raise AirflowFailException(f"{dataset} has files in more than one collection: {collections}. This DAG removes one collection's files, so remove these by hand.")
+        raise AirflowFailException(
+            f"{dataset} has files in more than one collection: {collections}. This DAG removes one collection's files, so remove these by hand."
+        )
     if not collections:
         return dataset
     return collections[0].removesuffix("-collection")
@@ -150,14 +157,24 @@ with DAG(
     def guard(**kwargs):
         # Read the specification now rather than when the DAG was parsed, as the dataset's
         # environment value may have only just been changed
-        check_dataset_can_be_retired(kwargs["params"]["dataset"], load_specification_datasets(), config["env"])
+        check_dataset_can_be_retired(
+            kwargs["params"]["dataset"], load_specification_datasets(), config["env"]
+        )
 
     def discover(**kwargs):
         dataset = kwargs["params"]["dataset"]
-        bucket = kwargs["conf"].get(section="custom", key="collection_dataset_bucket_name")
+        bucket = kwargs["conf"].get(
+            section="custom", key="collection_dataset_bucket_name"
+        )
 
         files = find_dataset_files(boto3.client("s3"), bucket, dataset)
-        collections = sorted({file["key"].split("/")[0] for file in files if file["key"].split("/")[0].endswith("-collection")})
+        collections = sorted(
+            {
+                file["key"].split("/")[0]
+                for file in files
+                if file["key"].split("/")[0].endswith("-collection")
+            }
+        )
 
         if not files:
             logger.info(f"no user-facing files found for {dataset} in {bucket}")
@@ -227,7 +244,9 @@ with DAG(
                 },
             ]
         },
-        network_configuration={"awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="discover", key="aws_vpc_config") }}'},
+        network_configuration={
+            "awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="discover", key="aws_vpc_config") }}'
+        },
         awslogs_group='{{ task_instance.xcom_pull(task_ids="discover", key="collection-task-log-group") }}',
         awslogs_region='{{ task_instance.xcom_pull(task_ids="discover", key="collection-task-log-region") }}',
         awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="discover", key="collection-task-log-stream-prefix") }}',
@@ -256,7 +275,9 @@ with DAG(
                 },
             ]
         },
-        network_configuration={"awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="discover", key="aws_vpc_config") }}'},
+        network_configuration={
+            "awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="discover", key="aws_vpc_config") }}'
+        },
         awslogs_group='{{ task_instance.xcom_pull(task_ids="discover", key="postgres-task-log-group") }}',
         awslogs_region='{{ task_instance.xcom_pull(task_ids="discover", key="postgres-task-log-region") }}',
         awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="discover", key="postgres-task-log-stream-prefix") }}',
@@ -286,7 +307,9 @@ with DAG(
                 },
             ]
         },
-        network_configuration={"awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="discover", key="aws_vpc_config") }}'},
+        network_configuration={
+            "awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="discover", key="aws_vpc_config") }}'
+        },
         awslogs_group='{{ task_instance.xcom_pull(task_ids="discover", key="datasette-task-log-group") }}',
         awslogs_region='{{ task_instance.xcom_pull(task_ids="discover", key="datasette-task-log-region") }}',
         awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="discover", key="datasette-task-log-stream-prefix") }}',

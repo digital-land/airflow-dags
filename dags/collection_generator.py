@@ -47,7 +47,9 @@ tiles_builder_container_name = f"{config['env']}-tile-builder"
 
 datasets_dict = load_specification_datasets()
 collections = get_collections_dict(datasets_dict.values())
-filtered_collections = filter_collections_for_env(collections, datasets_dict, config["env"])
+filtered_collections = filter_collections_for_env(
+    collections, datasets_dict, config["env"]
+)
 
 
 failure_callbacks = []
@@ -96,12 +98,24 @@ for collection, collection_datasets in filtered_collections.items():
     params = {
         "cpu": Param(default=collection_dag_config.cpu, type="integer"),
         "memory": Param(default=collection_dag_config.memory, type="integer"),
-        "transformed-jobs": Param(default=collection_dag_config.transformed_jobs, type="integer"),
-        "dataset-jobs": Param(default=collection_dag_config.dataset_jobs, type="integer"),
-        "transform-batch-size": Param(default=collection_dag_config.transform_batch_size, type="integer"),
-        "incremental-loading-override": Param(default=collection_dag_config.incremental_loading_override, type="boolean"),
-        "regenerate-log-override": Param(default=collection_dag_config.regenerate_log_override, type="boolean"),
-        "force-reprocessing": Param(default=collection_dag_config.force_reprocessing, type="boolean"),
+        "transformed-jobs": Param(
+            default=collection_dag_config.transformed_jobs, type="integer"
+        ),
+        "dataset-jobs": Param(
+            default=collection_dag_config.dataset_jobs, type="integer"
+        ),
+        "transform-batch-size": Param(
+            default=collection_dag_config.transform_batch_size, type="integer"
+        ),
+        "incremental-loading-override": Param(
+            default=collection_dag_config.incremental_loading_override, type="boolean"
+        ),
+        "regenerate-log-override": Param(
+            default=collection_dag_config.regenerate_log_override, type="boolean"
+        ),
+        "force-reprocessing": Param(
+            default=collection_dag_config.force_reprocessing, type="boolean"
+        ),
     }
 
     if config["env"] != "production":
@@ -149,20 +163,34 @@ for collection, collection_datasets in filtered_collections.items():
             transformed_jobs = str(kwargs["params"].get("transformed-jobs"))
             dataset_jobs = str(kwargs["params"].get("dataset-jobs"))
             transform_batch_size = int(kwargs["params"].get("transform-batch-size"))
-            incremental_loading_override = bool(kwargs["params"].get("incremental-loading-override"))
-            regenerate_log_override = bool(kwargs["params"].get("regenerate-log-override"))
+            incremental_loading_override = bool(
+                kwargs["params"].get("incremental-loading-override")
+            )
+            regenerate_log_override = bool(
+                kwargs["params"].get("regenerate-log-override")
+            )
             force_reprocessing = bool(kwargs["params"].get("force-reprocessing"))
-            digital_land_python_branch = params.get("digital-land-python-branch", "main")
+            digital_land_python_branch = params.get(
+                "digital-land-python-branch", "main"
+            )
             makerules_branch = params.get("makerules-branch", "main")
 
             ti.xcom_push(
                 key="digital-land-python-ref",
-                value=(digital_land_python_branch if digital_land_python_branch != "main" else ""),
+                value=(
+                    digital_land_python_branch
+                    if digital_land_python_branch != "main"
+                    else ""
+                ),
             )
 
             ti.xcom_push(
                 key="makerules-url",
-                value=(f"https://raw.githubusercontent.com/digital-land/makerules/{makerules_branch}/" if makerules_branch != "main" else ""),
+                value=(
+                    f"https://raw.githubusercontent.com/digital-land/makerules/{makerules_branch}/"
+                    if makerules_branch != "main"
+                    else ""
+                ),
             )
 
             # Push values to XCom
@@ -171,19 +199,27 @@ for collection, collection_datasets in filtered_collections.items():
             ti.xcom_push(key="transformed-jobs", value=transformed_jobs)
             ti.xcom_push(key="dataset-jobs", value=dataset_jobs)
             ti.xcom_push(key="transform-batch-size", value=transform_batch_size)
-            ti.xcom_push(key="incremental-loading-override", value=incremental_loading_override)
+            ti.xcom_push(
+                key="incremental-loading-override", value=incremental_loading_override
+            )
             ti.xcom_push(key="regenerate-log-override", value=regenerate_log_override)
-            ti.xcom_push(key="force-reprocessing", value="True" if force_reprocessing else "")
+            ti.xcom_push(
+                key="force-reprocessing", value="True" if force_reprocessing else ""
+            )
 
             # add collection_data bucket # add collection bucket name
-            collection_dataset_bucket_name = kwargs["conf"].get(section="custom", key="collection_dataset_bucket_name")
+            collection_dataset_bucket_name = kwargs["conf"].get(
+                section="custom", key="collection_dataset_bucket_name"
+            )
             ti.xcom_push(
                 key="collection-dataset-bucket-name",
                 value=collection_dataset_bucket_name,
             )
 
             # add tiles bucket name for the tiles processing
-            tiles_bucket_name = kwargs["conf"].get(section="custom", key="tiles_bucket_name")
+            tiles_bucket_name = kwargs["conf"].get(
+                section="custom", key="tiles_bucket_name"
+            )
             ti.xcom_push(key="tiles-bucket-name", value=tiles_bucket_name)
 
             # push collection-task log variables
@@ -271,11 +307,15 @@ for collection, collection_datasets in filtered_collections.items():
                     },
                 ]
             },
-            network_configuration={"awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'},
+            network_configuration={
+                "awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'
+            },
             awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
             awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-region") }}',
             awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}',
-            awslogs_fetch_interval=timedelta(seconds=collection_dag_config.awslogs_fetch_interval_seconds),
+            awslogs_fetch_interval=timedelta(
+                seconds=collection_dag_config.awslogs_fetch_interval_seconds
+            ),
         )
 
         configure_dag_task >> collect_ecs_task
@@ -303,16 +343,22 @@ for collection, collection_datasets in filtered_collections.items():
                 cluster=ecs_cluster,
                 task_definition=collection_task_name,
                 launch_type="FARGATE",
-                network_configuration={"awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'},
+                network_configuration={
+                    "awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'
+                },
                 awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
                 awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-region") }}',
                 awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}',
-                awslogs_fetch_interval=timedelta(seconds=collection_dag_config.awslogs_fetch_interval_seconds),
+                awslogs_fetch_interval=timedelta(
+                    seconds=collection_dag_config.awslogs_fetch_interval_seconds
+                ),
             ).expand(overrides=get_batch_configs.output)
 
             collect_ecs_task >> get_batch_configs >> transform_ecs_tasks
 
-            with TaskGroup(group_id=f"{dataset}-assemble-load-bake") as assemble_task_group:
+            with TaskGroup(
+                group_id=f"{dataset}-assemble-load-bake"
+            ) as assemble_task_group:
 
                 def get_emr_application_id(**context):
                     """Get EMR application ID and push to XCom."""
@@ -337,7 +383,9 @@ for collection, collection_datasets in filtered_collections.items():
                 S3_LOG_BUCKET = f"{ENV}-pd-batch-jobs-logs-bucket"
                 S3_SOURCE_DATA_PATH = f"{ENV}-collection-data"
                 S3_ENTRY_POINT = f"s3://{S3_BUCKET}/pkg/entry_script/run_main.py"
-                S3_WHEEL_FILE = f"s3://{S3_BUCKET}/pkg/whl_pkg/pyspark_jobs-0.1.0-py3-none-any.whl"
+                S3_WHEEL_FILE = (
+                    f"s3://{S3_BUCKET}/pkg/whl_pkg/pyspark_jobs-0.1.0-py3-none-any.whl"
+                )
                 S3_LOG_URI = f"s3://{S3_LOG_BUCKET}/"
                 S3_DATA_PATH = f"s3://{S3_SOURCE_DATA_PATH}/"
 
@@ -377,11 +425,15 @@ for collection, collection_datasets in filtered_collections.items():
                             "sparkSubmitParameters": spark_submit_parameters,
                         }
                     },
-                    configuration_overrides=emr_monitoring_configuration(S3_LOG_URI, emr_log_group(ENV)),
+                    configuration_overrides=emr_monitoring_configuration(
+                        S3_LOG_URI, emr_log_group(ENV)
+                    ),
                     name=f"{dataset}-job",
                     wait_for_completion=True,
                     aws_conn_id="aws_default",
-                    waiter_max_attempts=assemble_waiter_max_attempts(collection_dag_config.assemble_timeout),
+                    waiter_max_attempts=assemble_waiter_max_attempts(
+                        collection_dag_config.assemble_timeout
+                    ),
                     waiter_delay=ASSEMBLE_WAITER_DELAY_SECONDS,
                     execution_timeout=collection_dag_config.assemble_timeout,
                 )
@@ -446,11 +498,15 @@ for collection, collection_datasets in filtered_collections.items():
                             },
                         ]
                     },
-                    network_configuration={"awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'},
+                    network_configuration={
+                        "awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'
+                    },
                     awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
                     awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-region") }}',
                     awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}',
-                    awslogs_fetch_interval=timedelta(seconds=collection_dag_config.awslogs_fetch_interval_seconds),
+                    awslogs_fetch_interval=timedelta(
+                        seconds=collection_dag_config.awslogs_fetch_interval_seconds
+                    ),
                 )
 
                 assemble_emr_task >> package_ecs_task
@@ -486,10 +542,14 @@ for collection, collection_datasets in filtered_collections.items():
                             },
                         ]
                     },
-                    network_configuration={"awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'},
+                    network_configuration={
+                        "awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'
+                    },
                     awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="tiles-builder-task-log-group") }}',
                     awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="tiles-builder-task-log-region") }}',
                     awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="tiles-builder-task-log-stream-prefix") }}',
-                    awslogs_fetch_interval=timedelta(seconds=collection_dag_config.awslogs_fetch_interval_seconds),
+                    awslogs_fetch_interval=timedelta(
+                        seconds=collection_dag_config.awslogs_fetch_interval_seconds
+                    ),
                 )
                 assemble_emr_task >> tiles_builder_task

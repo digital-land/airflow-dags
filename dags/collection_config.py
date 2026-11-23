@@ -58,7 +58,9 @@ COLLECTION_CONFIG_OVERRIDES = {
     # slower to transform than an LPA file. One batch per 16 resources - the transformed-jobs
     # dag_triggers gives this collection - runs them side by side in separate ECS tasks rather
     # than queueing them in one. Its other datasets keep the default batch size.
-    "listed-building": CollectionDagConfig(transform_batch_size_by_dataset={"listed-building": 16}),
+    "listed-building": CollectionDagConfig(
+        transform_batch_size_by_dataset={"listed-building": 16}
+    ),
     # title-boundary's EMR job can otherwise consume all of the vCPU available to the
     # shared EMR Serverless application, starving other collections' jobs. It's also only
     # scheduled monthly, the day after HM Land Registry's own release schedule for the
@@ -110,5 +112,7 @@ def collection_schedule_matches(collection: str, data_interval_end, **_) -> bool
     actually fires), while data_interval_end is the day the run corresponds to.
     """
     rrule_str = get_collection_dag_config(collection).schedule_rrule
-    occurrence = rrulestr(rrule_str, dtstart=RRULE_SERIES_START).after(data_interval_end - timedelta(seconds=1), inc=True)
+    occurrence = rrulestr(rrule_str, dtstart=RRULE_SERIES_START).after(
+        data_interval_end - timedelta(seconds=1), inc=True
+    )
     return occurrence is not None and occurrence.date() == data_interval_end.date()

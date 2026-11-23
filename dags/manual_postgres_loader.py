@@ -11,14 +11,25 @@ from airflow.operators.python import PythonOperator
 from airflow.providers.amazon.aws.operators.ecs import (
     EcsRunTaskOperator,
 )
-from utils import dag_default_args, get_collections_dict, get_config, get_dataset_collection, get_task_log_config, load_specification_datasets
+from utils import (
+    dag_default_args,
+    get_collections_dict,
+    get_config,
+    get_dataset_collection,
+    get_task_log_config,
+    load_specification_datasets,
+)
 
 config = get_config()
 datasets_dict = load_specification_datasets()
 collections_dict = get_collections_dict(datasets_dict.values())
 
 # define some inputs
-datasets = [dataset["dataset"] for dataset in datasets_dict.values() if dataset.get("collection", None) is not None]
+datasets = [
+    dataset["dataset"]
+    for dataset in datasets_dict.values()
+    if dataset.get("collection", None) is not None
+]
 # append digital-land so data contained in there can be loaded
 datasets.append("digital-land")
 
@@ -48,7 +59,9 @@ with DAG(
         # based on the dataset provided need to create an ARN
         # this isn't actually used to download the dataset but the bucket name
         # and key are
-        collection_dataset_bucket_name = kwargs["conf"].get(section="custom", key="collection_dataset_bucket_name")
+        collection_dataset_bucket_name = kwargs["conf"].get(
+            section="custom", key="collection_dataset_bucket_name"
+        )
         dataset = str(params.get("dataset"))
         if dataset == "digital-land":
             collection = "digital-land-builder"
@@ -70,25 +83,50 @@ with DAG(
 
         # add vpc details
         aws_vpc_config = {
-            "subnets": kwargs["conf"].get(section="custom", key="ecs_task_subnets").split(","),
-            "securityGroups": kwargs["conf"].get(section="custom", key="ecs_task_security_groups").split(","),
+            "subnets": kwargs["conf"]
+            .get(section="custom", key="ecs_task_subnets")
+            .split(","),
+            "securityGroups": kwargs["conf"]
+            .get(section="custom", key="ecs_task_security_groups")
+            .split(","),
             "assignPublicIp": "ENABLED",
         }
         ti.xcom_push(key="aws_vpc_config", value=aws_vpc_config)
 
         # need to get log group information
         ecs_client = boto3.client("ecs")
-        sqlite_injection_task_log_config = get_task_log_config(ecs_client, sqlite_injection_task_name)
-        sqlite_injection_task_log_config_options = sqlite_injection_task_log_config["options"]
-        sqlite_injection_task_log_group = str(sqlite_injection_task_log_config_options.get("awslogs-group"))
-        sqlite_injection_task_log_stream_prefix = str(sqlite_injection_task_log_config_options.get("awslogs-stream-prefix")) + f"/{container_name}"
-        sqlite_injection_task_log_region = str(sqlite_injection_task_log_config_options.get("awslogs-region"))
+        sqlite_injection_task_log_config = get_task_log_config(
+            ecs_client, sqlite_injection_task_name
+        )
+        sqlite_injection_task_log_config_options = sqlite_injection_task_log_config[
+            "options"
+        ]
+        sqlite_injection_task_log_group = str(
+            sqlite_injection_task_log_config_options.get("awslogs-group")
+        )
+        sqlite_injection_task_log_stream_prefix = (
+            str(sqlite_injection_task_log_config_options.get("awslogs-stream-prefix"))
+            + f"/{container_name}"
+        )
+        sqlite_injection_task_log_region = str(
+            sqlite_injection_task_log_config_options.get("awslogs-region")
+        )
 
         # all the info we need to feed into the ECS task
-        ti.xcom_push(key="sqlite-injection-task-log-group", value=sqlite_injection_task_log_group)
-        ti.xcom_push(key="sqlite-injection-task-log-stream-prefix", value=sqlite_injection_task_log_stream_prefix)
-        ti.xcom_push(key="sqlite-injection-task-log-region", value=sqlite_injection_task_log_region)
-        ti.xcom_push(key="collection-dataset-bucket-name", value=collection_dataset_bucket_name)
+        ti.xcom_push(
+            key="sqlite-injection-task-log-group", value=sqlite_injection_task_log_group
+        )
+        ti.xcom_push(
+            key="sqlite-injection-task-log-stream-prefix",
+            value=sqlite_injection_task_log_stream_prefix,
+        )
+        ti.xcom_push(
+            key="sqlite-injection-task-log-region",
+            value=sqlite_injection_task_log_region,
+        )
+        ti.xcom_push(
+            key="collection-dataset-bucket-name", value=collection_dataset_bucket_name
+        )
 
     configure_dag_task = PythonOperator(
         task_id="configure-dag",
@@ -110,13 +148,21 @@ with DAG(
                     "cpu": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="cpu") | int }}',
                     "memory": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="memory") | int }}',
                     "environment": [
-                        {"name": "ENVIRONMENT", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="env") | string }}\''},
-                        {"name": "S3_OBJECT_ARN", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="s3-object-arn") | string }}\''},
+                        {
+                            "name": "ENVIRONMENT",
+                            "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="env") | string }}\'',
+                        },
+                        {
+                            "name": "S3_OBJECT_ARN",
+                            "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="s3-object-arn") | string }}\'',
+                        },
                     ],
                 },
             ]
         },
-        network_configuration={"awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'},
+        network_configuration={
+            "awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'
+        },
         awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="sqlite-injection-task-log-group") }}',
         awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="sqlite-injection-task-log-region") }}',
         awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="sqlite-injection-task-log-stream-prefix") }}',

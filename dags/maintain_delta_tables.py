@@ -7,7 +7,11 @@ from airflow.models.param import Param
 from airflow.operators.python import PythonOperator
 from airflow.providers.slack.notifications.slack import send_slack_notification
 from emr_dags_utils import get_secrets
-from emr_log_streaming import EmrServerlessStartJobWithLogsOperator, emr_log_group, emr_monitoring_configuration
+from emr_log_streaming import (
+    EmrServerlessStartJobWithLogsOperator,
+    emr_log_group,
+    emr_monitoring_configuration,
+)
 from utils import dag_default_args, get_config, push_vpc_config
 
 config = get_config()
@@ -30,7 +34,13 @@ RETENTION_HOURS = 168
 
 failure_callbacks = []
 if config["env"] == "production":
-    failure_callbacks.append(send_slack_notification(text="The DAG {{ dag.dag_id }} failed", channel="#planning-data-alerts", username="Airflow"))
+    failure_callbacks.append(
+        send_slack_notification(
+            text="The DAG {{ dag.dag_id }} failed",
+            channel="#planning-data-alerts",
+            username="Airflow",
+        )
+    )
 
 with DAG(
     dag_id="maintain-delta-tables",
@@ -95,10 +105,13 @@ with DAG(
             "sparkSubmit": {
                 "entryPoint": S3_MAINTENANCE_ENTRY_POINT,
                 "entryPointArguments": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="maintenance-entry-point-args") }}',
-                "sparkSubmitParameters": f"--py-files {S3_WHEEL_FILE} " "--conf spark.serializer=org.apache.spark.serializer.KryoSerializer",
+                "sparkSubmitParameters": f"--py-files {S3_WHEEL_FILE} "
+                "--conf spark.serializer=org.apache.spark.serializer.KryoSerializer",
             }
         },
-        configuration_overrides=emr_monitoring_configuration(S3_LOG_URI, emr_log_group(ENV)),
+        configuration_overrides=emr_monitoring_configuration(
+            S3_LOG_URI, emr_log_group(ENV)
+        ),
         name="maintain-delta-tables-job",
         wait_for_completion=True,
         aws_conn_id="aws_default",
