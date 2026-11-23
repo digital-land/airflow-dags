@@ -44,18 +44,26 @@ def test_title_boundary_trigger_dag_is_built_when_the_collection_is_selected(dag
 def test_title_boundary_trigger_dag_triggers_the_collection_without_waiting(dag_bag):
     """wait_for_completion=False is the whole point of the decoupling - whatever starts
     title-boundary must not then sit and block on it for hours."""
-    trigger = dag_bag.dags[TRIGGER_DAG_ID].get_task("trigger-title-boundary-collection-dag")
+    trigger = dag_bag.dags[TRIGGER_DAG_ID].get_task(
+        "trigger-title-boundary-collection-dag"
+    )
 
     assert trigger.trigger_dag_id == COLLECTION_DAG_ID
     assert trigger.wait_for_completion is False
 
 
-@pytest.mark.parametrize("master_dag_id", [SCHEDULED_MASTER_DAG_ID, MANUAL_MASTER_DAG_ID])
+@pytest.mark.parametrize(
+    "master_dag_id", [SCHEDULED_MASTER_DAG_ID, MANUAL_MASTER_DAG_ID]
+)
 def test_title_boundary_is_not_triggered_from_either_master_dag(dag_bag, master_dag_id):
     """The manual master DAG is deliberately kept as close an approximation of the scheduled one
     as possible, so title-boundary has to leave both. Dropping it from the scheduled DAG alone
     would still let a manual run block behind it."""
-    title_boundary_tasks = [task.task_id for task in dag_bag.dags[master_dag_id].tasks if "title-boundary" in task.task_id]
+    title_boundary_tasks = [
+        task.task_id
+        for task in dag_bag.dags[master_dag_id].tasks
+        if "title-boundary" in task.task_id
+    ]
 
     assert title_boundary_tasks == []
 
@@ -65,9 +73,13 @@ def test_digital_land_builder_no_longer_waits_for_title_boundary(dag_bag):
     triggered with wait_for_completion=True, so while title-boundary was in that loop the whole
     nightly run sat behind a three-hour monthly job once a month - the 2026-09-07 run was
     cancelled at its timeout while the chain waited on it."""
-    builder = dag_bag.dags[SCHEDULED_MASTER_DAG_ID].get_task("trigger-digital-land-builder-dag")
+    builder = dag_bag.dags[SCHEDULED_MASTER_DAG_ID].get_task(
+        "trigger-digital-land-builder-dag"
+    )
 
-    assert [task_id for task_id in builder.upstream_task_ids if "title-boundary" in task_id] == []
+    assert [
+        task_id for task_id in builder.upstream_task_ids if "title-boundary" in task_id
+    ] == []
 
 
 def test_trigger_dag_is_scheduled_at_a_time_the_rrule_check_can_match(dag_bag):
@@ -94,41 +106,58 @@ def test_trigger_dag_is_scheduled_at_a_time_the_rrule_check_can_match(dag_bag):
     )
 
 
-@pytest.mark.parametrize("master_dag_id", [SCHEDULED_MASTER_DAG_ID, MANUAL_MASTER_DAG_ID])
+@pytest.mark.parametrize(
+    "master_dag_id", [SCHEDULED_MASTER_DAG_ID, MANUAL_MASTER_DAG_ID]
+)
 def test_master_dags_only_trigger_dags_that_exist(dag_bag, master_dag_id):
     """trigger_dag_id_for and collection_generator each build the collection DAG id on their own,
     and the generator only builds DAGs for the collections the environment selects. A trigger
     pointing at a DAG that was never built would only show up as a failed trigger in a nightly
     run."""
-    missing = [task.trigger_dag_id for task in dag_bag.dags[master_dag_id].tasks if hasattr(task, "trigger_dag_id") and task.trigger_dag_id not in dag_bag.dags]
+    missing = [
+        task.trigger_dag_id
+        for task in dag_bag.dags[master_dag_id].tasks
+        if hasattr(task, "trigger_dag_id") and task.trigger_dag_id not in dag_bag.dags
+    ]
 
     assert missing == []
 
 
 def test_central_activities_zone_is_triggered_via_its_collection_dag(dag_bag):
-    trigger = dag_bag.dags[MANUAL_MASTER_DAG_ID].get_task("trigger-central-activities-zone-collection-dag")
+    trigger = dag_bag.dags[MANUAL_MASTER_DAG_ID].get_task(
+        "trigger-central-activities-zone-collection-dag"
+    )
 
     assert trigger.trigger_dag_id == "central-activities-zone-collection"
 
 
 def test_listed_building_is_triggered_via_its_collection_dag(dag_bag):
-    trigger = dag_bag.dags[MANUAL_MASTER_DAG_ID].get_task("trigger-listed-building-collection-dag")
+    trigger = dag_bag.dags[MANUAL_MASTER_DAG_ID].get_task(
+        "trigger-listed-building-collection-dag"
+    )
 
     assert trigger.trigger_dag_id == "listed-building-collection"
 
 
-@pytest.mark.parametrize("master_dag_id", [SCHEDULED_MASTER_DAG_ID, MANUAL_MASTER_DAG_ID])
+@pytest.mark.parametrize(
+    "master_dag_id", [SCHEDULED_MASTER_DAG_ID, MANUAL_MASTER_DAG_ID]
+)
 def test_organisation_is_triggered_via_its_collection_dag(dag_bag, master_dag_id):
     """Both master DAGs build their own organisation trigger rather than going through the
     collection loop, so each is checked separately."""
-    trigger = dag_bag.dags[master_dag_id].get_task("trigger-organisation-collection-dag")
+    trigger = dag_bag.dags[master_dag_id].get_task(
+        "trigger-organisation-collection-dag"
+    )
 
     assert trigger.trigger_dag_id == "organisation-collection"
 
 
 def test_listed_building_keeps_its_larger_task_size(dag_bag):
     """listed-building's transform needs about two of its three hours at 16 vCPU and 16 jobs,
-    so its collection DAG must be triggered with these overrides rather than its defaults."""
-    trigger = dag_bag.dags[MANUAL_MASTER_DAG_ID].get_task("trigger-listed-building-collection-dag")
+    so its collection DAG must be triggered with these overrides rather than its defaults.
+    """
+    trigger = dag_bag.dags[MANUAL_MASTER_DAG_ID].get_task(
+        "trigger-listed-building-collection-dag"
+    )
 
     assert trigger.conf == {"cpu": 16384, "transformed-jobs": 16}

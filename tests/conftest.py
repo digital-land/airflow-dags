@@ -10,13 +10,21 @@ CONFIG_PATH = Path("dags/config.json")
 CONFIG_BACKUP_PATH = CONFIG_PATH.with_suffix(".json.backup")
 
 # Matches the output of: bin/generate_dag_config.py --env development
-TEST_CONFIG = {"env": "development", "schedule": "0 0 * * *", "max_active_tasks": 50, "collection_selection": "explicit", "collections": ["ancient-woodland", "organisation"]}
+TEST_CONFIG = {
+    "env": "development",
+    "schedule": "0 0 * * *",
+    "max_active_tasks": 50,
+    "collection_selection": "explicit",
+    "collections": ["ancient-woodland", "organisation"],
+}
 
 # Several DAG modules call get_secrets("emr_execution_role", env) at import time, which hits real
 # AWS Secrets Manager unless overridden. aws_secrets_manager.get_secret_emr_compatible supports a
 # SECRET_<name> environment variable escape hatch specifically for this - see its docstring.
 SECRET_ENV_VAR = "SECRET__DEVELOPMENT_PD_BATCH_DEPLOYMENT_VARIABLES_SECRET"
-TEST_SECRET_VALUE = json.dumps({"emr_execution_role": "arn:aws:iam::000000000000:role/test-emr-execution-role"})
+TEST_SECRET_VALUE = json.dumps(
+    {"emr_execution_role": "arn:aws:iam::000000000000:role/test-emr-execution-role"}
+)
 
 
 def pytest_configure(config):

@@ -1,10 +1,18 @@
 import pytest
 
-from dags.utils import filter_collections_for_env, is_dataset_available, sort_collections_dict
+from dags.utils import (
+    filter_collections_for_env,
+    is_dataset_available,
+    sort_collections_dict,
+)
 
 
 def test_sort_collections_dict_moves_priority_keys_to_front():
-    collections_dict = {"flood-risk-zone": ["dataset1", "dataset2"], "collection_b": ["dataset3"], "collection_c": ["dataset4", "dataset5", "dataset6"]}
+    collections_dict = {
+        "flood-risk-zone": ["dataset1", "dataset2"],
+        "collection_b": ["dataset3"],
+        "collection_c": ["dataset4", "dataset5", "dataset6"],
+    }
     sorted_dict = sort_collections_dict(collections_dict)
     key_list = list(sorted_dict.keys())
     assert key_list[0] == "flood-risk-zone"
@@ -52,4 +60,6 @@ def test_filter_collections_for_env_keeps_collection_when_any_dataset_available(
 
     # collection DAG still exists in staging because local-authority is available there,
     # but only local-authority's task group is included
-    assert filter_collections_for_env(collections_dict, datasets_dict, "staging") == {"organisation": ["local-authority"]}
+    assert filter_collections_for_env(collections_dict, datasets_dict, "staging") == {
+        "organisation": ["local-authority"]
+    }

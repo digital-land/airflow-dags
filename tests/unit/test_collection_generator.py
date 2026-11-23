@@ -101,11 +101,19 @@ def _dags_for_env(env):
     """Rebuild the collection DAGs as `env` would, and return them."""
     config = {**utils.get_config(), "env": env}
     # The DAG module reads the EMR execution role secret at import time; conftest only fakes development's
-    secret = {f"SECRET__{env.upper()}_PD_BATCH_DEPLOYMENT_VARIABLES_SECRET": os.environ["SECRET__DEVELOPMENT_PD_BATCH_DEPLOYMENT_VARIABLES_SECRET"]}
+    secret = {
+        f"SECRET__{env.upper()}_PD_BATCH_DEPLOYMENT_VARIABLES_SECRET": os.environ[
+            "SECRET__DEVELOPMENT_PD_BATCH_DEPLOYMENT_VARIABLES_SECRET"
+        ]
+    }
     try:
-        with patch("utils.get_config", return_value=config), patch.dict(os.environ, secret):
+        with patch("utils.get_config", return_value=config), patch.dict(
+            os.environ, secret
+        ):
             module = importlib.reload(dags.collection_generator)
-            return [obj for obj in vars(module).values() if obj.__class__.__name__ == "DAG"]
+            return [
+                obj for obj in vars(module).values() if obj.__class__.__name__ == "DAG"
+            ]
     finally:
         importlib.reload(dags.collection_generator)
 

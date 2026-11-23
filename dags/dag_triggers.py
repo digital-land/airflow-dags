@@ -10,9 +10,19 @@ from airflow import DAG
 from airflow.operators.python import ShortCircuitOperator
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.utils.trigger_rule import TriggerRule
-from collection_config import DEFAULT_COLLECTION_CONFIG, collection_schedule_matches, get_collection_dag_config
+from collection_config import (
+    DEFAULT_COLLECTION_CONFIG,
+    collection_schedule_matches,
+    get_collection_dag_config,
+)
 from collection_schema import CollectionSelection
-from utils import filter_collections_for_env, get_collections_dict, get_config, load_specification_datasets, sort_collections_dict
+from utils import (
+    filter_collections_for_env,
+    get_collections_dict,
+    get_config,
+    load_specification_datasets,
+    sort_collections_dict,
+)
 
 # collections triggered by a DAG of their own rather than from either master DAG. They run on a
 # cadence of their own and nothing downstream consumes their output during the nightly run, so
@@ -25,12 +35,20 @@ def trigger_dag_id_for(collection: str) -> str:
 
 
 config = get_config()
-dag_schedule = config.get("schedule", None)  # Use "None" as a fallback if "schedule" key is missing
+dag_schedule = config.get(
+    "schedule", None
+)  # Use "None" as a fallback if "schedule" key is missing
 dag_max_active_tasks = config.get("max_active_tasks")
 
 # we want to use weightings to pioritise Dags in the schedule below this constant can be altered to change the weighting applied
 DEFAULT_WEIGHTING = 10
-CUSTOM_COLLECTION_DAG_WEIGHTING = {"tree-preservation-order": 90, "transport-access-node": 90, "flood-risk-zone": 90, "listed-building": 100, "conservation-area": 90}
+CUSTOM_COLLECTION_DAG_WEIGHTING = {
+    "tree-preservation-order": 90,
+    "transport-access-node": 90,
+    "flood-risk-zone": 90,
+    "listed-building": 100,
+    "conservation-area": 90,
+}
 
 
 def collection_selected(collection_name, configuration):
@@ -65,25 +83,41 @@ with DAG(
     collection_tasks = []
 
     if organisation_collection_selected:
-        run_org_collection_dag = TriggerDagRunOperator(task_id="trigger-organisation-collection-dag", trigger_dag_id=trigger_dag_id_for("organisation"), wait_for_completion=True)
+        run_org_collection_dag = TriggerDagRunOperator(
+            task_id="trigger-organisation-collection-dag",
+            trigger_dag_id=trigger_dag_id_for("organisation"),
+            wait_for_completion=True,
+        )
         run_org_builder_dag = TriggerDagRunOperator(
-            task_id="trigger-organisation-builder-dag", trigger_dag_id="organisation-builder", wait_for_completion=True, trigger_rule=TriggerRule.ALL_DONE
+            task_id="trigger-organisation-builder-dag",
+            trigger_dag_id="organisation-builder",
+            wait_for_completion=True,
+            trigger_rule=TriggerRule.ALL_DONE,
         )
         run_org_collection_dag >> run_org_builder_dag
 
     for collection, datasets in collections.items():
-        if collection not in ["organisation"] and collection not in DECOUPLED_COLLECTIONS:
+        if (
+            collection not in ["organisation"]
+            and collection not in DECOUPLED_COLLECTIONS
+        ):
 
             if collection_selected(collection, config):
                 # Set custom CPU for listed-building collection
-                conf = {"cpu": 16384, "transformed-jobs": 16} if collection in ("listed-building", "tree-preservation-order") else {}
+                conf = (
+                    {"cpu": 16384, "transformed-jobs": 16}
+                    if collection in ("listed-building", "tree-preservation-order")
+                    else {}
+                )
 
                 collection_dag = TriggerDagRunOperator(
                     task_id=f"trigger-{collection}-collection-dag",
                     trigger_dag_id=trigger_dag_id_for(collection),
                     wait_for_completion=True,
                     trigger_rule=TriggerRule.ALL_DONE,
-                    priority_weight=CUSTOM_COLLECTION_DAG_WEIGHTING.get(collection, DEFAULT_WEIGHTING),
+                    priority_weight=CUSTOM_COLLECTION_DAG_WEIGHTING.get(
+                        collection, DEFAULT_WEIGHTING
+                    ),
                     conf=conf,
                 )
 
@@ -91,7 +125,10 @@ with DAG(
                 # (e.g. title-boundary, monthly) only actually get triggered on a matching day
                 entry_task = collection_dag
                 collection_dag_config = get_collection_dag_config(collection)
-                if collection_dag_config.schedule_rrule != DEFAULT_COLLECTION_CONFIG.schedule_rrule:
+                if (
+                    collection_dag_config.schedule_rrule
+                    != DEFAULT_COLLECTION_CONFIG.schedule_rrule
+                ):
                     check_schedule = ShortCircuitOperator(
                         task_id=f"check-{collection}-schedule",
                         python_callable=collection_schedule_matches,
@@ -107,7 +144,10 @@ with DAG(
                     run_org_builder_dag >> entry_task
 
     dlb_dag = TriggerDagRunOperator(
-        task_id="trigger-digital-land-builder-dag", trigger_dag_id="build-digital-land-builder", wait_for_completion=True, trigger_rule=TriggerRule.ALL_DONE
+        task_id="trigger-digital-land-builder-dag",
+        trigger_dag_id="build-digital-land-builder",
+        wait_for_completion=True,
+        trigger_rule=TriggerRule.ALL_DONE,
     )
     for task in collection_tasks:
         task >> dlb_dag
@@ -124,27 +164,48 @@ with DAG(
 ):
 
     collection_tasks = []
-    run_org_collection_dag = TriggerDagRunOperator(task_id="trigger-organisation-collection-dag", trigger_dag_id=trigger_dag_id_for("organisation"), wait_for_completion=True)
+    run_org_collection_dag = TriggerDagRunOperator(
+        task_id="trigger-organisation-collection-dag",
+        trigger_dag_id=trigger_dag_id_for("organisation"),
+        wait_for_completion=True,
+    )
 
-    run_org_builder_dag = TriggerDagRunOperator(task_id="trigger-organisation-builder-dag", trigger_dag_id="organisation-builder", wait_for_completion=True)
+    run_org_builder_dag = TriggerDagRunOperator(
+        task_id="trigger-organisation-builder-dag",
+        trigger_dag_id="organisation-builder",
+        wait_for_completion=True,
+    )
 
     run_org_collection_dag >> run_org_builder_dag
 
     for collection, datasets in collections.items():
-        if collection not in ["organisation"] and collection not in DECOUPLED_COLLECTIONS:
+        if (
+            collection not in ["organisation"]
+            and collection not in DECOUPLED_COLLECTIONS
+        ):
 
             # Set custom CPU for listed-building collection
-            conf = {"cpu": 16384, "transformed-jobs": 16} if collection in ("listed-building", "tree-preservation-order") else {}
+            conf = (
+                {"cpu": 16384, "transformed-jobs": 16}
+                if collection in ("listed-building", "tree-preservation-order")
+                else {}
+            )
 
             collection_dag = TriggerDagRunOperator(
-                task_id=f"trigger-{collection}-collection-dag", trigger_dag_id=trigger_dag_id_for(collection), wait_for_completion=True, conf=conf
+                task_id=f"trigger-{collection}-collection-dag",
+                trigger_dag_id=trigger_dag_id_for(collection),
+                wait_for_completion=True,
+                conf=conf,
             )
             collection_tasks.append(collection_dag)
 
             run_org_builder_dag >> collection_dag
 
     dlb_dag = TriggerDagRunOperator(
-        task_id="trigger-digital-land-builder-dag", trigger_dag_id="build-digital-land-builder", wait_for_completion=True, trigger_rule=TriggerRule.ALL_DONE
+        task_id="trigger-digital-land-builder-dag",
+        trigger_dag_id="build-digital-land-builder",
+        wait_for_completion=True,
+        trigger_rule=TriggerRule.ALL_DONE,
     )
 
     for task in collection_tasks:

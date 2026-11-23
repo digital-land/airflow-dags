@@ -94,7 +94,9 @@ def get_secret(secret_name: str, region_name: Optional[str] = None) -> str:
         raise SecretsManagerError(error_msg)
 
 
-def get_secret_json(secret_name: str, region_name: Optional[str] = None) -> Dict[str, Any]:
+def get_secret_json(
+    secret_name: str, region_name: Optional[str] = None
+) -> Dict[str, Any]:
     """
     Retrieve a JSON secret from AWS Secrets Manager and parse it.
 
@@ -123,7 +125,9 @@ def get_secret_json(secret_name: str, region_name: Optional[str] = None) -> Dict
         raise SecretsManagerError(error_msg)
 
 
-def get_database_credentials(secret_name: str, region_name: Optional[str] = None) -> Dict[str, str]:
+def get_database_credentials(
+    secret_name: str, region_name: Optional[str] = None
+) -> Dict[str, str]:
     """
     Convenience method to retrieve database credentials from AWS Secrets Manager.
 
@@ -179,7 +183,9 @@ def get_database_credentials(secret_name: str, region_name: Optional[str] = None
     return credentials
 
 
-def get_secret_emr_compatible(secret_name: str, region_name: Optional[str] = None) -> str:
+def get_secret_emr_compatible(
+    secret_name: str, region_name: Optional[str] = None
+) -> str:
     """
     EMR Serverless compatible secret retrieval using native AWS SDK.
 
@@ -204,7 +210,9 @@ def get_secret_emr_compatible(secret_name: str, region_name: Optional[str] = Non
     if not region_name:
         region_name = os.getenv("AWS_REGION", "eu-west-2")
 
-    logger.info(f"EMR-compatible retrieval of secret '{secret_name}' using native AWS SDK")
+    logger.info(
+        f"EMR-compatible retrieval of secret '{secret_name}' using native AWS SDK"
+    )
 
     # Strategy 1: Try environment variable override first (for testing/development)
     env_secret_name = secret_name.replace("/", "_").replace("-", "_").upper()
@@ -245,7 +253,11 @@ def get_secret_emr_compatible(secret_name: str, region_name: Optional[str] = Non
         raise SecretsManagerError(error_msg)
 
 
-def get_secret_with_fallback(secret_name: str, env_var_name: Optional[str] = None, region_name: Optional[str] = None) -> str:
+def get_secret_with_fallback(
+    secret_name: str,
+    env_var_name: Optional[str] = None,
+    region_name: Optional[str] = None,
+) -> str:
     """
     Retrieve a secret from AWS Secrets Manager with optional environment variable fallback.
 
@@ -280,7 +292,9 @@ def get_secret_with_fallback(secret_name: str, env_var_name: Optional[str] = Non
         return get_secret(secret_name, region_name)
     except SecretsManagerError:
         if env_var_name:
-            error_msg = "Failed to retrieve secret and environment variable fallback is not set"
+            error_msg = (
+                "Failed to retrieve secret and environment variable fallback is not set"
+            )
         else:
             error_msg = "Failed to retrieve secret"
 

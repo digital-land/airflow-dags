@@ -23,7 +23,11 @@ def get_datasets():
     print(list(unique_keys))
 
     # Filter rows where realm is 'dataset' and typology is 'geograpthy'
-    filtered_datasets = [row["dataset"] for row in datasets if row.get("realm") == "dataset" and row.get("typology") == "geography"]
+    filtered_datasets = [
+        row["dataset"]
+        for row in datasets
+        if row.get("realm") == "dataset" and row.get("typology") == "geography"
+    ]
 
     # Print the filtered datasets column
     print(filtered_datasets)
@@ -32,7 +36,9 @@ def get_datasets():
 
 # Retrieve secrets from AWS Secrets Manager
 def get_secrets(secret_name, env):
-    aws_secrets_json = get_secret_emr_compatible(f"/{env}-pd-batch/deployment-variables-secret")
+    aws_secrets_json = get_secret_emr_compatible(
+        f"/{env}-pd-batch/deployment-variables-secret"
+    )
 
     # Parse the JSON string
     secrets = json.loads(aws_secrets_json)
@@ -64,7 +70,9 @@ def extract_and_validate_job_id(**context):
 
         # Validate format (EMR job run IDs are typically alphanumeric with specific length)
         if len(job_run_id) < 10:
-            raise ValueError(f"job_run_id appears to be invalid (too short): {job_run_id}")
+            raise ValueError(
+                f"job_run_id appears to be invalid (too short): {job_run_id}"
+            )
 
         print(f"Successfully extracted job_run_id: {job_run_id}")
 
@@ -73,7 +81,9 @@ def extract_and_validate_job_id(**context):
         return job_run_id
 
     except FileNotFoundError:
-        raise ValueError(f"Job ID temp file not found: {temp_file} - EMR job submission may have failed")
+        raise ValueError(
+            f"Job ID temp file not found: {temp_file} - EMR job submission may have failed"
+        )
     except Exception as e:
         raise ValueError(f"Failed to extract job_run_id: {str(e)}")
 
@@ -81,15 +91,24 @@ def extract_and_validate_job_id(**context):
 def wait_for_emr_job_completion(**context):
     """Wait for EMR Serverless job to complete"""
     dataset = context.get("dataset", "")
-    extract_task_id = context.get("extract_task_id", f"{dataset}-extract-job-id" if dataset else "extract_job_id")
-    get_app_task_id = context.get("get_app_task_id", f"{dataset}-get-emr-app-id" if dataset else "get_emr_application_id")
+    extract_task_id = context.get(
+        "extract_task_id", f"{dataset}-extract-job-id" if dataset else "extract_job_id"
+    )
+    get_app_task_id = context.get(
+        "get_app_task_id",
+        f"{dataset}-get-emr-app-id" if dataset else "get_emr_application_id",
+    )
 
     # Try to get job_run_id from XCom with better error handling
-    job_run_id = context["task_instance"].xcom_pull(task_ids=extract_task_id, key="job_run_id")
+    job_run_id = context["task_instance"].xcom_pull(
+        task_ids=extract_task_id, key="job_run_id"
+    )
 
     if not job_run_id:
         # Fallback: try to read from the temp file directly
-        temp_file = f"/tmp/{dataset}_job_run_id.txt" if dataset else "/tmp/job_run_id.txt"
+        temp_file = (
+            f"/tmp/{dataset}_job_run_id.txt" if dataset else "/tmp/job_run_id.txt"
+        )
         try:
             with open(temp_file, "r") as f:
                 job_run_id = f.read().strip()
@@ -108,7 +127,9 @@ def wait_for_emr_job_completion(**context):
     print(f"Current DAG run: {dag_run_id}")
 
     # Get application_id from XCom (set by get_emr_application_id task)
-    application_id = context["task_instance"].xcom_pull(task_ids=get_app_task_id, key="application_id")
+    application_id = context["task_instance"].xcom_pull(
+        task_ids=get_app_task_id, key="application_id"
+    )
 
     # Verify the extract task ran in this execution
     extract_task_start = ti.xcom_pull(task_ids=extract_task_id, key="execution_date")
@@ -120,7 +141,9 @@ def wait_for_emr_job_completion(**context):
         application_id = context["task_instance"].xcom_pull(task_ids=get_app_task_id)
 
     if not application_id:
-        raise ValueError(f"No application_id found from XCom for task: {get_app_task_id}")
+        raise ValueError(
+            f"No application_id found from XCom for task: {get_app_task_id}"
+        )
 
     emr_client = boto3.client("emr-serverless", region_name="eu-west-2")
     print(f"Monitoring EMR Serverless job: {job_run_id}")
@@ -132,7 +155,9 @@ def wait_for_emr_job_completion(**context):
 
     # Initial job status check to validate we can access the job
     try:
-        initial_response = emr_client.get_job_run(applicationId=application_id, jobRunId=job_run_id)
+        initial_response = emr_client.get_job_run(
+            applicationId=application_id, jobRunId=job_run_id
+        )
         initial_state = initial_response["jobRun"]["state"]
         job_created_at = initial_response["jobRun"].get("createdAt")
         print(f"Initial job state check: {initial_state}")
@@ -141,7 +166,9 @@ def wait_for_emr_job_completion(**context):
         # If job is already in a terminal state, handle immediately
         if initial_state == "SUCCESS":
             print("Job already completed successfully!")
-            print("WARNING: Job was already complete when monitoring started. Verify this is expected.")
+            print(
+                "WARNING: Job was already complete when monitoring started. Verify this is expected."
+            )
             return job_run_id
         elif initial_state in ["FAILED", "CANCELLED", "CANCELLING"]:
             state_details = initial_response.get("jobRun", {}).get("stateDetails", "")
@@ -161,15 +188,21 @@ def wait_for_emr_job_completion(**context):
         poll_count += 1
         # Check if we've exceeded timeout
         if time.time() - start_time > timeout_seconds:
-            print(f"Job monitoring timed out after {timeout_seconds} seconds (poll count: {poll_count})")
+            print(
+                f"Job monitoring timed out after {timeout_seconds} seconds (poll count: {poll_count})"
+            )
             print(f"Attempting to cancel EMR Serverless job: {job_run_id}")
 
             try:
-                cancel_response = emr_client.cancel_job_run(applicationId=application_id, jobRunId=job_run_id)
+                cancel_response = emr_client.cancel_job_run(
+                    applicationId=application_id, jobRunId=job_run_id
+                )
                 print(f"Job cancellation initiated: {cancel_response}")
                 time.sleep(10)
 
-                final_response = emr_client.get_job_run(applicationId=application_id, jobRunId=job_run_id)
+                final_response = emr_client.get_job_run(
+                    applicationId=application_id, jobRunId=job_run_id
+                )
                 final_state = final_response["jobRun"]["state"]
                 print(f"Final job state after cancellation: {final_state}")
             except Exception as cancel_error:
@@ -177,22 +210,30 @@ def wait_for_emr_job_completion(**context):
 
             from airflow.exceptions import AirflowSkipException
 
-            raise AirflowSkipException(f"Job monitoring timed out after {timeout_seconds} seconds. Job cancellation attempted.")
+            raise AirflowSkipException(
+                f"Job monitoring timed out after {timeout_seconds} seconds. Job cancellation attempted."
+            )
 
         try:
             print(f"Poll #{poll_count} - Checking job status...")
-            response = emr_client.get_job_run(applicationId=application_id, jobRunId=job_run_id)
+            response = emr_client.get_job_run(
+                applicationId=application_id, jobRunId=job_run_id
+            )
 
             job_state = response["jobRun"]["state"]
             elapsed = time.time() - start_time
-            print(f"Poll #{poll_count} - Job state: {job_state} (elapsed: {elapsed:.2f}s)")
+            print(
+                f"Poll #{poll_count} - Job state: {job_state} (elapsed: {elapsed:.2f}s)"
+            )
 
             if job_state == "SUCCESS":
                 print("Job completed successfully!")
                 final_details = response.get("jobRun", {})
                 print(f"Job completed in {time.time() - start_time:.2f} seconds")
                 if "billedResourceUtilization" in final_details:
-                    print(f"Resource utilization: {final_details['billedResourceUtilization']}")
+                    print(
+                        f"Resource utilization: {final_details['billedResourceUtilization']}"
+                    )
                 return job_run_id
             elif job_state in ["FAILED", "CANCELLED", "CANCELLING"]:
                 state_details = response.get("jobRun", {}).get("stateDetails", "")
@@ -205,11 +246,15 @@ def wait_for_emr_job_completion(**context):
                     error_msg += f" (Reason: {failure_reason})"
 
                 job_run_details = response.get("jobRun", {})
-                print(f"Job run details: {json.dumps(job_run_details, indent=2, default=str)}")
+                print(
+                    f"Job run details: {json.dumps(job_run_details, indent=2, default=str)}"
+                )
 
                 raise Exception(error_msg)
             elif job_state in ["PENDING", "SCHEDULED", "RUNNING"]:
-                print(f"Job still {job_state.lower()}, elapsed time: {elapsed:.2f}s, waiting 30 seconds...")
+                print(
+                    f"Job still {job_state.lower()}, elapsed time: {elapsed:.2f}s, waiting 30 seconds..."
+                )
 
                 job_run_details = response.get("jobRun", {})
                 if "jobProgress" in job_run_details:
@@ -218,7 +263,9 @@ def wait_for_emr_job_completion(**context):
                 time.sleep(30)
             else:
                 print(f"Unknown job state: {job_state}, continuing to wait...")
-                print(f"Full EMR response: {json.dumps(response, indent=2, default=str)}")
+                print(
+                    f"Full EMR response: {json.dumps(response, indent=2, default=str)}"
+                )
                 time.sleep(30)
 
         except Exception as e:

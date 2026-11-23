@@ -92,7 +92,11 @@ def filter_collections_for_env(collections_dict, datasets_dict, env):
     """
     filtered = {}
     for collection, dataset_names in collections_dict.items():
-        available_datasets = [name for name in dataset_names if is_dataset_available(datasets_dict[name], env)]
+        available_datasets = [
+            name
+            for name in dataset_names
+            if is_dataset_available(datasets_dict[name], env)
+        ]
         if available_datasets:
             filtered[collection] = available_datasets
     return filtered
@@ -105,10 +109,14 @@ def get_task_log_config(ecs_client, task_definition_family):
     """
 
     # Describe the task definition
-    response = ecs_client.describe_task_definition(taskDefinition=task_definition_family)
+    response = ecs_client.describe_task_definition(
+        taskDefinition=task_definition_family
+    )
 
     # Extract the log configuration from the container definitions
-    log_config = response["taskDefinition"]["containerDefinitions"][0].get("logConfiguration", {})
+    log_config = response["taskDefinition"]["containerDefinitions"][0].get(
+        "logConfiguration", {}
+    )
 
     return log_config
 
@@ -119,7 +127,9 @@ def push_vpc_config(ti, conf):
     """
     aws_vpc_config = {
         "subnets": conf.get(section="custom", key="ecs_task_subnets").split(","),
-        "securityGroups": conf.get(section="custom", key="ecs_task_security_groups").split(","),
+        "securityGroups": conf.get(
+            section="custom", key="ecs_task_security_groups"
+        ).split(","),
         "assignPublicIp": "ENABLED",
     }
 
@@ -137,7 +147,9 @@ def push_log_variables(ti, task_definition_name, container_name, prefix):
     task_log_config_options = task_log_config["options"]
     task_log_group = str(task_log_config_options.get("awslogs-group"))
     # add container name to prefix
-    task_log_stream_prefix = str(task_log_config_options.get("awslogs-stream-prefix")) + f"/{container_name}"
+    task_log_stream_prefix = (
+        str(task_log_config_options.get("awslogs-stream-prefix")) + f"/{container_name}"
+    )
     task_log_region = str(task_log_config_options.get("awslogs-region"))
 
     ti.xcom_push(key=f"{prefix}-log-group", value=task_log_group)
@@ -167,7 +179,9 @@ def setup_configure_dag_callable(config, task_definition_name):
         cpu = int(params.get("cpu"))
         transformed_jobs = str(kwargs["params"].get("transformed-jobs"))
         dataset_jobs = str(kwargs["params"].get("dataset-jobs"))
-        incremental_loading_override = bool(kwargs["params"].get("incremental-loading-override"))
+        incremental_loading_override = bool(
+            kwargs["params"].get("incremental-loading-override")
+        )
         regenerate_log_override = bool(kwargs["params"].get("regenerate-log-override"))
 
         # Push values to XCom
@@ -175,12 +189,18 @@ def setup_configure_dag_callable(config, task_definition_name):
         ti.xcom_push(key="cpu", value=cpu)
         ti.xcom_push(key="transformed-jobs", value=transformed_jobs)
         ti.xcom_push(key="dataset-jobs", value=dataset_jobs)
-        ti.xcom_push(key="incremental-loading-override", value=incremental_loading_override)
+        ti.xcom_push(
+            key="incremental-loading-override", value=incremental_loading_override
+        )
         ti.xcom_push(key="regenerate-log-override", value=regenerate_log_override)
 
         # add collection_data bucket # add collection bucket name
-        collection_dataset_bucket_name = kwargs["conf"].get(section="custom", key="collection_dataset_bucket_name")
-        ti.xcom_push(key="collection-dataset-bucket-name", value=collection_dataset_bucket_name)
+        collection_dataset_bucket_name = kwargs["conf"].get(
+            section="custom", key="collection_dataset_bucket_name"
+        )
+        ti.xcom_push(
+            key="collection-dataset-bucket-name", value=collection_dataset_bucket_name
+        )
 
         # push collection-task log variables
         push_log_variables(
@@ -258,22 +278,32 @@ def get_transform_batch_configs(ti, collection, collection_task_name, dataset):
     """
     # Pull all required values from XCom
     batch_size = ti.xcom_pull(task_ids="configure-dag", key="transform-batch-size")
-    batch_size = get_collection_dag_config(collection).transform_batch_size_by_dataset.get(dataset, batch_size)
-    collection_dataset_bucket_name = ti.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name")
+    batch_size = get_collection_dag_config(
+        collection
+    ).transform_batch_size_by_dataset.get(dataset, batch_size)
+    collection_dataset_bucket_name = ti.xcom_pull(
+        task_ids="configure-dag", key="collection-dataset-bucket-name"
+    )
     cpu = ti.xcom_pull(task_ids="configure-dag", key="cpu")
     memory = ti.xcom_pull(task_ids="configure-dag", key="memory")
     env = ti.xcom_pull(task_ids="configure-dag", key="env")
     transformed_jobs = ti.xcom_pull(task_ids="configure-dag", key="transformed-jobs")
     dataset_jobs = ti.xcom_pull(task_ids="configure-dag", key="dataset-jobs")
-    incremental_loading_override = ti.xcom_pull(task_ids="configure-dag", key="incremental-loading-override")
-    regenerate_log_override = ti.xcom_pull(task_ids="configure-dag", key="regenerate-log-override")
+    incremental_loading_override = ti.xcom_pull(
+        task_ids="configure-dag", key="incremental-loading-override"
+    )
+    regenerate_log_override = ti.xcom_pull(
+        task_ids="configure-dag", key="regenerate-log-override"
+    )
     force_reprocessing = ti.xcom_pull(
         task_ids="configure-dag",
         key="force-reprocessing",
     )
 
     # Get the selected dependency branches from XCom
-    digital_land_python_ref = ti.xcom_pull(task_ids="configure-dag", key="digital-land-python-ref") or ""
+    digital_land_python_ref = (
+        ti.xcom_pull(task_ids="configure-dag", key="digital-land-python-ref") or ""
+    )
 
     makerules_url = ti.xcom_pull(task_ids="configure-dag", key="makerules-url") or ""
 
