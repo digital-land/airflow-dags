@@ -10,6 +10,14 @@ from pathlib import Path
 import boto3
 from collection_config import get_collection_dag_config
 
+# Run every EMR Serverless job on /usr/bin/python3.11, which the emr-7.9.0 image ships
+# alongside the default python3 (3.9). Shared so the jobs can't drift apart.
+PYSPARK_PYTHON_CONF = (
+    "--conf spark.emr-serverless.driverEnv.PYSPARK_PYTHON=/usr/bin/python3.11 "
+    "--conf spark.emr-serverless.driverEnv.PYSPARK_DRIVER_PYTHON=/usr/bin/python3.11 "
+    "--conf spark.executorEnv.PYSPARK_PYTHON=/usr/bin/python3.11"
+)
+
 # Some useful default args for all DAGs
 dag_default_args = {
     "owner": "airflow",

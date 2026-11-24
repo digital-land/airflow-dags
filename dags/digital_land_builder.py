@@ -18,7 +18,13 @@ from emr_log_streaming import (
     emr_monitoring_configuration,
 )
 from github_actions import trigger_workflow
-from utils import dag_default_args, get_config, push_log_variables, push_vpc_config
+from utils import (
+    PYSPARK_PYTHON_CONF,
+    dag_default_args,
+    get_config,
+    push_log_variables,
+    push_vpc_config,
+)
 
 config = get_config()
 logger = logging.getLogger(__name__)
@@ -457,7 +463,7 @@ with DAG(
             "sparkSubmit": {
                 "entryPoint": S3_TASKS_ENTRY_POINT,
                 "entryPointArguments": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="tasks-entry-point-args") }}',
-                "sparkSubmitParameters": f"--py-files {S3_WHEEL_FILE} "
+                "sparkSubmitParameters": f"--py-files {S3_WHEEL_FILE} {PYSPARK_PYTHON_CONF} "
                 "--conf spark.serializer=org.apache.spark.serializer.KryoSerializer",
             }
         },
@@ -480,7 +486,7 @@ with DAG(
             "sparkSubmit": {
                 "entryPoint": S3_PROVISION_QUALITY_ENTRY_POINT,
                 "entryPointArguments": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="provision-quality-entry-point-args") }}',
-                "sparkSubmitParameters": f"--py-files {S3_WHEEL_FILE} "
+                "sparkSubmitParameters": f"--py-files {S3_WHEEL_FILE} {PYSPARK_PYTHON_CONF} "
                 "--conf spark.serializer=org.apache.spark.serializer.KryoSerializer "
                 "--conf spark.sql.maxPlanStringLength=8192",
             }

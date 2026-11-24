@@ -18,7 +18,7 @@ from emr_log_streaming import (
     emr_log_group,
     emr_monitoring_configuration,
 )
-from utils import dag_default_args, get_config
+from utils import PYSPARK_PYTHON_CONF, dag_default_args, get_config
 
 config = get_config()
 
@@ -78,7 +78,7 @@ with DAG(
                     f"'--parquet-datasets-path', 's3://{ENV}-parquet-datasets'] "
                     f"+ (['--debug'] if params.debug else []) }}}}"
                 ),
-                "sparkSubmitParameters": f"--py-files {S3_WHEEL_FILE} "
+                "sparkSubmitParameters": f"--py-files {S3_WHEEL_FILE} {PYSPARK_PYTHON_CONF} "
                 "--conf spark.serializer=org.apache.spark.serializer.KryoSerializer",
             }
         },

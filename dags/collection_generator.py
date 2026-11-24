@@ -26,6 +26,7 @@ from emr_log_streaming import (
     emr_monitoring_configuration,
 )
 from utils import (
+    PYSPARK_PYTHON_CONF,
     dag_default_args,
     filter_collections_for_env,
     get_collections_dict,
@@ -390,7 +391,7 @@ for collection, collection_datasets in filtered_collections.items():
                 S3_DATA_PATH = f"s3://{S3_SOURCE_DATA_PATH}/"
 
                 spark_submit_parameters = (
-                    f"--jars /usr/lib/spark/jars/postgresql-42.7.4.jar --py-files {S3_WHEEL_FILE} "
+                    f"--jars /usr/lib/spark/jars/postgresql-42.7.4.jar --py-files {S3_WHEEL_FILE} {PYSPARK_PYTHON_CONF} "
                     "--conf spark.serializer=org.apache.spark.serializer.KryoSerializer "
                     "--conf spark.kryo.registrator=org.apache.sedona.core.serde.SedonaKryoRegistrator "
                     "--conf spark.sql.extensions=org.apache.sedona.sql.SedonaSqlExtensions "
