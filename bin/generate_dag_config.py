@@ -8,7 +8,11 @@ import click
 # Allows read of collection_schema within dags directory
 sys.path.append(f"{os.getcwd()}")
 
-from dags.collection_schema import CollectionSelection, Environments, ScheduledCollectionConfig  # noqa E402
+from dags.collection_schema import (  # noqa E402
+    CollectionSelection,
+    Environments,
+    ScheduledCollectionConfig,
+)
 
 scheduled_collection_config = Environments(
     development=ScheduledCollectionConfig(
@@ -24,7 +28,9 @@ scheduled_collection_config = Environments(
         schedule="0 0 1 * *",
         max_active_task_instances=4,
     ),
-    production=ScheduledCollectionConfig(selection=CollectionSelection.all, schedule="0 0 * * *"),
+    production=ScheduledCollectionConfig(
+        selection=CollectionSelection.all, schedule="0 0 * * *"
+    ),
 )
 
 
@@ -54,7 +60,9 @@ def make_dag_config(output_path: Path, env: str):
         config_dict["max_active_tasks"] = env_collection_config.max_active_tasks
 
     if env_collection_config.max_active_task_instances:
-        config_dict["max_active_task_instances"] = env_collection_config.max_active_task_instances
+        config_dict["max_active_task_instances"] = (
+            env_collection_config.max_active_task_instances
+        )
 
     config_dict["collection_selection"] = env_collection_config.selection
     config_dict["collections"] = env_collection_config.collections

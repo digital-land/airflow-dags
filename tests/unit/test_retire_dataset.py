@@ -3,7 +3,13 @@ import pytest
 from airflow.exceptions import AirflowFailException
 from moto import mock_aws
 
-from dags.retire_dataset import check_dataset_can_be_retired, collection_to_retire, dag, dry_run_value, find_dataset_files
+from dags.retire_dataset import (
+    check_dataset_can_be_retired,
+    collection_to_retire,
+    dag,
+    dry_run_value,
+    find_dataset_files,
+)
 
 DATASETS = {
     "in-production": {"dataset": "in-production", "environment": "production"},
@@ -71,9 +77,13 @@ def test_find_dataset_files_returns_only_user_facing_files(s3_client):
 
 
 def test_find_dataset_files_returns_nothing_for_an_unknown_dataset(s3_client):
-    s3_client.put_object(Bucket="test-collection-data", Key="dataset/tree.csv", Body=b"x")
+    s3_client.put_object(
+        Bucket="test-collection-data", Key="dataset/tree.csv", Body=b"x"
+    )
 
-    assert find_dataset_files(s3_client, "test-collection-data", "no-such-dataset") == []
+    assert (
+        find_dataset_files(s3_client, "test-collection-data", "no-such-dataset") == []
+    )
 
 
 def test_guard_runs_before_discover():
@@ -82,7 +92,10 @@ def test_guard_runs_before_discover():
 
 def test_collection_to_retire_drops_the_collection_suffix():
     """The collection task adds -collection itself"""
-    assert collection_to_retire("tree", ["tree-preservation-order-collection"]) == "tree-preservation-order"
+    assert (
+        collection_to_retire("tree", ["tree-preservation-order-collection"])
+        == "tree-preservation-order"
+    )
 
 
 def test_collection_to_retire_falls_back_to_the_dataset_when_only_public_downloads_are_left():
@@ -91,7 +104,9 @@ def test_collection_to_retire_falls_back_to_the_dataset_when_only_public_downloa
 
 def test_collection_to_retire_refuses_files_in_more_than_one_collection():
     with pytest.raises(AirflowFailException, match="more than one collection"):
-        collection_to_retire("tree", ["tree-collection", "tree-preservation-order-collection"])
+        collection_to_retire(
+            "tree", ["tree-collection", "tree-preservation-order-collection"]
+        )
 
 
 def test_only_unticking_dry_run_removes_files():
@@ -125,7 +140,10 @@ def test_postgres_runs_the_loader_retire_script_with_everything_it_needs():
     container = dag.get_task("postgres").overrides["containerOverrides"][0]
 
     assert container["command"] == ["./retire.sh"]
-    assert {variable["name"] for variable in container["environment"]} == {"DATASET_NAME", "DRY_RUN"}
+    assert {variable["name"] for variable in container["environment"]} == {
+        "DATASET_NAME",
+        "DRY_RUN",
+    }
 
 
 def test_datasette_runs_after_discover():
@@ -139,16 +157,24 @@ def test_datasette_runs_the_datasette_sync_retire_script_with_everything_it_need
     assert task.task_definition == "development-efs-sync-task"
     assert container["name"] == "development-efs-sync"
     assert container["command"] == ["./retire.sh"]
-    assert {variable["name"] for variable in container["environment"]} == {"DATASET_NAME", "DRY_RUN"}
+    assert {variable["name"] for variable in container["environment"]} == {
+        "DATASET_NAME",
+        "DRY_RUN",
+    }
 
 
 @pytest.mark.parametrize("task_id", ["files", "postgres", "datasette"])
 def test_every_task_that_removes_data_takes_dry_run_from_discover(task_id):
     """So unticking dry_run is the only way any of them removes anything"""
     container = dag.get_task(task_id).overrides["containerOverrides"][0]
-    environment = {variable["name"]: variable["value"] for variable in container["environment"]}
+    environment = {
+        variable["name"]: variable["value"] for variable in container["environment"]
+    }
 
-    assert environment["DRY_RUN"] == '\'{{ task_instance.xcom_pull(task_ids="discover", key="dry-run") }}\''
+    assert (
+        environment["DRY_RUN"]
+        == '\'{{ task_instance.xcom_pull(task_ids="discover", key="dry-run") }}\''
+    )
 
 
 def test_dag_has_docs():

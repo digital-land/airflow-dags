@@ -13,8 +13,12 @@ from airflow import DAG
 from airflow.models.param import Param
 from airflow.operators.python import PythonOperator
 from emr_dags_utils import get_secrets
-from emr_log_streaming import EmrServerlessStartJobWithLogsOperator, emr_log_group, emr_monitoring_configuration
-from utils import dag_default_args, get_config
+from emr_log_streaming import (
+    EmrServerlessStartJobWithLogsOperator,
+    emr_log_group,
+    emr_monitoring_configuration,
+)
+from utils import PYSPARK_PYTHON_CONF, dag_default_args, get_config
 
 config = get_config()
 
@@ -25,7 +29,11 @@ with DAG(
     schedule=None,
     catchup=False,
     params={
-        "debug": Param(default=False, type="boolean", description="Enable debug logging for the Spark job"),
+        "debug": Param(
+            default=False,
+            type="boolean",
+            description="Enable debug logging for the Spark job",
+        ),
     },
     render_template_as_native_obj=True,
     is_paused_upon_creation=False,
@@ -70,10 +78,13 @@ with DAG(
                     f"'--parquet-datasets-path', 's3://{ENV}-parquet-datasets'] "
                     f"+ (['--debug'] if params.debug else []) }}}}"
                 ),
-                "sparkSubmitParameters": f"--py-files {S3_WHEEL_FILE} " "--conf spark.serializer=org.apache.spark.serializer.KryoSerializer",
+                "sparkSubmitParameters": f"--py-files {S3_WHEEL_FILE} {PYSPARK_PYTHON_CONF} "
+                "--conf spark.serializer=org.apache.spark.serializer.KryoSerializer",
             }
         },
-        configuration_overrides=emr_monitoring_configuration(S3_LOG_URI, emr_log_group(ENV)),
+        configuration_overrides=emr_monitoring_configuration(
+            S3_LOG_URI, emr_log_group(ENV)
+        ),
         name="assemble-tasks-job",
         wait_for_completion=True,
         aws_conn_id="aws_default",

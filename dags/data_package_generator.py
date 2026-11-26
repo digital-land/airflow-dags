@@ -16,7 +16,13 @@ config = get_config()
 
 failure_callbacks = []
 if config["env"] == "production":
-    failure_callbacks.append(send_slack_notification(text="The DAG {{ dag.dag_id }} failed", channel="#planning-data-alerts", username="Airflow"))
+    failure_callbacks.append(
+        send_slack_notification(
+            text="The DAG {{ dag.dag_id }} failed",
+            channel="#planning-data-alerts",
+            username="Airflow",
+        )
+    )
 
 # set some variables needed for ECS tasks,
 ecs_cluster = f"{config['env']}-cluster"
@@ -29,7 +35,10 @@ for package in data_packages:
         description=f"Data package builder task for the {package} data package",
         schedule=None,
         catchup=False,
-        params={"cpu": Param(default=8192, type="integer"), "memory": Param(default=32768, type="integer")},
+        params={
+            "cpu": Param(default=8192, type="integer"),
+            "memory": Param(default=32768, type="integer"),
+        },
         render_template_as_native_obj=True,
         is_paused_upon_creation=False,
         on_failure_callback=failure_callbacks,
@@ -54,15 +63,26 @@ for package in data_packages:
                         "cpu": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="cpu") | int }}',
                         "memory": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="memory") | int }}',
                         "environment": [
-                            {"name": "ENVIRONMENT", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="env") | string }}\''},
+                            {
+                                "name": "ENVIRONMENT",
+                                "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="env") | string }}\'',
+                            },
                             {"name": "DATA_PACKAGE_NAME", "value": package},
-                            {"name": "READ_S3_BUCKET", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}\''},
-                            {"name": "WRITE_S3_BUCKET", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}\''},
+                            {
+                                "name": "READ_S3_BUCKET",
+                                "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}\'',
+                            },
+                            {
+                                "name": "WRITE_S3_BUCKET",
+                                "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}\'',
+                            },
                         ],
                     },
                 ]
             },
-            network_configuration={"awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'},
+            network_configuration={
+                "awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'
+            },
             awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-group") }}',
             awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-region") }}',
             awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-task-log-stream-prefix") }}',

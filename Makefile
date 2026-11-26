@@ -39,13 +39,13 @@ test-acceptance::
 	python -m pytest tests/acceptance
 
 lint::
-	black --check --line-length 180 dags/ tests/ bin/
+	black --check dags/ tests/ bin/
 	flake8 dags/ tests/ bin/
-	isort --check-only --profile black --line-length 180 dags/ tests/ bin/
+	isort --check-only dags/ tests/ bin/
 
 format::
-	black --line-length 180 dags/ tests/ bin/
-	isort --profile black --line-length 180 dags/ tests/ bin/
+	black dags/ tests/ bin/
+	isort dags/ tests/ bin/
 
 compile ::
 	python -m piptools compile --output-file=requirements/requirements.txt requirements/requirements.in
