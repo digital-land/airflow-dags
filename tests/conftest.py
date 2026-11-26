@@ -4,13 +4,20 @@ from pathlib import Path
 
 import boto3
 import pytest
+import utils
 from moto import mock_aws
 
 CONFIG_PATH = Path("dags/config.json")
 CONFIG_BACKUP_PATH = CONFIG_PATH.with_suffix(".json.backup")
 
 # Matches the output of: bin/generate_dag_config.py --env development
-TEST_CONFIG = {"env": "development", "schedule": "0 0 * * *", "max_active_tasks": 50, "collection_selection": "explicit", "collections": ["ancient-woodland", "organisation"]}
+TEST_CONFIG = {
+    "env": "development",
+    "schedule": "0 0 * * *",
+    "max_active_tasks": 50,
+    "collection_selection": "explicit",
+    "collections": ["ancient-woodland", "organisation"],
+}
 
 # Several DAG modules call get_secrets("emr_execution_role", env) at import time, which hits real
 # AWS Secrets Manager unless overridden. aws_secrets_manager.get_secret_emr_compatible supports a
@@ -35,6 +42,26 @@ def pytest_configure(config):
         json.dump(TEST_CONFIG, f, indent=4)
 
     os.environ[SECRET_ENV_VAR] = TEST_SECRET_VALUE
+
+    def _dataset(name, typology="geography"):
+        return {
+            "dataset": name,
+            "collection": name,
+            "realm": "dataset",
+            "typology": typology,
+            "environment": "production",
+        }
+
+    utils.load_specification_datasets = lambda bucket_name=None: {
+        row["dataset"]: row
+        for row in [
+            _dataset("ancient-woodland"),
+            _dataset("organisation", typology="organisation"),
+            _dataset("title-boundary"),
+            _dataset("listed-building"),
+            _dataset("central-activities-zone"),
+        ]
+    }
 
 
 def pytest_unconfigure(config):

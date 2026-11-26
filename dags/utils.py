@@ -2,13 +2,19 @@ import csv
 import json
 import math
 import os
-import tempfile
-import urllib
+import urllib.request
 from datetime import datetime, timedelta
-from pathlib import Path
 
 import boto3
 from collection_config import get_collection_dag_config
+
+# Run every EMR Serverless job on /usr/bin/python3.11, which the emr-7.9.0 image ships
+# alongside the default python3 (3.9). Shared so the jobs can't drift apart.
+PYSPARK_PYTHON_CONF = (
+    "--conf spark.emr-serverless.driverEnv.PYSPARK_PYTHON=/usr/bin/python3.11 "
+    "--conf spark.emr-serverless.driverEnv.PYSPARK_DRIVER_PYTHON=/usr/bin/python3.11 "
+    "--conf spark.executorEnv.PYSPARK_PYTHON=/usr/bin/python3.11"
+)
 
 # Some useful default args for all DAGs
 dag_default_args = {
@@ -28,22 +34,31 @@ def get_config(path=None):
     return config
 
 
-# TBD no idea why this isn't in the config rather than directly loading stuff from the spec
-def load_specification_datasets():
-    with tempfile.TemporaryDirectory() as tmpdir:
+SPECIFICATION_DATASET_KEY = "specification/dataset.csv"
+SPECIFICATION_DATASET_PUBLIC_URL = "https://files.planning.data.gov.uk/specification/dataset.csv"
 
-        dataset_spec_url = "https://raw.githubusercontent.com/digital-land/specification/main/specification/dataset.csv"
-        dataset_spec_path = Path(tmpdir) / "dataset.csv"
-        urllib.request.urlretrieve(dataset_spec_url, dataset_spec_path)
 
-        datasets_dict = {}
+def load_specification_datasets(bucket_name=None):
+    """
+    Read the specification's dataset.csv from the collection dataset bucket, keyed by dataset.
 
-        with open(dataset_spec_path, newline="") as f:
-            dictreader = csv.DictReader(f)
-            for row in dictreader:
-                datasets_dict[row["dataset"]] = row
+    This is the copy of the specification the rest of the pipeline runs on. The bucket name
+    defaults to the custom.collection_dataset_bucket_name Airflow config value.
+    """
+    if bucket_name is None:
+        from airflow.configuration import conf
 
-        return datasets_dict
+        bucket_name = conf.get(section="custom", key="collection_dataset_bucket_name", fallback=None)
+
+    if bucket_name:
+        s3 = boto3.client("s3")
+        response = s3.get_object(Bucket=bucket_name, Key=SPECIFICATION_DATASET_KEY)
+        content = response["Body"].read().decode("utf-8")
+    else:
+        with urllib.request.urlopen(SPECIFICATION_DATASET_PUBLIC_URL) as response:
+            content = response.read().decode("utf-8")
+
+    return {row["dataset"]: row for row in csv.DictReader(content.splitlines())}
 
 
 def get_collections_dict(datasets):
@@ -183,7 +198,12 @@ def setup_configure_dag_callable(config, task_definition_name):
         ti.xcom_push(key="collection-dataset-bucket-name", value=collection_dataset_bucket_name)
 
         # push collection-task log variables
-        push_log_variables(ti, task_definition_name=task_definition_name, container_name=task_definition_name, prefix="collection-task")
+        push_log_variables(
+            ti,
+            task_definition_name=task_definition_name,
+            container_name=task_definition_name,
+            prefix="collection-task",
+        )
         # push aws vpc config
         push_vpc_config(ti, kwargs["conf"])
 
@@ -218,7 +238,13 @@ def sort_collections_dict(collections_dict):
     Given a dictionary of collections and datasets, return a sorted list of collections.
     The sorting is done based on the collection name.
     """
-    priority = ["tree-preservation-order", "transport-access-node", "flood-risk-zone", "listed-building", "conservation-area"]
+    priority = [
+        "tree-preservation-order",
+        "transport-access-node",
+        "flood-risk-zone",
+        "listed-building",
+        "conservation-area",
+    ]
 
     def sort_key(item):
         key, value = item
@@ -294,12 +320,24 @@ def get_transform_batch_configs(ti, collection, collection_task_name, dataset):
                         {"name": "ENVIRONMENT", "value": str(env)},
                         {"name": "COLLECTION_NAME", "value": collection},
                         {"name": "DATASET", "value": dataset},
-                        {"name": "COLLECTION_DATASET_BUCKET_NAME", "value": str(collection_dataset_bucket_name)},
-                        {"name": "HOISTED_COLLECTION_DATASET_BUCKET_NAME", "value": str(collection_dataset_bucket_name)},
+                        {
+                            "name": "COLLECTION_DATASET_BUCKET_NAME",
+                            "value": str(collection_dataset_bucket_name),
+                        },
+                        {
+                            "name": "HOISTED_COLLECTION_DATASET_BUCKET_NAME",
+                            "value": str(collection_dataset_bucket_name),
+                        },
                         {"name": "TRANSFORMED_JOBS", "value": str(transformed_jobs)},
                         {"name": "DATASET_JOBS", "value": str(dataset_jobs)},
-                        {"name": "INCREMENTAL_LOADING_OVERRIDE", "value": str(incremental_loading_override)},
-                        {"name": "REGENERATE_LOG_OVERRIDE", "value": str(regenerate_log_override)},
+                        {
+                            "name": "INCREMENTAL_LOADING_OVERRIDE",
+                            "value": str(incremental_loading_override),
+                        },
+                        {
+                            "name": "REGENERATE_LOG_OVERRIDE",
+                            "value": str(regenerate_log_override),
+                        },
                         {"name": "REPROCESS", "value": force_reprocessing},
                         {"name": "TRANSFORMATION_LIMIT", "value": str(limit)},
                         {"name": "TRANSFORMATION_OFFSET", "value": str(offset)},
