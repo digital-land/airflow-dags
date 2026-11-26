@@ -21,14 +21,20 @@ def load_dag_module(monkeypatch):
     sys.modules.pop(MODULE, None)
 
 
-def test_trigger_evening_pipeline_starts_the_workflow_without_inputs(load_dag_module, monkeypatch):
+def test_trigger_evening_pipeline_starts_the_workflow_without_inputs(
+    load_dag_module, monkeypatch
+):
     module = load_dag_module("production")
     trigger_workflow = Mock()
     monkeypatch.setattr(module, "trigger_workflow", trigger_workflow)
 
     module.trigger_evening_pipeline()
 
-    trigger_workflow.assert_called_once_with("production", repository="digital-land/config", workflow="config-evening-pipeline.yml")
+    trigger_workflow.assert_called_once_with(
+        "production",
+        repository="digital-land/config",
+        workflow="config-evening-pipeline.yml",
+    )
 
 
 def test_dag_runs_at_23_00_on_weekdays_in_production(load_dag_module):

@@ -26,7 +26,11 @@ def trigger_evening_pipeline(**kwargs):
     Start config's evening pipeline. It is started without inputs, which it treats the same as a scheduled run:
     writes enabled, and a Slack alert if any stage fails.
     """
-    trigger_workflow(config["env"], repository="digital-land/config", workflow="config-evening-pipeline.yml")
+    trigger_workflow(
+        config["env"],
+        repository="digital-land/config",
+        workflow="config-evening-pipeline.yml",
+    )
 
 
 if config["env"] == "production":
@@ -39,7 +43,13 @@ if config["env"] == "production":
         start_date=datetime(2024, 1, 1),
         catchup=False,
         is_paused_upon_creation=False,
-        on_failure_callback=[send_slack_notification(text="The DAG {{ dag.dag_id }} failed", channel="#planning-data-alerts", username="Airflow")],
+        on_failure_callback=[
+            send_slack_notification(
+                text="The DAG {{ dag.dag_id }} failed",
+                channel="#planning-data-alerts",
+                username="Airflow",
+            )
+        ],
     ) as dag:
         PythonOperator(
             task_id="trigger-evening-pipeline",
