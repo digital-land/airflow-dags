@@ -4,6 +4,7 @@ from pathlib import Path
 
 import boto3
 import pytest
+import utils
 from moto import mock_aws
 
 CONFIG_PATH = Path("dags/config.json")
@@ -43,6 +44,26 @@ def pytest_configure(config):
         json.dump(TEST_CONFIG, f, indent=4)
 
     os.environ[SECRET_ENV_VAR] = TEST_SECRET_VALUE
+
+    def _dataset(name, typology="geography"):
+        return {
+            "dataset": name,
+            "collection": name,
+            "realm": "dataset",
+            "typology": typology,
+            "environment": "production",
+        }
+
+    utils.load_specification_datasets = lambda bucket_name=None: {
+        row["dataset"]: row
+        for row in [
+            _dataset("ancient-woodland"),
+            _dataset("organisation", typology="organisation"),
+            _dataset("title-boundary"),
+            _dataset("listed-building"),
+            _dataset("central-activities-zone"),
+        ]
+    }
 
 
 def pytest_unconfigure(config):

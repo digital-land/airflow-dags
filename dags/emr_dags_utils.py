@@ -1,37 +1,8 @@
-import csv
 import json
 import time
-import urllib.request
 
 import boto3
 from aws_secrets_manager import get_secret_emr_compatible
-
-
-def get_datasets():
-    dataset_spec_url = "https://raw.githubusercontent.com/digital-land/specification/main/specification/dataset.csv"
-
-    with urllib.request.urlopen(dataset_spec_url) as response:
-        lines = [line.decode("utf-8") for line in response.readlines()]
-        reader = csv.DictReader(lines)
-        datasets = [row for row in reader]
-    print(type(datasets))
-
-    unique_keys = set()
-    for item in datasets:
-        unique_keys.update(item.keys())
-
-    print(list(unique_keys))
-
-    # Filter rows where realm is 'dataset' and typology is 'geograpthy'
-    filtered_datasets = [
-        row["dataset"]
-        for row in datasets
-        if row.get("realm") == "dataset" and row.get("typology") == "geography"
-    ]
-
-    # Print the filtered datasets column
-    print(filtered_datasets)
-    return filtered_datasets
 
 
 # Retrieve secrets from AWS Secrets Manager
