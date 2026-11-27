@@ -30,7 +30,9 @@ def extract_jinja_templates(file_content):
     """Extract all Jinja2 templates from Python file content."""
     # Pattern to match Jinja2 templates in strings
     # Matches {{ ... }} and {% ... %} patterns
-    jinja_pattern = re.compile(r'["\']([^"\']*\{\{[^}]*\}\}[^"\']*)["\']|["\']([^"\']*\{%[^%]*%\}[^"\']*)["\']')
+    jinja_pattern = re.compile(
+        r'["\']([^"\']*\{\{[^}]*\}\}[^"\']*)["\']|["\']([^"\']*\{%[^%]*%\}[^"\']*)["\']'
+    )
 
     templates = []
     for match in jinja_pattern.finditer(file_content):
@@ -60,7 +62,11 @@ def test_jinja_template_syntax():
                 # Try to parse the template
                 env.parse(template)
             except TemplateSyntaxError as e:
-                failed_templates.append(f"\nFile: {dag_file.name}\n" f"Template: {template}\n" f"Error: {str(e)}")
+                failed_templates.append(
+                    f"\nFile: {dag_file.name}\n"
+                    f"Template: {template}\n"
+                    f"Error: {str(e)}"
+                )
 
     if failed_templates:
         error_msg = "\n".join(failed_templates)
@@ -90,11 +96,16 @@ def test_no_spaces_in_jinja_variables():
             if re.search(r"\w+_\s+\w+", match):  # Detects cases like 'task_ instance'
                 # Get line number for better error reporting
                 line_num = file_content[: file_content.find(match)].count("\n") + 1
-                failed_checks.append(f"\nFile: {dag_file.name} (line ~{line_num})\n" f"Found space in variable name: {match}\n")
+                failed_checks.append(
+                    f"\nFile: {dag_file.name} (line ~{line_num})\n"
+                    f"Found space in variable name: {match}\n"
+                )
 
     if failed_checks:
         error_msg = "\n".join(failed_checks)
-        pytest.fail(f"Found Jinja2 templates with spaces in variable names:\n{error_msg}")
+        pytest.fail(
+            f"Found Jinja2 templates with spaces in variable names:\n{error_msg}"
+        )
 
 
 def test_common_jinja_typos():
@@ -119,7 +130,11 @@ def test_common_jinja_typos():
             for match in matches:
                 # Get line number
                 line_num = file_content[: match.start()].count("\n") + 1
-                failed_checks.append(f"\nFile: {dag_file.name} (line {line_num})\n" f"Found typo: {description}\n" f"Context: {match.group()}\n")
+                failed_checks.append(
+                    f"\nFile: {dag_file.name} (line {line_num})\n"
+                    f"Found typo: {description}\n"
+                    f"Context: {match.group()}\n"
+                )
 
     if failed_checks:
         error_msg = "\n".join(failed_checks)

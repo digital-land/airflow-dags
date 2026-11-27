@@ -14,7 +14,10 @@ from dags.collection_config import (
 
 
 def test_get_collection_dag_config_returns_default_for_unknown_collection():
-    assert get_collection_dag_config("central-activities-zone") is DEFAULT_COLLECTION_CONFIG
+    assert (
+        get_collection_dag_config("central-activities-zone")
+        is DEFAULT_COLLECTION_CONFIG
+    )
 
 
 def test_get_collection_dag_config_returns_override_for_title_boundary():
@@ -26,7 +29,8 @@ def test_get_collection_dag_config_returns_override_for_title_boundary():
 
 def test_listed_building_transform_is_batched_per_dataset():
     """listed-building's own resources are split into small batches; the collection's other
-    datasets, such as listed-building-outline's thousands of LPA files, keep the default."""
+    datasets, such as listed-building-outline's thousands of LPA files, keep the default.
+    """
     config = get_collection_dag_config("listed-building")
     assert config.transform_batch_size_by_dataset == {"listed-building": 16}
     assert config.transform_batch_size == DEFAULT_COLLECTION_CONFIG.transform_batch_size
@@ -46,7 +50,8 @@ def test_default_collection_schedule_is_daily():
 
 def test_collection_schedule_matches_accepts_timezone_aware_data_interval_end():
     """Regression test: Airflow's data_interval_end is UTC-aware. dateutil raises "can't compare
-    offset-naive and offset-aware datetimes" if the rrule's own anchor isn't aware too."""
+    offset-naive and offset-aware datetimes" if the rrule's own anchor isn't aware too.
+    """
     data_interval_end = pendulum.datetime(2026, 8, 3, tz="UTC")
     collection_schedule_matches("title-boundary", data_interval_end)  # should not raise
 
@@ -60,8 +65,12 @@ def test_collection_schedule_matches_uses_data_interval_end_not_logical_date():
     way to prove the right one is actually being read rather than just "a" date."""
     result = collection_schedule_matches(
         "title-boundary",
-        logical_date=pendulum.datetime(2026, 8, 2, tz="UTC"),  # Sunday - would not match
-        data_interval_end=pendulum.datetime(2026, 8, 3, tz="UTC"),  # Monday after the first Sunday, matches
+        logical_date=pendulum.datetime(
+            2026, 8, 2, tz="UTC"
+        ),  # Sunday - would not match
+        data_interval_end=pendulum.datetime(
+            2026, 8, 3, tz="UTC"
+        ),  # Monday after the first Sunday, matches
     )
     assert result is True
 
@@ -69,13 +78,24 @@ def test_collection_schedule_matches_uses_data_interval_end_not_logical_date():
 @pytest.mark.parametrize(
     "data_interval_end,expected",
     [
-        (pendulum.datetime(2026, 8, 3, tz="UTC"), True),  # Monday after the first Sunday (2 Aug)
-        (pendulum.datetime(2026, 8, 2, tz="UTC"), False),  # the release Sunday itself - not a match
+        (
+            pendulum.datetime(2026, 8, 3, tz="UTC"),
+            True,
+        ),  # Monday after the first Sunday (2 Aug)
+        (
+            pendulum.datetime(2026, 8, 2, tz="UTC"),
+            False,
+        ),  # the release Sunday itself - not a match
         (pendulum.datetime(2026, 8, 10, tz="UTC"), False),  # a week late - not a match
-        (pendulum.datetime(2026, 9, 7, tz="UTC"), True),  # Monday after the first Sunday (6 Sep)
+        (
+            pendulum.datetime(2026, 9, 7, tz="UTC"),
+            True,
+        ),  # Monday after the first Sunday (6 Sep)
     ],
 )
-def test_collection_schedule_matches_title_boundary_monday_after_first_sunday(data_interval_end, expected):
+def test_collection_schedule_matches_title_boundary_monday_after_first_sunday(
+    data_interval_end, expected
+):
     assert collection_schedule_matches("title-boundary", data_interval_end) is expected
 
 
@@ -87,8 +107,13 @@ def test_collection_schedule_matches_title_boundary_monday_after_first_sunday(da
         pendulum.datetime(2026, 12, 25, tz="UTC"),
     ],
 )
-def test_collection_schedule_matches_default_daily_collection_always_matches(data_interval_end):
-    assert collection_schedule_matches("central-activities-zone", data_interval_end) is True
+def test_collection_schedule_matches_default_daily_collection_always_matches(
+    data_interval_end,
+):
+    assert (
+        collection_schedule_matches("central-activities-zone", data_interval_end)
+        is True
+    )
 
 
 def _first_sunday(year, month):
@@ -120,8 +145,16 @@ def test_title_boundary_runs_once_a_month_the_day_after_the_hmlr_release():
     for offset in range(30):
         month_start = start.add(months=offset)
         expected = _first_sunday(month_start.year, month_start.month).add(days=1)
-        matching = [day for day in (month_start.add(days=i) for i in range(month_start.days_in_month)) if collection_schedule_matches("title-boundary", day)]
-        assert matching == [expected], f"{month_start:%Y-%m}: expected {expected:%a %d %b}, got {[format(d, '%a %d %b') for d in matching]}"
+        matching = [
+            day
+            for day in (
+                month_start.add(days=i) for i in range(month_start.days_in_month)
+            )
+            if collection_schedule_matches("title-boundary", day)
+        ]
+        assert matching == [
+            expected
+        ], f"{month_start:%Y-%m}: expected {expected:%a %d %b}, got {[format(d, '%a %d %b') for d in matching]}"
 
 
 def test_default_assemble_timeout_is_three_hours():
@@ -130,11 +163,16 @@ def test_default_assemble_timeout_is_three_hours():
 
 def test_title_boundary_assemble_timeout_is_raised_above_the_default():
     """The 2026-09-07 production run was cancelled at the default three hours having not finished.
-    Raising it is only safe because nothing waits on this collection any more - see dag_triggers."""
-    assert get_collection_dag_config("title-boundary").assemble_timeout == timedelta(hours=12)
+    Raising it is only safe because nothing waits on this collection any more - see dag_triggers.
+    """
+    assert get_collection_dag_config("title-boundary").assemble_timeout == timedelta(
+        hours=12
+    )
 
 
-@pytest.mark.parametrize("collection", ["central-activities-zone", *COLLECTION_CONFIG_OVERRIDES])
+@pytest.mark.parametrize(
+    "collection", ["central-activities-zone", *COLLECTION_CONFIG_OVERRIDES]
+)
 def test_waiter_budget_always_outlasts_execution_timeout(collection):
     """The assemble EMR operator's two bounds are not interchangeable and execution_timeout must
     always be the one that fires.
@@ -146,7 +184,10 @@ def test_waiter_budget_always_outlasts_execution_timeout(collection):
     nothing left tracking it.
     """
     config = get_collection_dag_config(collection)
-    waiter_budget_seconds = assemble_waiter_max_attempts(config.assemble_timeout) * ASSEMBLE_WAITER_DELAY_SECONDS
+    waiter_budget_seconds = (
+        assemble_waiter_max_attempts(config.assemble_timeout)
+        * ASSEMBLE_WAITER_DELAY_SECONDS
+    )
 
     assert waiter_budget_seconds > config.assemble_timeout.total_seconds()
 
@@ -164,4 +205,7 @@ def test_waiter_budget_always_outlasts_execution_timeout(collection):
 def test_assemble_waiter_max_attempts_always_exceeds_its_input(assemble_timeout):
     """Flooring to whole poll intervals and adding one has to stay strictly above the input for
     every timeout, not just the ones that divide evenly."""
-    assert assemble_waiter_max_attempts(assemble_timeout) * ASSEMBLE_WAITER_DELAY_SECONDS > assemble_timeout.total_seconds()
+    assert (
+        assemble_waiter_max_attempts(assemble_timeout) * ASSEMBLE_WAITER_DELAY_SECONDS
+        > assemble_timeout.total_seconds()
+    )

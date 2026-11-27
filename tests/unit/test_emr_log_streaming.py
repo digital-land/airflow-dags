@@ -6,17 +6,25 @@ import pytest
 from airflow.providers.amazon.aws.operators.emr import EmrServerlessStartJobOperator
 from moto import mock_aws
 
-from dags.emr_log_streaming import EmrServerlessStartJobWithLogsOperator, emr_log_group, emr_monitoring_configuration
+from dags.emr_log_streaming import (
+    EmrServerlessStartJobWithLogsOperator,
+    emr_log_group,
+    emr_monitoring_configuration,
+)
 
 LOG_GROUP = emr_log_group("development")
 STREAM_PREFIX = "/applications/test-app/jobs/test-job/SPARK_DRIVER/"
 
 
 def test_monitoring_configuration_sends_driver_logs_to_the_named_log_group():
-    config = emr_monitoring_configuration("s3://development-pd-batch-jobs-logs-bucket/", LOG_GROUP)
+    config = emr_monitoring_configuration(
+        "s3://development-pd-batch-jobs-logs-bucket/", LOG_GROUP
+    )
 
     monitoring = config["monitoringConfiguration"]
-    assert monitoring["s3MonitoringConfiguration"] == {"logUri": "s3://development-pd-batch-jobs-logs-bucket/"}
+    assert monitoring["s3MonitoringConfiguration"] == {
+        "logUri": "s3://development-pd-batch-jobs-logs-bucket/"
+    }
     assert monitoring["cloudWatchLoggingConfiguration"] == {
         "enabled": True,
         "logGroupName": "/aws/emr-serverless/development-pd-batch",
@@ -36,7 +44,9 @@ def logs_client(mock_aws_credentials, monkeypatch):
 
 def create_streams(logs_client):
     for log_type in ("stdout", "stderr"):
-        logs_client.create_log_stream(logGroupName=LOG_GROUP, logStreamName=STREAM_PREFIX + log_type)
+        logs_client.create_log_stream(
+            logGroupName=LOG_GROUP, logStreamName=STREAM_PREFIX + log_type
+        )
 
 
 def write_log(logs_client, log_type, message):
@@ -59,7 +69,9 @@ def fake_job(monkeypatch, while_running, error=None):
         return self.job_id
 
     monkeypatch.setattr(EmrServerlessStartJobOperator, "execute", execute)
-    monkeypatch.setattr(EmrServerlessStartJobOperator, "persist_links", lambda self, context: None)
+    monkeypatch.setattr(
+        EmrServerlessStartJobOperator, "persist_links", lambda self, context: None
+    )
 
 
 def make_operator():
@@ -68,7 +80,9 @@ def make_operator():
         application_id="test-app",
         execution_role_arn="arn:aws:iam::000000000000:role/test-emr-execution-role",
         job_driver={},
-        configuration_overrides=emr_monitoring_configuration("s3://test-logs/", LOG_GROUP),
+        configuration_overrides=emr_monitoring_configuration(
+            "s3://test-logs/", LOG_GROUP
+        ),
         log_fetch_interval=timedelta(seconds=0.1),
     )
 
@@ -90,7 +104,9 @@ def test_driver_stdout_is_copied_into_the_task_log(logs_client, monkeypatch, cap
     assert operator._log_fetcher is None
 
 
-def test_driver_stderr_is_not_logged_when_the_job_succeeds(logs_client, monkeypatch, caplog):
+def test_driver_stderr_is_not_logged_when_the_job_succeeds(
+    logs_client, monkeypatch, caplog
+):
     create_streams(logs_client)
     fake_job(monkeypatch, lambda: write_log(logs_client, "stderr", "spark INFO noise"))
 
@@ -103,7 +119,9 @@ def test_driver_stderr_is_logged_when_the_job_fails(logs_client, monkeypatch, ca
     create_streams(logs_client)
     fake_job(
         monkeypatch,
-        lambda: write_log(logs_client, "stderr", "java.lang.OutOfMemoryError: Java heap space"),
+        lambda: write_log(
+            logs_client, "stderr", "java.lang.OutOfMemoryError: Java heap space"
+        ),
         error=RuntimeError("Serverless Job failed"),
     )
 
@@ -113,7 +131,9 @@ def test_driver_stderr_is_logged_when_the_job_fails(logs_client, monkeypatch, ca
     assert "java.lang.OutOfMemoryError: Java heap space" in caplog.text
 
 
-def test_job_that_fails_before_the_driver_starts_still_raises_its_own_error(logs_client, monkeypatch, caplog):
+def test_job_that_fails_before_the_driver_starts_still_raises_its_own_error(
+    logs_client, monkeypatch, caplog
+):
     # no log streams: the job failed before the Spark driver wrote anything
     fake_job(monkeypatch, lambda: None, error=RuntimeError("AccessDeniedException"))
 

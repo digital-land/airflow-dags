@@ -24,7 +24,12 @@ datasets_dict = load_specification_datasets()
 collections_dict = get_collections_dict(datasets_dict.values())
 
 # define some inputs
-datasets = [dataset["dataset"] for dataset in datasets_dict.values() if dataset.get("typology", None) == "geography" and dataset.get("collection", None) is not None]
+datasets = [
+    dataset["dataset"]
+    for dataset in datasets_dict.values()
+    if dataset.get("typology", None) == "geography"
+    and dataset.get("collection", None) is not None
+]
 # append digital-land so data contained in there can be loaded
 
 ecs_cluster = f"{config['env']}-cluster"
@@ -54,8 +59,12 @@ with DAG(
         # based on the dataset provided need to create an ARN
         # this isn't actually used to download the dataset but the bucket name
         # and key are
-        collection_dataset_bucket_name = kwargs["conf"].get(section="custom", key="collection_dataset_bucket_name")
-        ti.xcom_push(key="collection-dataset-bucket-name", value=collection_dataset_bucket_name)
+        collection_dataset_bucket_name = kwargs["conf"].get(
+            section="custom", key="collection_dataset_bucket_name"
+        )
+        ti.xcom_push(
+            key="collection-dataset-bucket-name", value=collection_dataset_bucket_name
+        )
 
         dataset = str(params.get("dataset"))
 
@@ -68,7 +77,12 @@ with DAG(
         ti.xcom_push(key="dataset", value=dataset)
 
         # push task log details
-        push_log_variables(ti, task_definition_name=task_name, container_name=container_name, prefix="tiles-builder-task")
+        push_log_variables(
+            ti,
+            task_definition_name=task_name,
+            container_name=container_name,
+            prefix="tiles-builder-task",
+        )
         # add vpc details
         push_vpc_config(ti, kwargs["conf"])
 
@@ -92,15 +106,26 @@ with DAG(
                     "cpu": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="cpu") | int }}',
                     "memory": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="memory") | int }}',
                     "environment": [
-                        {"name": "ENVIRONMENT", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="env") | string }}\''},
-                        {"name": "DATASET", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="dataset") | string }}\''},
-                        {"name": "READ_S3_BUCKET", "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}\''},
+                        {
+                            "name": "ENVIRONMENT",
+                            "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="env") | string }}\'',
+                        },
+                        {
+                            "name": "DATASET",
+                            "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="dataset") | string }}\'',
+                        },
+                        {
+                            "name": "READ_S3_BUCKET",
+                            "value": '\'{{ task_instance.xcom_pull(task_ids="configure-dag", key="collection-dataset-bucket-name") | string }}\'',
+                        },
                         {"name": "WRITE_S3_BUCKET", "value": f"{tiles_bucket_name}"},
                     ],
                 },
             ]
         },
-        network_configuration={"awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'},
+        network_configuration={
+            "awsvpcConfiguration": '{{ task_instance.xcom_pull(task_ids="configure-dag", key="aws_vpc_config") }}'
+        },
         awslogs_group='{{ task_instance.xcom_pull(task_ids="configure-dag", key="tiles-builder-task-log-group") }}',
         awslogs_region='{{ task_instance.xcom_pull(task_ids="configure-dag", key="tiles-builder-task-log-region") }}',
         awslogs_stream_prefix='{{ task_instance.xcom_pull(task_ids="configure-dag", key="tiles-builder-task-log-stream-prefix") }}',

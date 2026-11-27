@@ -23,7 +23,9 @@ TEST_CONFIG = {
 # AWS Secrets Manager unless overridden. aws_secrets_manager.get_secret_emr_compatible supports a
 # SECRET_<name> environment variable escape hatch specifically for this - see its docstring.
 SECRET_ENV_VAR = "SECRET__DEVELOPMENT_PD_BATCH_DEPLOYMENT_VARIABLES_SECRET"
-TEST_SECRET_VALUE = json.dumps({"emr_execution_role": "arn:aws:iam::000000000000:role/test-emr-execution-role"})
+TEST_SECRET_VALUE = json.dumps(
+    {"emr_execution_role": "arn:aws:iam::000000000000:role/test-emr-execution-role"}
+)
 
 
 def pytest_configure(config):
