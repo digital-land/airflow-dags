@@ -2,10 +2,8 @@ import csv
 import json
 import math
 import os
-import tempfile
-import urllib
+import urllib.request
 from datetime import datetime, timedelta
-from pathlib import Path
 
 import boto3
 from collection_config import get_collection_dag_config
@@ -36,22 +34,35 @@ def get_config(path=None):
     return config
 
 
-# TBD no idea why this isn't in the config rather than directly loading stuff from the spec
-def load_specification_datasets():
-    with tempfile.TemporaryDirectory() as tmpdir:
+SPECIFICATION_DATASET_KEY = "specification/dataset.csv"
+SPECIFICATION_DATASET_PUBLIC_URL = (
+    "https://files.planning.data.gov.uk/specification/dataset.csv"
+)
 
-        dataset_spec_url = "https://raw.githubusercontent.com/digital-land/specification/main/specification/dataset.csv"
-        dataset_spec_path = Path(tmpdir) / "dataset.csv"
-        urllib.request.urlretrieve(dataset_spec_url, dataset_spec_path)
 
-        datasets_dict = {}
+def load_specification_datasets(bucket_name=None):
+    """
+    Read the specification's dataset.csv from the collection dataset bucket, keyed by dataset.
 
-        with open(dataset_spec_path, newline="") as f:
-            dictreader = csv.DictReader(f)
-            for row in dictreader:
-                datasets_dict[row["dataset"]] = row
+    This is the copy of the specification the rest of the pipeline runs on. The bucket name
+    defaults to the custom.collection_dataset_bucket_name Airflow config value.
+    """
+    if bucket_name is None:
+        from airflow.configuration import conf
 
-        return datasets_dict
+        bucket_name = conf.get(
+            section="custom", key="collection_dataset_bucket_name", fallback=None
+        )
+
+    if bucket_name:
+        s3 = boto3.client("s3")
+        response = s3.get_object(Bucket=bucket_name, Key=SPECIFICATION_DATASET_KEY)
+        content = response["Body"].read().decode("utf-8")
+    else:
+        with urllib.request.urlopen(SPECIFICATION_DATASET_PUBLIC_URL) as response:
+            content = response.read().decode("utf-8")
+
+    return {row["dataset"]: row for row in csv.DictReader(content.splitlines())}
 
 
 def get_collections_dict(datasets):
