@@ -41,16 +41,12 @@ def get_config(path=None):
     return config
 
 
-def load_config_dataset_environments(bucket_name):
-    s3 = boto3.client("s3")
-    response = s3.get_object(Bucket=bucket_name, Key=CONFIG_DATASET_KEY)
-    content = response["Body"].read().decode("utf-8")
-    return {
-        r["dataset"]: r["environment"] for r in csv.DictReader(content.splitlines())
-    }
+SPECIFICATION_DATASET_KEY = "specification/dataset.csv"
+SPECIFICATION_DATASET_PUBLIC_URL = (
+    "https://files.planning.data.gov.uk/specification/dataset.csv"
+)
 
 
-# TBD no idea why this isn't in the config rather than directly loading stuff from the spec
 def load_specification_datasets(bucket_name=None):
     """
     Read the specification's dataset.csv from the collection dataset bucket, keyed by dataset.
@@ -73,14 +69,7 @@ def load_specification_datasets(bucket_name=None):
         with urllib.request.urlopen(SPECIFICATION_DATASET_PUBLIC_URL) as response:
             content = response.read().decode("utf-8")
 
-    datasets = {row["dataset"]: row for row in csv.DictReader(content.splitlines())}
-
-    if bucket_name:
-        environments = load_config_dataset_environments(bucket_name)
-        for name, row in datasets.items():
-            row["environment"] = environments.get(name, "")
-
-    return datasets
+    return {row["dataset"]: row for row in csv.DictReader(content.splitlines())}
 
 
 def get_collections_dict(datasets):
