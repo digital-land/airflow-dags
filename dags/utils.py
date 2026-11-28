@@ -16,6 +16,13 @@ PYSPARK_PYTHON_CONF = (
     "--conf spark.executorEnv.PYSPARK_PYTHON=/usr/bin/python3.11"
 )
 
+CONFIG_DATASET_KEY = "config/pipeline/dataset.csv"
+
+SPECIFICATION_DATASET_KEY = "specification/dataset.csv"
+SPECIFICATION_DATASET_PUBLIC_URL = (
+    "https://files.planning.data.gov.uk/specification/dataset.csv"
+)
+
 # Some useful default args for all DAGs
 dag_default_args = {
     "owner": "airflow",
